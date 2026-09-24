@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-24 登録pair選択の承認・非実行受渡し: 直前の選択ドライバーと水温/RPM一括読取の結合確認へ利用者「syouninn」（承認）。判断待ちは解消。別のprivate pair handoffを追加し、既存単一選択のmetadata/5秒期限/一回消費/再照合を内部再利用、外部ticketは分離し同一ECUと固定pids[05,0C]をコピー凍結。既存秘密descriptor resolverへ別factoryで接続し公開route/起動権限は追加しない。専用検査と人工秘密storeの一致・12拒否scenario、bridge通常入口384/Errors0、package490/Errors0が合格。配布生成器の必要ファイル一覧も追従したが本体/603ZIPは未更新。実registry/実vendor DLL/VCI/実車は未使用。次は同承認範囲で生成pair workerの独立pin/親子要求照合へ結合する（現workerはまだ固定ECU7E0、pair選択から未接続）。公開送信は既存の審査拒否による保留を維持し、ローカル実装を進める。保存形式・依存DLL信頼規約・実通信無効は不変。
+
 2026-09-24 固定pairの実画面保存復元: 生成native検査へ任意の人工UI artifact出力を追加し、既存scanner-file-flowを単一RPMと固定水温/RPM両方の検査へ対応。x86/x64各4シナリオ合格後、正常x64 worker由来の既存形式JSONを隔離Chromeの実filechooserで取込。90℃/2000.25rpmの2カード、PID00対応05/0C、同一ECU7E8と全monitor値/対応matrixがdownload→ページreload→再取込で一致。画像でも開発検証注意・DTC未取得・主要読取未完了を確認（mode01-native-QL68pf、obd-file-flow-LJYusH）。専用CLIなし、初回playwright解決失敗は同梱runtimeの明示指定で解消し既存検査を使用。利用者データ/実password/実VCI/実車は未使用。ブラウザーprocess再起動・OS再起動・別PCは今回未検証。本体/603ZIP/保存形式/公開実行権限不変。公開送信保留を維持し、登録pair選択/一般driver起動は未接続。
 
 2026-09-23 上記pair保存結合の回帰検証: Session export266、JSON policy177、development source merge116、manufacturer history export369がすべてErrors0。クリップボード検査は人工入力のみ。node構文/diff検査合格。

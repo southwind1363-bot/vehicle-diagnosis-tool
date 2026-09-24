@@ -6,12 +6,13 @@ import path from "node:path";
 import { createDtcSelectedPackageReview } from "./native/dtc-selected-package-review.js";
 import { createJ2534DtcSelectionHandoff } from "./j2534-dtc-selection-handoff.js";
 import { createJ2534Mode01SelectionHandoff } from "./j2534-mode01-selection-handoff.js";
+import { createJ2534Mode01PairSelectionHandoff } from "./j2534-mode01-pair-selection-handoff.js";
 import { createRegisteredMode01PackageReview } from "./native/mode01-selected-package-review.js";
 import { createRegisteredMode01FixtureSupervisor } from "./native/mode01-registered-fixture-supervisor.js";
 import { createJ2534SelectedMode01FixtureSupervisor } from "./j2534-mode01-fixture-supervisor.js";
 
 const source = fs.readFileSync(new URL("../local-bridge-readonly.js", import.meta.url), "utf8");
-const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff", "createJ2534RegisteredMode01SelectionHandoff"];
+const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff", "createJ2534RegisteredMode01SelectionHandoff", "createJ2534RegisteredMode01PairSelectionHandoff"];
 const code = names.map(name => {
   const match = source.match(new RegExp(`(?:export )?function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`));
   assert.ok(match, `Missing ${name}`); return match[0].replace(/^export /, "");
@@ -25,6 +26,7 @@ function setup() {
   const state = { time: 100, calls: 0, current: { ...original, fingerprint: { ...original.fingerprint } },
     metadata: { exact_readonly_api_ready: true, execution_enabled: false, sha256: "a".repeat(64), file_size: 4096, driver_architecture: "x64" } };
   const context = vm.createContext({ j2534RegisteredDriverDescriptorSecrets: secrets, createJ2534DtcSelectionHandoff, createJ2534Mode01SelectionHandoff,
+    createJ2534Mode01PairSelectionHandoff,
     performance: { now: () => state.time },
     createJ2534RegisteredDriverDescriptor(options) {
       state.calls++; assert.equal(options.enabled, true); assert.equal(options.selectedDeviceId, original.selectedDeviceId);
@@ -33,9 +35,26 @@ function setup() {
   vm.runInContext(code, context);
   state.api = context.createJ2534RegisteredDtcSelectionHandoff(); state.descriptor = descriptor; state.original = original;
   state.mode01 = context.createJ2534RegisteredMode01SelectionHandoff();
+  state.pair = context.createJ2534RegisteredMode01PairSelectionHandoff();
   return state;
 }
 const request = { request_ecu: 0x7e0, service: 3 };
+{
+  const s = setup(), ticket = s.pair.prepare(s.descriptor, { request_ecu: 0x7e7, pids: [5, 12] });
+  assert.equal(s.calls, 1);
+  const selected = s.pair.consume(ticket);
+  assert.deepEqual(selected.pids, [5, 12]); assert.equal(selected.request_ecu, 0x7e7);
+  assert.equal(selected.path, s.original.libraryPath); assert.equal(s.calls, 2);
+  assert.equal(s.pair.consume(ticket), null);
+}
+for (const mutate of [s => s.current = null, s => s.current.descriptorSource = "test_fixture_registry",
+  s => s.current.libraryPath += ".changed", s => s.metadata.execution_enabled = true,
+  s => s.metadata.exact_readonly_api_ready = false, s => s.time += 5000,
+  ...["device", "inode", "size", "mtime_ns", "ctime_ns", "sha256"].map(k => s => s.current.fingerprint[k] = "changed")]) {
+  const s = setup(), ticket = s.pair.prepare(s.descriptor, { request_ecu: 0x7e0, pids: [5, 12] });
+  mutate(s); assert.equal(s.pair.consume(ticket), null); assert.equal(s.pair.consume(ticket), null);
+}
+console.log("Registered Mode01 pair resolver: matched and 12 refusal scenarios PASS (synthetic store only)");
 // Actual host factory rejects an unissued clone before any registry/file work.
 const unissuedReview = createRegisteredMode01PackageReview().inspect({}, { request_ecu: 2016, pid: 5 }, null, null);
 assert.equal(unissuedReview.reason, "selection_unavailable");

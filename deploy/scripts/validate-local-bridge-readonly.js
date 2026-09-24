@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 // Keep the production deadline and failure classifications unchanged.
 for (const suite of ["validate-vendor-review", "validate-preflight-termination",
   "validate-preflight-process-close", "validate-j2534-dtc-selection-handoff",
-  "validate-j2534-mode01-result", "validate-j2534-mode01-selection-handoff"]) {
+  "validate-j2534-mode01-result", "validate-j2534-mode01-selection-handoff", "validate-j2534-mode01-pair-selection"]) {
   await import(`./${suite}.js`);
 }
 
