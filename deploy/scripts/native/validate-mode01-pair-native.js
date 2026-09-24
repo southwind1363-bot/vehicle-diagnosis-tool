@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 import { spawnSync, spawn } from "node:child_process";
 import { buildJ2534NativeFixture } from "./build-j2534-native-fixture.js";
 import { createJ2534Mode01PairSessionSupervisor } from "../j2534-mode01-pair-session-supervisor.js";
+import { createJ2534SelectedMode01PairFixtureSupervisor } from "../j2534-selected-mode01-pair-fixture-supervisor.js";
+import { createJ2534Mode01PairSelectionHandoff } from "../j2534-mode01-pair-selection-handoff.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -21,6 +23,8 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     const dll = buildJ2534NativeFixture(arch, `owned-dtc-mode01-pair${suffix}`);
     fs.writeFileSync(path.join(root, "mode01.dll"), dll, { flag: "wx" });
     const digest = crypto.createHash("sha256").update(dll).digest("hex").toUpperCase();
+    const selectedArgs = ["--selected-generated-mode01-pair", path.join(root, "mode01.dll"), digest,
+      String(dll.length), arch, "2016", "5", "12"];
     const pin = path.join(root, "Digest.cs");
     fs.writeFileSync(pin, `internal static class Mode01PairFixtureDigest { internal const string Value = "${digest}"; internal const long Size = ${dll.length}; }`, { flag: "wx" });
     const exe = path.join(root, "pair-worker.exe");
@@ -35,7 +39,7 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     if (suffix === "") {
       const built = spawnSync(compiler, args.map(arg => arg.replace(";PREFLIGHT_FIXTURE_TESTS", "")), options);
       assert.equal(built.status, 0, built.stdout + built.stderr);
-      const refused = spawnSync(exe, ["--generated-mode01-pair"], options);
+      const refused = spawnSync(exe, selectedArgs, options);
       assert.equal(refused.status, 1); assert.equal(refused.stdout, ""); assert.equal(refused.stderr, "");
     }
     const built = spawnSync(compiler, args, options);
@@ -44,22 +48,67 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       const refused = spawnSync(exe, invalid, options);
       assert.equal(refused.status, 2); assert.equal(refused.stdout, "");
     }
+    for (let index = 0; index < selectedArgs.length; index++) {
+      const invalid = [...selectedArgs]; invalid[index] += "x";
+      const refused = spawnSync(exe, invalid, options);
+      assert.equal(refused.status, 2); assert.equal(refused.stdout, "");
+    }
+    for (const invalid of [selectedArgs.slice(0, -1), [...selectedArgs, "extra"],
+      [...selectedArgs.slice(0, 6), "12", "5"]]) {
+      const refused = spawnSync(exe, invalid, options);
+      assert.equal(refused.status, 2); assert.equal(refused.stdout, "");
+    }
     if (suffix === "") {
       // Only our generated temp fixture is altered; no vendor file is accessed.
       const changed = Buffer.from(dll); changed[changed.length - 1] ^= 1;
       fs.writeFileSync(path.join(root, "mode01.dll"), changed);
       try {
-        const refused = spawnSync(exe, ["--generated-mode01-pair"], options);
+        const refused = spawnSync(exe, selectedArgs, options);
         assert.equal(refused.status, 1); assert.equal(refused.stdout, ""); assert.equal(refused.stderr, "");
       } finally { fs.writeFileSync(path.join(root, "mode01.dll"), dll); }
     }
-    const parent = createJ2534Mode01PairSessionSupervisor({ requestEcu: 0x7e0,
+    const pinned = { path: selectedArgs[1], sha256: digest, size: dll.length, architecture: arch, request_ecu: 0x7e0 };
+    const descriptor = Object.freeze({});
+    let now = 100, current = { selected_device_id: "j2534-0123456789abcdef",
+      path: pinned.path, sha256: digest, size: dll.length, architecture: arch }, launches = 0;
+    const handoff = createJ2534Mode01PairSelectionHandoff({ now: () => now,
+      resolveDescriptor: d => d === descriptor ? current : null,
+      revalidateDescriptor: d => d === descriptor ? current : null });
+    const settings = { handoff, descriptor, pinned,
       buildDiagnosticScanSession: obd.buildDiagnosticScanSession,
       normalizeBridgeLivePidSnapshot: obd.normalizeBridgeLivePidSnapshot,
       decodeLivePidResponse: obd.decodeLivePidResponse,
-      spawnWorker: () => spawn(exe, ["--generated-mode01-pair"], { cwd: root, env, shell: false,
-        windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }) });
+      spawnWorker: argv => { launches++; assert.deepEqual(argv, selectedArgs); assert.ok(Object.isFrozen(argv));
+        return spawn(exe, argv, { cwd: root, env, shell: false,
+          windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }); } };
+    for (const change of [() => { now += 5000; }, () => { current = { ...current, size: current.size + 1 }; },
+      () => { current = { ...current, sha256: "F".repeat(64) }; }]) {
+      const saved = current, savedNow = now;
+      const refused = createJ2534SelectedMode01PairFixtureSupervisor(settings);
+      change();
+      const result = await refused();
+      assert.equal(result.status, "unavailable"); assert.equal(result.session, null); assert.equal(result.results, null);
+      assert.equal((await refused()).reason, "fixture_already_consumed");
+      assert.equal(launches, 0);
+      current = saved; now = savedNow;
+    }
+    // A consistent but different selection must still fail the independent builder pin.
+    const saved = current; current = { ...current, size: current.size + 1 };
+    const mismatched = await createJ2534SelectedMode01PairFixtureSupervisor(settings)();
+    assert.equal(mismatched.status, "unavailable"); assert.equal(launches, 0); current = saved;
+    for (const invalid of [{ ...pinned, request_ecu: 0x7e1 }, { ...pinned, size: 0 },
+      { ...pinned, sha256: digest.toLowerCase() }, { ...pinned, architecture: "arm64" },
+      { ...pinned, extra: true }, { ...pinned, path: "relative.dll" }]) {
+      assert.throws(() => createJ2534SelectedMode01PairFixtureSupervisor({ ...settings, pinned: invalid }),
+        /mode01_pair_fixture_selection_invalid/);
+    }
+    const cancelled = createJ2534SelectedMode01PairFixtureSupervisor(settings);
+    assert.equal((await cancelled({ signal: AbortSignal.abort() })).reason, "fixture_cancelled");
+    assert.equal((await cancelled()).reason, "fixture_already_consumed"); assert.equal(launches, 0);
+    const parent = createJ2534SelectedMode01PairFixtureSupervisor(settings);
+    pinned.path = "C:\\changed-after-prepare\\mode01.dll"; // Parent owns its independent copy.
     const outcome = await parent();
+    assert.equal(launches, 1);
     assert.equal(outcome.completion.worker_exited, true);
     if (suffix === "") {
       assert.equal(outcome.status, "completed", JSON.stringify(outcome.completion));
