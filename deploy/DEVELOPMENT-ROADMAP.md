@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-24 ローカルPC配布3.13.605: 18f2ae65の配布verify中の同サイズ変更検出を通常生成器で新規605へ同梱。版3箇所同期、offline183/Errors0後に新規ZIP作成し別tempへ展開、同梱verifierで849files/16916494bytesの全hash一致と変更検出コード同梱を確認。空の人工registryで同梱起動moduleからweb/health HTTP200、vehicle_command_enabled:false/sample_readouts_enabled:falseを確認して両server終了。ZIP SHA256=580D72BB8C6F32C78EA0E04F2B98206F9F9E237B64179B8FBC48ABB6633C9D1F。展開先workstation-605-421eb58832c34d129a007c7102db463b。604と既存配布は上書きせず、保存形式・実通信無効・開発native worker配布除外を維持。605のブラウザー再起動/保存復元・別PC・実VCI/実車は未検証。公開送信は既存審査拒否による保留を維持し再試行していない。
+
 2026-09-24 配布verify中の同サイズ更新検出: 既存bounded readerは読込前後のsizeだけを照合しており、読込済みbytesのhashが一致しても直後に同サイズ上書きされた変更を検出しなかった。開いているfileのmtime/ctimeも前後照合し、観測できた変更はpackage_integrity_file_changedで拒否する。人工8byteファイルを読込直後に同サイズ更新する専用ケース、既存増大/縮小/短いread/例外時handle解放、通常package492/Errors0が合格。これはコピー/同期中の更新検出改善でありOS lockや完全な競合防止・発行元認証の証明ではない。604ZIPは上書きせず本体版/保存形式/実通信権限不変。次の新版配布へ同梱予定、公開送信保留。
 
 2026-09-24 604別展開のブラウザー保存復元: agent-browser/agent-browser-verify/verificationの画面・経路検証に従い、CLI不在のため既存Playwright検査を使用。604ZIP別展開から空registryで起動、隔離Chromeで人工事例JSON取込→両server停止→browser process終了/再起動→offline表示→事例検索→downloadしたJSONと保存全項目の一致が合格。初回注意・誤password拒否・lock保持・604全cache・外向き通信なし・同梱integrity不変も確認。390px画像で604表示/検索画面を目視（packaged-browser-ZzUR1g）。補助CDP cache一覧No frame foundと任意favicon ERR_FAILEDは独立記録し、保存復元失敗とは扱わない。実password正常login/OS再起動/別PC/実VCI/実車は未検証。既存ZIP・本体・保存形式・実通信権限変更なし、公開送信保留。
