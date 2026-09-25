@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 固定一巡の親正常終了と変換結合: 開発fixture専用supervisorを追加し、既存bounded親の正常終了/未中止/エラーなしを確認した後だけDTC03/07/0Aと05/0Cを既存converterへ渡す。同一要求ECU・固定service/PID順・cleanup・同一PID00receiptを再照合し全5結果かresults:nullのみ、再使用/事前中止も一回消費。x86/x64各672＋154の人工callback子exe出力から取得ゼロDTC3種/90℃/2000.25rpmを確認し、10不正JSON、非zero終了/stderr/事前中止を拒否。実fixture DLLのABI一巡ではなく管理callback子processの結合検証。実DLL/VCI/実車/公開経路/保存形式/605ZIP不変、共通session保存と固定生成DLL一巡は次段階。公開送信保留は維持。
+
 2026-09-25 固定一巡の元receipt保持: ownerの終了成功後だけJ2534DiagnosticSweepObservationを返す内部経路を追加。全6段の元status/count/message metadata/bytesを既存コピー/JSON処理で保持し、DTCはservice03/07/0A順、Mode01二値は同一PID00receiptを参照する独立コピーとした。既存capture APIは互換wrapperとして維持。人工callbackで入力/取得コピーの改変後もJSON不変、status9と段ごとのtimestamp、ECU/値/同一PID00がx86/x64各672＋154とJSON検査で合格、既存pair各444/親子拒否も合格。内部JSONにはworker終了済みを追加せず、親processの正常終了確認と既存converterへの受渡しは次段階。生成DLL一巡/実vendor DLL/VCI/実車は未検証・未実行。保存形式/605ZIP/公開entry/公開送信保留は不変。
 
 2026-09-25 固定一巡のowner結合: 同承認範囲でReadDiagnosticSweepAndFinishを開発compileflag限定で追加。同一ownerの既存一回取得gate内で03/07/0A/00/05/0Cを固定順に各一回write/readし、各段の完全応答確認に成功したときだけ次へ進む。Mode01 native receipt抽出は既存exchangeを内部再利用。StopFilter→Disconnect→Close→Dispose/ReferenceReleasedまで全成功した場合のみ中間captureを返し、失敗時保持・再試行なし。管理callbackで全6段のwrite/read失敗、filter/cleanup/release失敗、例外、割込み/再使用拒否と90℃/2000.25rpm/ゼロDTCを検査しx86/x64各664＋既存純粋154項目合格。共有抽出変更の回帰として既存pair各444と親子拒否も合格。実DLL/実VCI/実車は未使用、独立native ABIの一巡/worker正常終了/元status付きreceipt保存/既存sessionへの結合はまだ未実装・未検証。次は生成workerへ渡す元receiptの保持と終了後内部observationを整え、親正常終了まで公開結果にしない。公開entry・605ZIP・保存形式・公開送信保留は維持。
