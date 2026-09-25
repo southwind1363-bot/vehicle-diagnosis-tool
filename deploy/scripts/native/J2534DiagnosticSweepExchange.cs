@@ -31,6 +31,31 @@ namespace VehicleDiagnosis.Native
         { return new byte[] { 0, 0, (byte)(ecu >> 8), (byte)ecu, service }; }
         internal byte[] Begin()
         { Require(0); state = 1; return Request(3); }
+        // Native receipt adapter: a timeout status is usable only when a single
+        // complete response passes the same payload checks as status zero.
+        internal byte[] AcceptDtcRead(byte service, J2534ReceiveNative.Result read)
+        {
+            if (read == null || (read.Status != 0 && read.Status != 9)
+                || read.Messages == null || read.Messages.Length < 1 || read.Messages.Length > 2
+                || read.ReportedCount != (uint)read.Messages.Length) { Abort(); return null; }
+            byte[] payload = null;
+            bool indicated = false;
+            foreach (var message in read.Messages) {
+                if (message == null || message.ProtocolId != 6 || message.TxFlags != 0
+                    || message.Data == null || message.Data.Length < 4 || message.Data.Length > 4099
+                    || (message.ExtraDataIndex != 0 && message.ExtraDataIndex != message.Data.Length))
+                { Abort(); return null; }
+                byte[] data = message.Data;
+                uint source = ((uint)data[0] << 24) | ((uint)data[1] << 16) | ((uint)data[2] << 8) | data[3];
+                if (source != ecu + 8) { Abort(); return null; }
+                if (message.RxStatus == 2 && data.Length == 4 && !indicated && payload == null)
+                { indicated = true; continue; }
+                if (message.RxStatus != 0 || payload != null) { Abort(); return null; }
+                payload = new byte[data.Length - 4];
+                Array.Copy(data, 4, payload, 0, payload.Length);
+            }
+            return AcceptDtcResponse(service, ecu + 8, payload);
+        }
         internal byte[] AcceptDtcResponse(byte service, uint source, byte[] payload)
         {
             int index = service == 3 ? 0 : service == 7 ? 1 : service == 10 ? 2 : -1;

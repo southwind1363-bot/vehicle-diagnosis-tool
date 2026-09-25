@@ -10,6 +10,34 @@ namespace VehicleDiagnosis.Native
         private static byte[] Dtc(byte service) { return new byte[] { (byte)(service + 64), 0, 0 }; }
         private static void Main()
         {
+            foreach (int status in new[] { 0, 9 }) foreach (bool indicator in new[] { false, true }) {
+                var sweep = new J2534DiagnosticSweepExchange(0x7e0); sweep.Begin();
+                var response = new J2534ReceiveNative.Message { ProtocolId = 6,
+                    Data = new byte[] { 0, 0, 7, 232, 67, 0, 0 } };
+                var start = new J2534ReceiveNative.Message { ProtocolId = 6, RxStatus = 2,
+                    Data = new byte[] { 0, 0, 7, 232 } };
+                Check(sweep.AcceptDtcRead(3, new J2534ReceiveNative.Result { Status = status,
+                    ReportedCount = indicator ? 2u : 1u,
+                    Messages = indicator ? new[] { start, response } : new[] { response } })[4] == 7);
+            }
+            for (int fault = 0; fault < 10; fault++) {
+                var sweep = new J2534DiagnosticSweepExchange(0x7e0); sweep.Begin();
+                var message = new J2534ReceiveNative.Message { ProtocolId = 6,
+                    Data = new byte[] { 0, 0, 7, 232, 67, 0, 0 } };
+                var read = new J2534ReceiveNative.Result { ReportedCount = 1, Messages = new[] { message } };
+                if (fault == 0) read.Status = 1;
+                if (fault == 1) read.ReportedCount = 2;
+                if (fault == 2) message.ProtocolId = 5;
+                if (fault == 3) message.TxFlags = 1;
+                if (fault == 4) message.ExtraDataIndex = 1;
+                if (fault == 5) message.Data[3]++;
+                if (fault == 6) message.RxStatus = 1;
+                if (fault == 7) { read.Messages = new[] { message, message }; read.ReportedCount = 2; }
+                if (fault == 8) { message.RxStatus = 2; message.Data = new byte[] { 0, 0, 7, 232 }; }
+                if (fault == 9) read.Messages = null;
+                Check(sweep.AcceptDtcRead(3, read) == null);
+                Reject(delegate { sweep.Begin(); });
+            }
             for (uint ecu = 0x7e0; ecu <= 0x7e7; ecu++) {
                 var sweep = new J2534DiagnosticSweepExchange(ecu);
                 Check(sweep.Begin()[4] == 3);

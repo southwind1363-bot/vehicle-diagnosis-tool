@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 固定一巡のnative DTC受信接続第一段: 承認済み統合開発を継続し、純粋exchangeへAcceptDtcReadを追加。native status0/9、count、ISO15765、同一ECU、flags、extra index、単一完全応答と任意の先行start indicatorを検査して既存固定順序へ渡す。不完全timeout/重複/echo等は一巡失敗・再使用不可。人工native receiptの正常4/異常10ケースを加えx86/x64各154項目合格。初回sandbox temp作成EPERMは正規の承認付き検査で解消。これはreceiptから中間payloadへの結合のみでowner/生成DLL worker/cleanup/親終了/保存統合は未完了、実DLL/VCI/実車不使用。605ZIP・保存形式・公開実行無効・公開送信保留を維持。
+
 2026-09-25 固定読取一巡の承認・第一段: 直前の統合開発確認へ利用者「承認」。判断待ちは解消。開発compileflag限定の純粋J2534DiagnosticSweepExchangeを追加し、同一ECUの03→07→0A→PID00両対応確認→05→0Cを固定、一段でも失敗なら一括captureなし・再使用不可とした。DTC payloadのservice/ECU/長さ/末尾zero paddingを確認し、Mode01は既存exchangeを再利用。ゼロ件/ゼロ値、全6段の失敗、順序/ECU不一致、片側未対応、abort、receiptコピー保持をx86/x64各130項目で確認。初回compileはObservation参照不足を修正後合格。通常native検査入口へ追加（通常全体は今回未実行）。これは完全payloadの中間処理のみで、native status/receipt検査・owner・生成DLL worker・cleanup・親正常終了・既存結果保存への結合は未実装。次は同承認範囲でowner付き固定一巡へ結合し、正常終了まで結果を採用しない。実vendor DLL/VCI/実車/公開entry/保存形式/605ZIPは不変、実接続検証ではない。公開送信の審査拒否保留は今回のコード開発承認と分離して維持。
 
 2026-09-24 次機能の判断待ち: HEAD6f4bfb6aで605配布/保存復元の残検証を完了。コード照合ではDTC fixture supervisorはscenarioにより03/07/0Aの一つを選択し、pair workerはPID00→05→0C専用で、両者を同一ECUの一巡へ統合する処理はない。次候補は開発専用の固定読取一巡（03/07/0Aと対応確認後05/0C）で、要求順序・途中失敗・終了確認と結果採用の境界に関わるため未実装で利用者判断待ちとする。提案は生成DLL/人工登録のみのコード開発、保存形式維持・実通信無効・再試行なし。実vendor DLL/VCI/実車/公開entry/信頼catalog許可は含めない。既存正常検査の反復や新しい版番号だけを進捗にせず、この境界を越える実装は回答まで行わない。公開送信の審査拒否保留も維持。自動実行設定は変更していない。
