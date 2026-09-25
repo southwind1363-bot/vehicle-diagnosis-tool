@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 固定一巡の元receipt保持: ownerの終了成功後だけJ2534DiagnosticSweepObservationを返す内部経路を追加。全6段の元status/count/message metadata/bytesを既存コピー/JSON処理で保持し、DTCはservice03/07/0A順、Mode01二値は同一PID00receiptを参照する独立コピーとした。既存capture APIは互換wrapperとして維持。人工callbackで入力/取得コピーの改変後もJSON不変、status9と段ごとのtimestamp、ECU/値/同一PID00がx86/x64各672＋154とJSON検査で合格、既存pair各444/親子拒否も合格。内部JSONにはworker終了済みを追加せず、親processの正常終了確認と既存converterへの受渡しは次段階。生成DLL一巡/実vendor DLL/VCI/実車は未検証・未実行。保存形式/605ZIP/公開entry/公開送信保留は不変。
+
 2026-09-25 固定一巡のowner結合: 同承認範囲でReadDiagnosticSweepAndFinishを開発compileflag限定で追加。同一ownerの既存一回取得gate内で03/07/0A/00/05/0Cを固定順に各一回write/readし、各段の完全応答確認に成功したときだけ次へ進む。Mode01 native receipt抽出は既存exchangeを内部再利用。StopFilter→Disconnect→Close→Dispose/ReferenceReleasedまで全成功した場合のみ中間captureを返し、失敗時保持・再試行なし。管理callbackで全6段のwrite/read失敗、filter/cleanup/release失敗、例外、割込み/再使用拒否と90℃/2000.25rpm/ゼロDTCを検査しx86/x64各664＋既存純粋154項目合格。共有抽出変更の回帰として既存pair各444と親子拒否も合格。実DLL/実VCI/実車は未使用、独立native ABIの一巡/worker正常終了/元status付きreceipt保存/既存sessionへの結合はまだ未実装・未検証。次は生成workerへ渡す元receiptの保持と終了後内部observationを整え、親正常終了まで公開結果にしない。公開entry・605ZIP・保存形式・公開送信保留は維持。
 
 2026-09-25 固定一巡のnative DTC受信接続第一段: 承認済み統合開発を継続し、純粋exchangeへAcceptDtcReadを追加。native status0/9、count、ISO15765、同一ECU、flags、extra index、単一完全応答と任意の先行start indicatorを検査して既存固定順序へ渡す。不完全timeout/重複/echo等は一巡失敗・再使用不可。人工native receiptの正常4/異常10ケースを加えx86/x64各154項目合格。初回sandbox temp作成EPERMは正規の承認付き検査で解消。これはreceiptから中間payloadへの結合のみでowner/生成DLL worker/cleanup/親終了/保存統合は未完了、実DLL/VCI/実車不使用。605ZIP・保存形式・公開実行無効・公開送信保留を維持。

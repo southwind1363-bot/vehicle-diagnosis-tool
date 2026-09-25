@@ -9,25 +9,37 @@ namespace VehicleDiagnosis.Native
         internal J2534DiagnosticSweepExchange.Capture ReadDiagnosticSweepAndFinish(uint channel, uint requestEcu,
             J2534ReceiveNative.ReadFunction read, StartFilterFunction start, StopFilterFunction stop)
         {
+            var observation = ReadDiagnosticSweepObservationAndFinish(channel, requestEcu, read, start, stop);
+            return observation == null ? null : observation.Capture;
+        }
+        internal J2534DiagnosticSweepObservation ReadDiagnosticSweepObservationAndFinish(uint channel, uint requestEcu,
+            J2534ReceiveNative.ReadFunction read, StartFilterFunction start, StopFilterFunction stop)
+        {
             if (read == null || start == null || stop == null) throw new ArgumentNullException("sweep_binding");
             var exchange = new J2534DiagnosticSweepExchange(requestEcu);
             uint filter;
             if (PrepareDtcFilterOnce(channel, requestEcu, start, stop, out filter) != 0) return null;
             J2534DiagnosticSweepExchange.Capture captured = null;
+            var receipts = new J2534ReceiveNative.Result[6];
             try {
                 double? completed = owner.RunOwnedMode01Acquisition(device, channel, requestEcu, delegate {
                     exchange.Begin();
+                    int index = 0;
                     foreach (byte service in new byte[] { 3, 7, 10 }) {
                         if (WriteFixed(channel, requestEcu, service, null) != 0) return null;
                         var response = new J2534ReceiveNative(read).ReadMode01StageOnce(channel);
                         if (exchange.AcceptDtcRead(service, response) == null) return null;
+                        receipts[index++] = J2534Mode01Observation.Copy(response);
                     }
                     if (WriteFixed(channel, requestEcu, 1, 0) != 0) return null;
-                    if (exchange.AcceptSupportedRead(new J2534ReceiveNative(read).ReadMode01StageOnce(channel)) == null) return null;
+                    receipts[3] = new J2534ReceiveNative(read).ReadMode01StageOnce(channel);
+                    if (exchange.AcceptSupportedRead(receipts[3]) == null) return null;
                     if (WriteFixed(channel, requestEcu, 1, 5) != 0) return null;
-                    if (exchange.AcceptCoolantRead(new J2534ReceiveNative(read).ReadMode01StageOnce(channel)) == null) return null;
+                    receipts[4] = new J2534ReceiveNative(read).ReadMode01StageOnce(channel);
+                    if (exchange.AcceptCoolantRead(receipts[4]) == null) return null;
                     if (WriteFixed(channel, requestEcu, 1, 12) != 0) return null;
-                    captured = exchange.AcceptRpmRead(new J2534ReceiveNative(read).ReadMode01StageOnce(channel));
+                    receipts[5] = new J2534ReceiveNative(read).ReadMode01StageOnce(channel);
+                    captured = exchange.AcceptRpmRead(receipts[5]);
                     return captured == null ? (double?)null : 1;
                 });
                 if (!completed.HasValue || captured == null) return null;
@@ -35,9 +47,9 @@ namespace VehicleDiagnosis.Native
                 if (owner.Disconnect(device, channel) != 0) return null;
                 if (owner.Close(device) != 0) return null;
                 owner.Dispose();
-                return owner.ReferenceReleased ? captured : null;
+                return owner.ReferenceReleased ? new J2534DiagnosticSweepObservation(requestEcu, captured, receipts) : null;
             }
-            finally { exchange.Abort(); captured = null; }
+            finally { exchange.Abort(); captured = null; Array.Clear(receipts, 0, receipts.Length); }
         }
     }
 }

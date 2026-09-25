@@ -30,7 +30,7 @@ namespace VehicleDiagnosis.Native
             json.Append(",\"value_read\":"); AppendRead(json, valueRead);
             return json.Append('}').ToString();
         }
-        private static void AppendRead(StringBuilder json, J2534ReceiveNative.Result read)
+        internal static void AppendRead(StringBuilder json, J2534ReceiveNative.Result read)
         {
             json.Append("{\"Status\":").Append(read.Status.ToString(CultureInfo.InvariantCulture));
             json.Append(",\"ReportedCount\":").Append(read.ReportedCount.ToString(CultureInfo.InvariantCulture));
@@ -52,7 +52,7 @@ namespace VehicleDiagnosis.Native
             }
             json.Append("]}");
         }
-        private static J2534ReceiveNative.Result Copy(J2534ReceiveNative.Result source)
+        internal static J2534ReceiveNative.Result Copy(J2534ReceiveNative.Result source)
         {
             var messages = new J2534ReceiveNative.Message[source.Messages.Length];
             for (int i = 0; i < messages.Length; i++) {

@@ -5,10 +5,11 @@ namespace VehicleDiagnosis.Native
     internal static class J2534DiagnosticSweepOwnedTests
     {
         private static int checks;
+        internal static J2534DiagnosticSweepObservation Completed;
         private static void Check(bool ok) { checks++; if (!ok) throw new Exception("owned sweep check " + checks); }
         private static void Reject(Action action)
         { bool rejected = false; try { action(); } catch (InvalidOperationException) { rejected = true; } Check(rejected); }
-        internal static void Run()
+        internal static void Run(bool quiet = false)
         {
             // 1..12 write/read failure per stage; 13..16 cleanup; 17 filter;
             // 18 callback throw. These are managed callbacks, not native DLLs.
@@ -38,21 +39,39 @@ namespace VehicleDiagnosis.Native
                             : reads == 5 ? new byte[] { 65, 5, 130 } : new byte[] { 65, 12, 31, 65 };
                         if (fault == reads * 2) payload[0] = 255;
                         byte[] message = new byte[4152]; message[0] = 6;
+                        message[12] = (byte)reads;
                         message[16] = (byte)(payload.Length + 4); message[26] = 7; message[27] = 232;
                         Array.Copy(payload, 0, message, 28, payload.Length);
                         Marshal.Copy(message, 0, m, message.Length); Marshal.WriteInt32(n, 1); return 9;
                     };
-                    Func<J2534DiagnosticSweepExchange.Capture> run = delegate {
-                        return request.ReadDiagnosticSweepAndFinish(channel, 0x7e0, read,
+                    Func<J2534DiagnosticSweepObservation> run = delegate {
+                        return request.ReadDiagnosticSweepObservationAndFinish(channel, 0x7e0, read,
                             delegate(uint c, uint t, IntPtr m, IntPtr p, IntPtr f, IntPtr o) { Marshal.WriteInt32(o, 30); return fault == 17 ? 1 : 0; },
                             delegate { stops++; return fault == 13 ? 1 : 0; });
                     };
                     if (fault == 18) Reject(delegate { run(); });
                     else {
-                        var capture = run(); Check((capture != null) == (fault == 0));
-                        if (capture != null) {
+                        var observation = run(); Check((observation != null) == (fault == 0));
+                        if (observation != null) {
+                            Completed = observation;
+                            var capture = observation.Capture;
                             Check(capture.CoolantCelsius == 90 && capture.Rpm == 2000.25);
                             for (int i = 0; i < 3; i++) Check(capture.DtcPayload(i)[0] == new byte[] { 67, 71, 74 }[i]);
+                            string before = observation.ToFixtureJson();
+                            var originals = new J2534ReceiveNative.Result[] { observation.DtcRead(0), observation.DtcRead(1),
+                                observation.DtcRead(2), observation.Coolant.SupportedRead, observation.Coolant.ValueRead, observation.Rpm.ValueRead };
+                            var copied = new J2534DiagnosticSweepObservation(0x7e0, capture, originals);
+                            for (int i = 0; i < 6; i++) {
+                                Check(originals[i].Status == 9 && originals[i].Messages[0].Timestamp == i + 1);
+                                originals[i].Messages[0].Data[4] = 0;
+                                originals[i].Status = 1; originals[i].Messages = null;
+                            }
+                            Check(copied.ToFixtureJson() == before && observation.ToFixtureJson() == before);
+                            for (int i = 0; i < 3; i++) {
+                                var detached = copied.DtcRead(i); detached.Messages[0].Data[4] = 0;
+                                detached.ReportedCount = 0;
+                            }
+                            Check(copied.ToFixtureJson() == before);
                         }
                     }
                     int expectedWrites = fault == 17 ? 0 : fault == 18 ? 1 : fault >= 1 && fault <= 12 ? (fault + 1) / 2 : 6;
@@ -67,7 +86,7 @@ namespace VehicleDiagnosis.Native
                 }
                 Check(library.Released == (fault == 0));
             }
-            Console.WriteLine("owned sweep checks " + checks + ", Errors: 0 (managed callbacks; no DLL)");
+            if (!quiet) Console.WriteLine("owned sweep checks " + checks + ", Errors: 0 (managed callbacks; no DLL)");
         }
         private sealed class Library : IIdentityLibrary
         {

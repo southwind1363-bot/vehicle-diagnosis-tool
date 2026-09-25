@@ -8,8 +8,14 @@ namespace VehicleDiagnosis.Native
         private static void Reject(Action action)
         { bool rejected = false; try { action(); } catch (InvalidOperationException) { rejected = true; } Check(rejected); }
         private static byte[] Dtc(byte service) { return new byte[] { (byte)(service + 64), 0, 0 }; }
-        private static void Main()
+        private static void Main(string[] args)
         {
+            if (args.Length != 0) {
+                if (args.Length != 1 || args[0] != "--fixture-output") throw new ArgumentException("fixture arguments");
+                J2534DiagnosticSweepOwnedTests.Run(true);
+                Console.Write(J2534DiagnosticSweepOwnedTests.Completed.ToFixtureJson());
+                return;
+            }
             J2534DiagnosticSweepOwnedTests.Run();
             foreach (int status in new[] { 0, 9 }) foreach (bool indicator in new[] { false, true }) {
                 var sweep = new J2534DiagnosticSweepExchange(0x7e0); sweep.Begin();
