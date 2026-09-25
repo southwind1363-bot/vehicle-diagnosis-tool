@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync, spawn } from "node:child_process";
 import vm from "node:vm";
 import { createJ2534SweepFixtureSupervisor } from "../j2534-sweep-fixture-supervisor.js";
+import { createJ2534SweepSessionSupervisor } from "../j2534-sweep-session-supervisor.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -90,4 +91,37 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   assert.equal((await cancelled({ signal: abort.signal })).reason, "fixture_cancelled");
   assert.equal((await cancelled()).reason, "fixture_already_consumed");
   console.log(arch, "bounded sweep parent: managed child success, 10 malformed results, failed exit/stderr/cancellation rejected");
+  const sessionWorker = (text, build = obd.buildDiagnosticScanSession) => createJ2534SweepSessionSupervisor({
+    requestEcu: 0x7e0, decodeLivePidResponse: obd.decodeLivePidResponse, decodeDtcResponse: obd.decodeObdDtcResponse,
+    normalizeBridgeLivePidSnapshot: obd.normalizeBridgeLivePidSnapshot, buildDiagnosticScanSession: build,
+    spawnWorker: () => spawn(process.execPath, ["-e", "process.stdout.write(process.argv[1])", text], options) });
+  for (const hasCodes of [false, true]) {
+    const payload = JSON.parse(output.stdout);
+    if (hasCodes) payload.dtc_reads.forEach((item, index) => {
+      item.read_result.Messages[0].Data[5] = 1;
+      item.read_result.Messages[0].Data[6] = index + 1;
+    });
+    const acquire = sessionWorker(JSON.stringify(payload));
+    const built = await acquire();
+    assert.equal(built.status, "completed");
+    const archive = obd.buildBridgeSessionExportPayload(built.session);
+    const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
+    assert.equal(restored.source, "j2534_development_read");
+    assert.equal(archive.vehicle_command_enabled, false);
+    assert.equal(archive.retained_raw_text, false);
+    assert.equal(restored.dtcSnapshot.dtc_readout_status, "reported");
+    assert.equal(restored.dtcSnapshot.dtcs.length, hasCodes ? 3 : 0);
+    assert.deepEqual(restored.dtcSnapshot.dtcs, built.session.dtcSnapshot.dtcs);
+    assert.deepEqual(restored.livePidSnapshot.monitorValues, built.session.livePidSnapshot.monitorValues);
+    assert.equal(restored.livePidSnapshot.monitorValues.length, 2);
+    assert.equal((await acquire()).session, null);
+  }
+  for (const build of [() => { throw new Error("private"); }, () => null, () => ({ source: "wrong" })]) {
+    const rejected = await sessionWorker(output.stdout, build)();
+    assert.equal(rejected.session, null); assert.equal(rejected.results, null);
+  }
+  const incomplete = JSON.parse(output.stdout); incomplete.dtc_reads.pop();
+  const rejected = await sessionWorker(JSON.stringify(incomplete), () => { assert.fail("must not build"); })();
+  assert.equal(rejected.session, null); assert.equal(rejected.results, null);
+  console.log(arch, "sweep session: empty/coded DTC and live values archive roundtrip; incomplete/builder failure rejected");
 }
