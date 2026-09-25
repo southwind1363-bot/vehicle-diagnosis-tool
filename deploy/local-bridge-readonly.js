@@ -10,6 +10,7 @@ import { verifyWorkstationPackage } from "./scripts/verify-workstation-package.j
 import { createJ2534DtcSelectionHandoff } from "./scripts/j2534-dtc-selection-handoff.js";
 import { createJ2534Mode01SelectionHandoff } from "./scripts/j2534-mode01-selection-handoff.js";
 import { createJ2534Mode01PairSelectionHandoff } from "./scripts/j2534-mode01-pair-selection-handoff.js";
+import { createJ2534SweepSelectionHandoff } from "./scripts/j2534-sweep-selection-handoff.js";
 
 const DEFAULT_PORT = 8765;
 const API_VERSION = "v1";
@@ -1597,6 +1598,12 @@ export function createJ2534RegisteredMode01SelectionHandoff() {
 // Separate fixed-pair metadata handoff; no spawn, DLL call or execution grant.
 export function createJ2534RegisteredMode01PairSelectionHandoff() {
   return createJ2534Mode01PairSelectionHandoff({ resolveDescriptor: resolveJ2534RegisteredDtcSelection,
+    revalidateDescriptor: resolveJ2534RegisteredDtcSelection, now: () => performance.now() });
+}
+
+// Private fixed-sweep metadata only. No public route or execution permission.
+export function createJ2534RegisteredSweepSelectionHandoff() {
+  return createJ2534SweepSelectionHandoff({ resolveDescriptor: resolveJ2534RegisteredDtcSelection,
     revalidateDescriptor: resolveJ2534RegisteredDtcSelection, now: () => performance.now() });
 }
 

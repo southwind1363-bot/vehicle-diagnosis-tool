@@ -12,9 +12,13 @@ import { createRegisteredMode01FixtureSupervisor } from "./native/mode01-registe
 import { createJ2534SelectedMode01FixtureSupervisor } from "./j2534-mode01-fixture-supervisor.js";
 import { createJ2534SelectedMode01PairFixtureSupervisor } from "./j2534-selected-mode01-pair-fixture-supervisor.js";
 import { createRegisteredMode01PairFixtureSupervisor } from "./native/mode01-pair-registered-fixture-supervisor.js";
+import { createJ2534SweepSelectionHandoff } from "./j2534-sweep-selection-handoff.js";
+import { createJ2534SelectedSweepFixtureSupervisor } from "./j2534-selected-sweep-fixture-supervisor.js";
+import { createJ2534RegisteredSweepSelectionHandoff } from "../local-bridge-readonly.js";
 
 const source = fs.readFileSync(new URL("../local-bridge-readonly.js", import.meta.url), "utf8");
 const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff", "createJ2534RegisteredMode01SelectionHandoff", "createJ2534RegisteredMode01PairSelectionHandoff"];
+names.push("createJ2534RegisteredSweepSelectionHandoff");
 const code = names.map(name => {
   const match = source.match(new RegExp(`(?:export )?function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`));
   assert.ok(match, `Missing ${name}`); return match[0].replace(/^export /, "");
@@ -28,7 +32,7 @@ function setup() {
   const state = { time: 100, calls: 0, current: { ...original, fingerprint: { ...original.fingerprint } },
     metadata: { exact_readonly_api_ready: true, execution_enabled: false, sha256: "a".repeat(64), file_size: 4096, driver_architecture: "x64" } };
   const context = vm.createContext({ j2534RegisteredDriverDescriptorSecrets: secrets, createJ2534DtcSelectionHandoff, createJ2534Mode01SelectionHandoff,
-    createJ2534Mode01PairSelectionHandoff,
+    createJ2534Mode01PairSelectionHandoff, createJ2534SweepSelectionHandoff,
     performance: { now: () => state.time },
     createJ2534RegisteredDriverDescriptor(options) {
       state.calls++; assert.equal(options.enabled, true); assert.equal(options.selectedDeviceId, original.selectedDeviceId);
@@ -38,9 +42,51 @@ function setup() {
   state.api = context.createJ2534RegisteredDtcSelectionHandoff(); state.descriptor = descriptor; state.original = original;
   state.mode01 = context.createJ2534RegisteredMode01SelectionHandoff();
   state.pair = context.createJ2534RegisteredMode01PairSelectionHandoff();
+  state.sweep = context.createJ2534RegisteredSweepSelectionHandoff();
   return state;
 }
 const request = { request_ecu: 0x7e0, service: 3 };
+const sweepIntent = { request_ecu: 0x7e0, services: [3, 7, 10], pids: [0, 5, 12] };
+assert.equal(createJ2534RegisteredSweepSelectionHandoff().prepare({}, sweepIntent), null);
+for (const [index, mutate] of [() => {}, s => s.current = null, s => s.current.descriptorSource = "test_fixture_registry",
+  s => s.current.libraryPath += ".changed", s => s.metadata.execution_enabled = true,
+  s => s.metadata.exact_readonly_api_ready = false, s => s.time += 5000,
+  ...["device", "inode", "size", "mtime_ns", "ctime_ns", "sha256"].map(k => s => s.current.fingerprint[k] = "changed")].entries()) {
+  const s = setup(), ticket = s.sweep.prepare(s.descriptor, sweepIntent);
+  mutate(s); const selected = s.sweep.consume(ticket);
+  if (index === 0) {
+    assert.deepEqual(selected.services, [3, 7, 10]); assert.deepEqual(selected.pids, [0, 5, 12]);
+    assert.equal(selected.path, s.original.libraryPath); assert.equal(s.calls, 2);
+  } else assert.equal(selected, null);
+  assert.equal(s.sweep.consume(ticket), null);
+}
+const sweepFactorySource = fs.readFileSync(new URL("./native/sweep-registered-fixture-supervisor.js", import.meta.url), "utf8");
+const sweepFactory = sweepFactorySource.match(/export function createRegisteredSweepFixtureSupervisor[^]*?\n\}/)[0].replace(/^export /, "");
+for (const scenario of ["matched", "expired", "changed", "wrong_pin", "unissued", "cancelled", "permission_changed"]) {
+  const s = setup(); let launches = 0;
+  const context = vm.createContext({ createJ2534SelectedSweepFixtureSupervisor,
+    createJ2534RegisteredSweepSelectionHandoff: () => s.sweep,
+    createDiagnosticSweepFixtureSpawn: () => args => {
+      launches++; assert.deepEqual(args, ["--generated-diagnostic-sweep"]);
+      throw new Error("synthetic spawn failure");
+    } });
+  vm.runInContext(sweepFactory, context);
+  const run = context.createRegisteredSweepFixtureSupervisor({ descriptor: scenario === "unissued" ? {} : s.descriptor,
+    pinned: { path: s.original.libraryPath, sha256: (scenario === "wrong_pin" ? "B" : "A").repeat(64),
+      size: 4096, architecture: "x64", request_ecu: 2016 }, spawnDescriptor: {},
+    handoff: { prepare() { assert.fail("Injected handoff"); } }, spawnWorker() { assert.fail("Injected spawn"); },
+    decodeDtcResponse() { assert.fail("No evidence"); }, decodeLivePidResponse() { assert.fail("No evidence"); },
+    buildDiagnosticScanSession() { assert.fail("No session"); }, normalizeBridgeLivePidSnapshot() { assert.fail("No snapshot"); } });
+  if (scenario === "expired") s.time += 5000;
+  if (scenario === "changed") s.current.fingerprint.inode++;
+  if (scenario === "permission_changed") s.metadata.execution_enabled = true;
+  const result = await run(scenario === "cancelled" ? { signal: AbortSignal.abort() } : {});
+  assert.equal(result.session, null); assert.equal(result.results, null);
+  assert.equal(launches, scenario === "matched" ? 1 : 0);
+  assert.equal((await run()).reason, "fixture_already_consumed");
+  assert.ok(!JSON.stringify(result).includes(s.original.libraryPath));
+}
+console.log("Registered sweep: synthetic resolver and composition passed; no registry/process/DLL/vehicle");
 {
   const s = setup(), ticket = s.pair.prepare(s.descriptor, { request_ecu: 0x7e7, pids: [5, 12] });
   assert.equal(s.calls, 1);

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 一巡の登録秘密resolver結合: 承認済み範囲でcreateJ2534RegisteredSweepSelectionHandoffを既存秘密store resolverへ接続し、開発専用registered fixture親を追加。公開descriptor cloneは受け付けず、再発行したpath/全fingerprint/readiness/実行無効を照合、外部からhandoff/spawn callbackを注入して置換できない構成とした。人工秘密storeで正常と12拒否、親構成7ケース（期限/改変/独立pin/未発行/中止/権限変更）を確認、既存bridge384と署名配布26等も合格。最終test表記修正後の非昇格検査はtemp作成EPERMで停止したため、承認付きで一度再実行して合格。実レジストリ成功や実DLL/VCI/実車の確認ではなく、人工storeと抽出resolverコードの検証。新規公開route/実行許可/保存形式なし、605ZIPは未更新、公開送信保留維持。次は実factoryの未発行拒否を生成fixture親で確認し、bridgeの新import依存を次版配布へ取り込む手順を確認する。
+
 2026-09-25 一巡選択結合の承認・第一段: 前記質問に対し利用者が最善案の選択を依頼し、提示した実通信無効の内部開発方針へ「続けて」。判断待ちは解消。別のopaque sweep ticketで固定services03/07/0A・pids00/05/0Cを既存identity期限/一回消費/metadata再照合に結び、独立fixture pinと一致した場合だけ固定workerへ渡す親を追加。既存single/pair ticketとは相互使用不可、配列はコピー凍結、選択情報は保存sessionへ追加しない。人工descriptorで期限切れ/時計逆行/全metadata変更/例外/別instance/未発行/要求改変を拒否し、生成DLLのx86/x64計32経路と結果保存往復に結合、起動前拒否でspawn0回を確認。実秘密store resolverとの結合は次段階で、今回の成功は実登録由来の証明ではない。実vendor DLL/VCI/実車/公開entry/保存形式/605ZIP不変、公開送信の審査拒否保留は別件として維持。
 
 2026-09-25 一巡の登録選択結合・判断待ち: HEADd5d79706まで固定生成workerの一巡・正常終了・保存復元・起動pin照合を結合済み。現sweep workerは隣接sweep.dll/compile時hashと固定ECUのみ、spawnも引数一つであり、登録秘密descriptorとの対応は確認していない。既存pair ticketはservice01/PID05・0C用でDTC03/07/0Aを含む一巡の承認情報として流用できない。次候補は独立した非実行の一巡ticketへ期限/一回消費/全metadata再照合と固定service/PID列を結び、独立fixture pinと一致した場合だけ検査workerへ渡す内部コード開発。選択情報の信頼境界に関わるため未実装で利用者判断待ちとする。提案は人工登録/固定生成DLLのみ、実vendor DLL/VCI/実車/公開entry/保存形式/依存信頼規約/605ZIPを変更しない。公開送信の審査拒否保留は別件として維持。以前のスケジューラーPAUSED更新拒否を再試行せず、設定停止済みとは扱わない。判断前は同じ検査を繰り返さない。
