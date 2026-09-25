@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 一巡選択結合の承認・第一段: 前記質問に対し利用者が最善案の選択を依頼し、提示した実通信無効の内部開発方針へ「続けて」。判断待ちは解消。別のopaque sweep ticketで固定services03/07/0A・pids00/05/0Cを既存identity期限/一回消費/metadata再照合に結び、独立fixture pinと一致した場合だけ固定workerへ渡す親を追加。既存single/pair ticketとは相互使用不可、配列はコピー凍結、選択情報は保存sessionへ追加しない。人工descriptorで期限切れ/時計逆行/全metadata変更/例外/別instance/未発行/要求改変を拒否し、生成DLLのx86/x64計32経路と結果保存往復に結合、起動前拒否でspawn0回を確認。実秘密store resolverとの結合は次段階で、今回の成功は実登録由来の証明ではない。実vendor DLL/VCI/実車/公開entry/保存形式/605ZIP不変、公開送信の審査拒否保留は別件として維持。
+
 2026-09-25 一巡の登録選択結合・判断待ち: HEADd5d79706まで固定生成workerの一巡・正常終了・保存復元・起動pin照合を結合済み。現sweep workerは隣接sweep.dll/compile時hashと固定ECUのみ、spawnも引数一つであり、登録秘密descriptorとの対応は確認していない。既存pair ticketはservice01/PID05・0C用でDTC03/07/0Aを含む一巡の承認情報として流用できない。次候補は独立した非実行の一巡ticketへ期限/一回消費/全metadata再照合と固定service/PID列を結び、独立fixture pinと一致した場合だけ検査workerへ渡す内部コード開発。選択情報の信頼境界に関わるため未実装で利用者判断待ちとする。提案は人工登録/固定生成DLLのみ、実vendor DLL/VCI/実車/公開entry/保存形式/依存信頼規約/605ZIPを変更しない。公開送信の審査拒否保留は別件として維持。以前のスケジューラーPAUSED更新拒否を再試行せず、設定停止済みとは扱わない。判断前は同じ検査を繰り返さない。
 
 2026-09-25 固定一巡workerの起動前照合: 既存fixture専用spawnのfile/directory同一性・SHA256・config拒否・限定環境・一回消費を再利用し、sweep-native一時folderのsweep-worker.exe/sweep.dllと固定引数一つだけに限定した別入口を追加。一巡検査親をこの入口へ結合。生成後のexe/DLL改変、引数変更、誤hash/architecture、再使用を拒否し、x86/x64一巡32ケースと既存pair native全ケース・保存往復が合格。compile時DLL pinと親のworker pinを維持し、任意path/ECU/PIDや登録driverへは拡張しない。hash再照合はOS隔離や照合後race防止、メーカー信頼証明ではない。実vendor DLL/VCI/実車/別PCは未検証・未使用、公開entry/605ZIP/保存形式・公開送信保留は不変。一般登録driver選択との一巡結合は依然未接続。

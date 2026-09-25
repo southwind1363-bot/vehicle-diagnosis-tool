@@ -7,8 +7,10 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { buildJ2534NativeFixture } from "./build-j2534-native-fixture.js";
-import { createJ2534SweepSessionSupervisor } from "../j2534-sweep-session-supervisor.js";
+import "../validate-j2534-sweep-selection-handoff.js";
 import { createDiagnosticSweepFixtureSpawn } from "./mode01-fixture-spawn.js";
+import { createJ2534SweepSelectionHandoff } from "../j2534-sweep-selection-handoff.js";
+import { createJ2534SelectedSweepFixtureSupervisor } from "../j2534-selected-sweep-fixture-supervisor.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -71,10 +73,32 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       assert.throws(() => createDiagnosticSweepFixtureSpawn({ ...descriptor, architecture: "arm64" }), /descriptor_invalid/);
     }
     const fixedSpawn = createDiagnosticSweepFixtureSpawn(descriptor);
-    const parent = createJ2534SweepSessionSupervisor({ requestEcu: 0x7e0,
+    const secret = Object.freeze({});
+    const selected = { selected_device_id: "j2534-0123456789abcdef", path: path.join(root, "sweep.dll"),
+      sha256: digest, size: dll.length, architecture: arch };
+    let now = 100, current = selected, launches = 0;
+    const handoff = createJ2534SweepSelectionHandoff({ now: () => now,
+      resolveDescriptor: d => d === secret ? current : null,
+      revalidateDescriptor: d => d === secret ? current : null });
+    const pinned = { path: selected.path, sha256: digest, size: dll.length, architecture: arch, request_ecu: 0x7e0 };
+    const settings = { handoff, descriptor: secret, pinned,
       decodeDtcResponse: obd.decodeObdDtcResponse, decodeLivePidResponse: obd.decodeLivePidResponse,
       buildDiagnosticScanSession: obd.buildDiagnosticScanSession, normalizeBridgeLivePidSnapshot: obd.normalizeBridgeLivePidSnapshot,
-      spawnWorker: () => fixedSpawn(command) });
+      spawnWorker: args => { launches++; return fixedSpawn(args); } };
+    if (!suffix) {
+      for (const change of [() => { now += 5000; }, () => { now--; },
+        () => { current = { ...selected, size: selected.size + 1 }; },
+        () => { current = { ...selected, sha256: "F".repeat(64) }; }]) {
+        const refused = createJ2534SelectedSweepFixtureSupervisor(settings);
+        change();
+        assert.equal((await refused()).session, null);
+        assert.equal((await refused()).reason, "fixture_already_consumed");
+        assert.equal(launches, 0); now = 100; current = selected;
+      }
+      assert.equal((await createJ2534SelectedSweepFixtureSupervisor({ ...settings, descriptor: {} })()).session, null);
+      assert.equal(launches, 0);
+    }
+    const parent = createJ2534SelectedSweepFixtureSupervisor(settings);
     const result = await parent();
     assert.equal(result.completion.worker_exited, true);
     assert.equal(result.status, suffix ? "unavailable" : "completed");
@@ -92,6 +116,7 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       assert.equal(restored.vehicleCommandEnabled, false);
     }
     assert.equal((await parent()).session, null);
+    assert.equal(launches, 1);
     assert.throws(() => fixedSpawn(command), /spawn_consumed/);
     console.log(arch, suffix || "success", "generated DLL sweep -> bounded worker -> session/archive passed (no vendor/VCI/car)");
   }
