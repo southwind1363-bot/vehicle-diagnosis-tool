@@ -84,6 +84,7 @@ function fixture() {
   for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-dtc-selection-handoff.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
   fs.copyFileSync(new URL("./j2534-mode01-selection-handoff.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-mode01-selection-handoff.js"));
   fs.copyFileSync(new URL("./j2534-mode01-pair-selection-handoff.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-mode01-pair-selection-handoff.js"));
+  fs.copyFileSync(new URL("./j2534-sweep-selection-handoff.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-sweep-selection-handoff.js"));
   fs.copyFileSync(new URL("./j2534-native-quarantine.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-native-quarantine.js"));
   fs.copyFileSync(new URL("./j2534-registered-driver-native-preflight.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-registered-driver-native-preflight.js"));
   for (const name of ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534GlobalMutexLease.cs", "J2534RegisteredDriverPreflightWorker.cs"])
@@ -346,6 +347,11 @@ try {
   const preflightTarget = path.join(process.env.SystemRoot || process.env.WINDIR || "C:\\Windows", "System32", "version.dll");
   const preflightBytes = fs.readFileSync(preflightTarget);
   const packagedRunner = await import(`${pathToFileURL(path.join(result.directory, "scripts", "j2534-registered-driver-native-preflight.js")).href}?fixture=${Date.now()}`);
+  const packagedSweep = await import(pathToFileURL(path.join(result.directory, "scripts", "j2534-sweep-selection-handoff.js")));
+  const unavailableSweep = packagedSweep.createJ2534SweepSelectionHandoff({ now: () => 0,
+    resolveDescriptor: () => null, revalidateDescriptor: () => null });
+  check(unavailableSweep.prepare({}, { request_ecu: 2016, services: [3, 7, 10], pids: [0, 5, 12] }) === null,
+    "Packaged sweep metadata dependency did not load or failed to reject an unissued selection");
   const packagedRequest = {
     selected_device_id: "j2534-package-fixture-x64", descriptor_source: "live_windows_registry",
     private_library_path: preflightTarget, expected_sha256: createHash("sha256").update(preflightBytes).digest("hex"),
@@ -424,7 +430,8 @@ try {
     }
   }
   for (const omitted of ["style.css", "local-bridge-readonly.js", "manifest.webmanifest", "service-worker.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js",
-    "scripts/j2534-mode01-selection-handoff.js", "scripts/j2534-mode01-pair-selection-handoff.js"]) {
+    "scripts/j2534-mode01-selection-handoff.js", "scripts/j2534-mode01-pair-selection-handoff.js",
+    "scripts/j2534-sweep-selection-handoff.js"]) {
     const incomplete = JSON.parse(originalManifest);
     incomplete.files = incomplete.files.filter((entry) => entry.path !== omitted);
     const infoBytes = Buffer.from(JSON.stringify({ ...JSON.parse(originalInfo), fileCount: incomplete.files.length + 1 }));

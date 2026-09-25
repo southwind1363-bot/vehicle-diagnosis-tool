@@ -13,6 +13,7 @@ const RUNTIME_FILES = ["start-workstation.cmd", "verify-workstation.cmd", "inspe
 // Required by the bridge's non-executing private metadata API, not a native worker.
 RUNTIME_FILES.push("scripts/j2534-mode01-selection-handoff.js");
 RUNTIME_FILES.push("scripts/j2534-mode01-pair-selection-handoff.js");
+RUNTIME_FILES.push("scripts/j2534-sweep-selection-handoff.js");
 
 function exists(entry) {
   try { fs.lstatSync(entry); return true; } catch (error) { if (error.code === "ENOENT") return false; throw error; }
