@@ -11,6 +11,7 @@ import "../validate-j2534-sweep-selection-handoff.js";
 import { createDiagnosticSweepFixtureSpawn } from "./mode01-fixture-spawn.js";
 import { createJ2534SweepSelectionHandoff } from "../j2534-sweep-selection-handoff.js";
 import { createJ2534SelectedSweepFixtureSupervisor } from "../j2534-selected-sweep-fixture-supervisor.js";
+import { createRegisteredSweepFixtureSupervisor } from "./sweep-registered-fixture-supervisor.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -86,6 +87,25 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       buildDiagnosticScanSession: obd.buildDiagnosticScanSession, normalizeBridgeLivePidSnapshot: obd.normalizeBridgeLivePidSnapshot,
       spawnWorker: args => { launches++; return fixedSpawn(args); } };
     if (!suffix) {
+      // Use the actual imported registered factory, not an extracted resolver or
+      // injected secret store. A look-alike descriptor must never reach spawn.
+      for (const unissued of [{}, { ...selected }, JSON.parse(JSON.stringify(selected))]) {
+        let injectedCalls = 0;
+        const refused = createRegisteredSweepFixtureSupervisor({ ...settings,
+          descriptor: unissued, spawnDescriptor: descriptor,
+          handoff: { prepare() { injectedCalls++; return {}; }, consume() { injectedCalls++; return selected; } },
+          spawnWorker() { injectedCalls++; throw new Error("injection_must_not_run"); } });
+        const rejected = await refused();
+        assert.equal(rejected.status, "unavailable");
+        assert.equal(rejected.session, null);
+        assert.equal(rejected.results, null);
+        assert.equal(rejected.completion.worker_started, false);
+        assert.equal(rejected.completion.parsed_result, null);
+        assert.equal(injectedCalls, 0);
+        assert.equal((await refused()).reason, "fixture_already_consumed");
+        assert.ok(!JSON.stringify(rejected).includes(root));
+      }
+      console.log(arch, "actual registered factory rejects unissued descriptors before worker start");
       for (const change of [() => { now += 5000; }, () => { now--; },
         () => { current = { ...selected, size: selected.size + 1 }; },
         () => { current = { ...selected, sha256: "F".repeat(64) }; }]) {
