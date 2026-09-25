@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 606別展開のブラウザー保存復元: 未確認だった606配布に対し、新規人工Chromeプロファイル・空registryで初回案内/ロック/誤パスワード拒否/全offline cacheを確認。両serverを停止しChromeを終了・再起動した後、人工P0300事例のオフライン検索とJSON backup内容一致、保存内容不変、配布file整合性不変が合格。390pxの復元画面も確認。agent-browser CLIが存在しないため既存Playwright検証器と同梱runtimeへ切替、最初のtemp作成EPERM後は許可付き実行一回で合格。出力はTemp/packaged-browser-ddV6Pj。再起動後のCDP cache一覧取得はNo frame診断、任意icon失敗1件があるが、offline再表示/検索/exportの実操作は成功。実パスワード成功/OS再起動/別PC/実VCI/実車は未確認。ソース機能/606ZIP/安全境界変更なし、公開送信保留維持。
+
 2026-09-25 一巡選択と起動pinの統一・承認済み修正: 前記確認に利用者「承認」。固定sweep spawnが実際に検査した同一fileのpath/hash/size/architectureと固定ECUから読み取り専用pinを生成し、関数とpinを凍結。registered factoryは外部pinとの全項目一致をhandoff生成前に確認し、その後は生成したpinだけを使用する。不一致はsweep_fixture_build_mismatchで拒否。x86/x64生成fixtureでpath/hash/size/architecture/ECU/余分fieldの6種拒否と不変性、未発行選択拒否、既存32一巡・保存往復が合格。人工秘密resolver/構成検査と共有spawnの既存pair native検査も合格。判断待ちは解消、承認済み内部開発を継続可能。実registry成功/実vendor DLL/VCI/実車/別PCは未検証・未使用。新しい実行権限/公開entry/保存形式/606ZIPは変更なし、公開送信の審査拒否保留は維持。
 
 2026-09-25 一巡選択と起動pinの相互照合・判断待ち: HEADb98b293bを確認。registered sweep factoryは選択用pinnedとspawnDescriptorを別々に下流へ渡し、両者のpath/hash/architecture/size一致をfactory自身では検査していない。抽出した実factoryと非実行stubでAの選択pinとBの起動descriptor（hash/architectureも相違）がそのまま受け渡されることを確認した。実process/実registry/実DLLは使っておらず、実登録成功や実際の誤起動を再現したとはしない。次の修正案は、検証済みの固定生成build情報から選択比較用pinを導出して一本化し、不一致を選択消費・起動前に拒否すること。選択対象と実行対象の信頼境界に関わるため未修正で判断待ち。開発fixtureのみのコード修正を提案し、実vendor DLL/VCI/実車/公開entry/保存形式/606ZIPを変更しない。公開pushとscheduler更新の既存審査拒否を再試行せず、scheduler停止済みとは扱わない。判断前は同じ拒否検査を反復しない。
