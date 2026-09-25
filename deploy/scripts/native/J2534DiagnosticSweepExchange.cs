@@ -83,6 +83,24 @@ namespace VehicleDiagnosis.Native
             if (first == null || second == null) { Abort(); return null; }
             state = 5; return first;
         }
+        internal byte[] AcceptSupportedRead(J2534ReceiveNative.Result read)
+        {
+            uint source;
+            byte[] payload = coolant.ExtractResponse(read, out source);
+            return AcceptSupportedResponse(source, payload);
+        }
+        internal byte[] AcceptCoolantRead(J2534ReceiveNative.Result read)
+        {
+            uint source;
+            byte[] payload = coolant.ExtractResponse(read, out source);
+            return AcceptCoolantResponse(source, payload);
+        }
+        internal Capture AcceptRpmRead(J2534ReceiveNative.Result read)
+        {
+            uint source;
+            byte[] payload = rpm.ExtractResponse(read, out source);
+            return AcceptRpmResponse(source, payload);
+        }
         internal byte[] AcceptCoolantResponse(uint source, byte[] payload)
         {
             Require(5); state = 7;

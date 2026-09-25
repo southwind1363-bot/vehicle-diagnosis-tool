@@ -10,6 +10,7 @@ namespace VehicleDiagnosis.Native
         private static byte[] Dtc(byte service) { return new byte[] { (byte)(service + 64), 0, 0 }; }
         private static void Main()
         {
+            J2534DiagnosticSweepOwnedTests.Run();
             foreach (int status in new[] { 0, 9 }) foreach (bool indicator in new[] { false, true }) {
                 var sweep = new J2534DiagnosticSweepExchange(0x7e0); sweep.Begin();
                 var response = new J2534ReceiveNative.Message { ProtocolId = 6,

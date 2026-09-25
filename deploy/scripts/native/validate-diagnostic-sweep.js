@@ -8,6 +8,7 @@ import { spawnSync } from "node:child_process";
 assert.equal(process.platform, "win32");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "diagnostic-sweep-"));
 const sources = ["J2534DiagnosticSweepExchange.cs", "J2534DiagnosticSweepExchangeTests.cs",
+  "J2534DiagnosticSweepOwned.cs", "J2534DiagnosticSweepOwnedTests.cs",
   "J2534Mode01Exchange.cs", "J2534Mode01Observation.cs", "J2534ReceiveNative.cs", "J2534IdentityNative.cs",
   "J2534ReadRequestNative.cs"];
 for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) {

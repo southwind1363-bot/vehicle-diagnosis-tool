@@ -73,7 +73,7 @@ namespace VehicleDiagnosis.Native
             return AcceptValueResponse(source, payload);
         }
 
-        private byte[] ExtractResponse(J2534ReceiveNative.Result result, out uint source)
+        internal byte[] ExtractResponse(J2534ReceiveNative.Result result, out uint source)
         {
             source = 0;
             if (result == null || (result.Status != 0 && result.Status != 9)
