@@ -7,6 +7,8 @@ const SCENARIOS = new Set([
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang",
   "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent", "owned-dtc-data-last-ecu",
   "owned-dtc-mode01",
+  "owned-dtc-mode01-sweep", "owned-dtc-mode01-sweep-stop-failure",
+  "owned-dtc-mode01-sweep-disconnect-failure", "owned-dtc-mode01-sweep-close-failure",
   "owned-dtc-mode01-pair", "owned-dtc-mode01-pair-stop-failure",
   "owned-dtc-mode01-pair-disconnect-failure", "owned-dtc-mode01-pair-close-failure",
   "owned-dtc-mode01-rpm", "owned-dtc-mode01-rpm-zero", "owned-dtc-mode01-unsupported",
@@ -372,6 +374,27 @@ function mode01Code(architecture, original, scenario) {
         choose(6, wrap(6, receive([65, 5, 130]), 4), wrap(8, receive([65, 12, 31, 65]), 4))),
       stop: cleanup("stop", 9, support.stop, 2), disconnect: cleanup("disconnect", 10, original.disconnect, 1),
       close: cleanup("close", 11, original.close, 1)
+    };
+  }
+  if (scenario.startsWith("owned-dtc-mode01-sweep")) {
+    const requests = [requestCode(architecture, 3, 0x7e0), requestCode(architecture, 7, 0x7e0),
+      requestCode(architecture, 10, 0x7e0), support, requestCode(architecture, 1, 0x7e0, 5),
+      requestCode(architecture, 1, 0x7e0, 12)];
+    const responses = [[67, 1, 1], [71, 1, 2], [74, 1, 3], [65, 0, 8, 16, 0, 0],
+      [65, 5, 130], [65, 12, 31, 65]];
+    const stages = (offset, bodies) => bodies.reduceRight((next, body, index) => {
+      const state = offset + index * 2;
+      const current = wrap(state, body, 4);
+      return next ? choose(state, current, next) : current;
+    }, null);
+    return {
+      open: wrap(0, original.open, 2), connect: wrap(1, original.connect, 5),
+      start: wrap(2, support.start, 6),
+      write: stages(3, requests.map(request => request.write)),
+      read: stages(4, responses.map(receive)),
+      stop: cleanup("stop", 15, support.stop, 2),
+      disconnect: cleanup("disconnect", 16, original.disconnect, 1),
+      close: cleanup("close", 17, original.close, 1)
     };
   }
   return {

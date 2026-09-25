@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 固定生成DLLの一巡結合: 既存PE生成器に固定03/07/0A/00/05/0C順序oracleを追加し、compile時hash/sizeと隣接sweep.dllのみを許す開発fixture workerを追加。既存execution lease・保持preflight・owner・cleanupを経由し、親正常終了後の既存session/export/importまでx86/x64で接続。各architectureで正常一巡（3種DTC、90℃、2000.25rpm）とstop/disconnect/close失敗時のsession/results不採用、引数拒否、fixture preflight flagなし拒否、再使用拒否を確認。共有生成器の既存pair native回帰も実施。通常native検査入口へ追加（全体検査は今回未実行）。実vendor DLL/VCI/実車/別PCは使用せず、生成DLLでの独立ABI検証のみ。一般登録driver選択とは未接続、各段native失敗ケースの一巡結合は残る。公開entry/保存形式/605ZIPと公開送信保留を維持。
+
 2026-09-25 固定一巡の既存session・保存復元結合: 開発専用session supervisorを追加。親の正常終了と全5結果の変換成功後だけ、既存stored/pending/permanentDtcSnapshot入力と二値livePidSnapshot・PID00対応情報を既存buildDiagnosticScanSessionへ渡す。欠落/変換失敗/構築例外/再使用はsession:null・results:nullで部分結果を返さない。x86/x64各672＋154と既存親拒否検査に加え、人工ゼロ件および3種の非ゼロDTCと90℃/2000.25rpmを既存export/importで往復し、開発由来表示情報・送信無効・raw非保持・DTC/live値の一致を確認。保存形式/公開entry/605ZIPは変更なし。実生成DLLのABI一巡、実vendor DLL/VCI/実車/別PCは未検証。次は同承認内の固定生成DLL一巡結合。公開送信は以前の審査拒否による保留を維持し、今回もpushの再試行・迂回なし。
 
 2026-09-25 固定一巡の親正常終了と変換結合: 開発fixture専用supervisorを追加し、既存bounded親の正常終了/未中止/エラーなしを確認した後だけDTC03/07/0Aと05/0Cを既存converterへ渡す。同一要求ECU・固定service/PID順・cleanup・同一PID00receiptを再照合し全5結果かresults:nullのみ、再使用/事前中止も一回消費。x86/x64各672＋154の人工callback子exe出力から取得ゼロDTC3種/90℃/2000.25rpmを確認し、10不正JSON、非zero終了/stderr/事前中止を拒否。実fixture DLLのABI一巡ではなく管理callback子processの結合検証。実DLL/VCI/実車/公開経路/保存形式/605ZIP不変、共通session保存と固定生成DLL一巡は次段階。公開送信保留は維持。
