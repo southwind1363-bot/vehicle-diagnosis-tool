@@ -5,9 +5,10 @@ import crypto from "node:crypto";
 import vm from "node:vm";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { spawnSync, spawn } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { buildJ2534NativeFixture } from "./build-j2534-native-fixture.js";
 import { createJ2534SweepSessionSupervisor } from "../j2534-sweep-session-supervisor.js";
+import { createDiagnosticSweepFixtureSpawn } from "./mode01-fixture-spawn.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -47,10 +48,33 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       const refused = spawnSync(exe, invalid, options);
       assert.equal(refused.status, 2); assert.equal(refused.stdout, "");
     }
+    const descriptor = { root, architecture: arch, fixture_sha256: digest.toLowerCase(),
+      worker_sha256: crypto.createHash("sha256").update(fs.readFileSync(exe)).digest("hex") };
+    const command = ["--generated-diagnostic-sweep"];
+    if (!suffix) {
+      for (const invalid of [[], [...command, "extra"], ["--generated-mode01-pair"]]) {
+        const refused = createDiagnosticSweepFixtureSpawn(descriptor);
+        assert.throws(() => refused(invalid), /spawn_rejected/);
+        assert.throws(() => refused(command), /spawn_consumed/);
+      }
+      for (const target of [exe, path.join(root, "sweep.dll")]) {
+        const refused = createDiagnosticSweepFixtureSpawn(descriptor);
+        const original = fs.readFileSync(target), changed = Buffer.from(original);
+        changed[changed.length - 1] ^= 1;
+        try {
+          fs.writeFileSync(target, changed);
+          assert.throws(() => refused(command), /spawn_rejected/);
+        } finally { fs.writeFileSync(target, original); }
+        assert.throws(() => refused(command), /spawn_consumed/);
+      }
+      assert.throws(() => createDiagnosticSweepFixtureSpawn({ ...descriptor, worker_sha256: "0".repeat(64) }), /descriptor_invalid/);
+      assert.throws(() => createDiagnosticSweepFixtureSpawn({ ...descriptor, architecture: "arm64" }), /descriptor_invalid/);
+    }
+    const fixedSpawn = createDiagnosticSweepFixtureSpawn(descriptor);
     const parent = createJ2534SweepSessionSupervisor({ requestEcu: 0x7e0,
       decodeDtcResponse: obd.decodeObdDtcResponse, decodeLivePidResponse: obd.decodeLivePidResponse,
       buildDiagnosticScanSession: obd.buildDiagnosticScanSession, normalizeBridgeLivePidSnapshot: obd.normalizeBridgeLivePidSnapshot,
-      spawnWorker: () => spawn(exe, ["--generated-diagnostic-sweep"], { ...options, stdio: ["ignore", "pipe", "pipe"] }) });
+      spawnWorker: () => fixedSpawn(command) });
     const result = await parent();
     assert.equal(result.completion.worker_exited, true);
     assert.equal(result.status, suffix ? "unavailable" : "completed");
@@ -68,6 +92,7 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       assert.equal(restored.vehicleCommandEnabled, false);
     }
     assert.equal((await parent()).session, null);
+    assert.throws(() => fixedSpawn(command), /spawn_consumed/);
     console.log(arch, suffix || "success", "generated DLL sweep -> bounded worker -> session/archive passed (no vendor/VCI/car)");
   }
 }

@@ -41,18 +41,25 @@ export function createMode01PairFixtureSpawn({ root, worker_sha256, fixture_sha2
   return createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture }, "pair-worker.exe", "--selected-generated-mode01-pair", ["5", "12"]);
 }
 
-function createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture }, workerName, command, pids) {
+// Fixed sweep only: no selected path, ECU, service or PID arguments are accepted.
+export function createDiagnosticSweepFixtureSpawn({ root, worker_sha256, fixture_sha256, architecture }) {
+  return createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture },
+    "sweep-worker.exe", "--generated-diagnostic-sweep", [], "sweep.dll", /^sweep-native-[A-Za-z0-9]+$/, true);
+}
+
+function createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture }, workerName, command, pids,
+  fixtureName = "mode01.dll", rootPattern = /^mode01-native-[A-Za-z0-9]+$/, fixedOnly = false) {
   try {
     if (process.platform !== "win32" || typeof root !== "string" || !["x86", "x64"].includes(architecture)
       || ![worker_sha256, fixture_sha256].every(v => typeof v === "string" && /^[a-f0-9]{64}$/.test(v))
-      || path.dirname(root) !== fs.realpathSync(os.tmpdir()) || !/^mode01-native-[A-Za-z0-9]+$/.test(path.basename(root))
+      || path.dirname(root) !== fs.realpathSync(os.tmpdir()) || !rootPattern.test(path.basename(root))
       || fs.realpathSync(root) !== root) throw 0;
     const directory = fs.lstatSync(root);
     if (!directory.isDirectory() || directory.isSymbolicLink()) throw 0;
-    const worker = path.join(root, workerName), fixture = path.join(root, "mode01.dll");
+    const worker = path.join(root, workerName), fixture = path.join(root, fixtureName);
     const workerStat = inspect(worker, worker_sha256), fixtureStat = inspect(fixture, fixture_sha256);
     noConfig(worker);
-    const expected = Object.freeze([command, fixture, fixture_sha256.toUpperCase(),
+    const expected = Object.freeze(fixedOnly ? [command] : [command, fixture, fixture_sha256.toUpperCase(),
       String(fixtureStat.size), architecture, "2016", ...pids]);
     const windows = process.env.SystemRoot || "C:\\Windows";
     let consumed = false;

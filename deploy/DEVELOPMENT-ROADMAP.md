@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 固定一巡workerの起動前照合: 既存fixture専用spawnのfile/directory同一性・SHA256・config拒否・限定環境・一回消費を再利用し、sweep-native一時folderのsweep-worker.exe/sweep.dllと固定引数一つだけに限定した別入口を追加。一巡検査親をこの入口へ結合。生成後のexe/DLL改変、引数変更、誤hash/architecture、再使用を拒否し、x86/x64一巡32ケースと既存pair native全ケース・保存往復が合格。compile時DLL pinと親のworker pinを維持し、任意path/ECU/PIDや登録driverへは拡張しない。hash再照合はOS隔離や照合後race防止、メーカー信頼証明ではない。実vendor DLL/VCI/実車/別PCは未検証・未使用、公開entry/605ZIP/保存形式・公開送信保留は不変。一般登録driver選択との一巡結合は依然未接続。
+
 2026-09-25 一巡途中のnative失敗検証: 前回未検証だった固定生成DLLの03/07/0A/00/05/0C各write/readへ固定error7の12ケースを追加。失敗後oracle状態を無効値へ置き、後続呼出しを正常段として受け付けない。x86/x64で各12ケースがbounded親まで終了し、parsed_result/session/resultsがすべてnullになることを確認。正常一巡と3種cleanup失敗も含む計32ケース合格。これは新しい通信許可や模擬接続の完成宣言ではなく、承認済み一巡実装の独立ABI異常経路の検証。実vendor DLL/VCI/実車は未使用。一般登録選択は未接続、固定worker起動前のexe/DLL pin照合の専用spawn結合が次の残作業。公開entry/保存形式/605ZIPは不変、公開送信保留は継続。
 
 2026-09-25 固定生成DLLの一巡結合: 既存PE生成器に固定03/07/0A/00/05/0C順序oracleを追加し、compile時hash/sizeと隣接sweep.dllのみを許す開発fixture workerを追加。既存execution lease・保持preflight・owner・cleanupを経由し、親正常終了後の既存session/export/importまでx86/x64で接続。各architectureで正常一巡（3種DTC、90℃、2000.25rpm）とstop/disconnect/close失敗時のsession/results不採用、引数拒否、fixture preflight flagなし拒否、再使用拒否を確認。共有生成器の既存pair native回帰も実施。通常native検査入口へ追加（全体検査は今回未実行）。実vendor DLL/VCI/実車/別PCは使用せず、生成DLLでの独立ABI検証のみ。一般登録driver選択とは未接続、各段native失敗ケースの一巡結合は残る。公開entry/保存形式/605ZIPと公開送信保留を維持。
