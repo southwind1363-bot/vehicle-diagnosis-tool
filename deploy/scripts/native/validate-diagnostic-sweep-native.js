@@ -15,7 +15,9 @@ vm.runInContext(fs.readFileSync(new URL("../../obd-readonly.js", import.meta.url
 const obd = context.window.ObdReadOnly;
 obd.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL("../../data/obd-monitor-definitions.json", import.meta.url), "utf8")));
 for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) {
-  for (const suffix of ["", "-stop-failure", "-disconnect-failure", "-close-failure"]) {
+  for (const suffix of ["", "-stop-failure", "-disconnect-failure", "-close-failure",
+    ...["03", "07", "0a", "00", "05", "0c"].flatMap(stage =>
+      ["write", "read"].map(operation => `-${stage}-${operation}-failure`))]) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "sweep-native-"));
     const dll = buildJ2534NativeFixture(arch, `owned-dtc-mode01-sweep${suffix}`);
     fs.writeFileSync(path.join(root, "sweep.dll"), dll, { flag: "wx" });
@@ -52,7 +54,10 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     const result = await parent();
     assert.equal(result.completion.worker_exited, true);
     assert.equal(result.status, suffix ? "unavailable" : "completed");
-    if (suffix) { assert.equal(result.session, null); assert.equal(result.results, null); }
+    if (suffix) {
+      assert.equal(result.session, null); assert.equal(result.results, null);
+      assert.equal(result.completion.parsed_result, null);
+    }
     else {
       assert.deepEqual(result.results.live.map(item => item.evidence.value), [90, 2000.25]);
       const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(result.session)));

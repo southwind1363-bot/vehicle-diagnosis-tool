@@ -9,6 +9,8 @@ const SCENARIOS = new Set([
   "owned-dtc-mode01",
   "owned-dtc-mode01-sweep", "owned-dtc-mode01-sweep-stop-failure",
   "owned-dtc-mode01-sweep-disconnect-failure", "owned-dtc-mode01-sweep-close-failure",
+  ...["03", "07", "0a", "00", "05", "0c"].flatMap(stage =>
+    ["write", "read"].map(operation => `owned-dtc-mode01-sweep-${stage}-${operation}-failure`)),
   "owned-dtc-mode01-pair", "owned-dtc-mode01-pair-stop-failure",
   "owned-dtc-mode01-pair-disconnect-failure", "owned-dtc-mode01-pair-close-failure",
   "owned-dtc-mode01-rpm", "owned-dtc-mode01-rpm-zero", "owned-dtc-mode01-unsupported",
@@ -384,7 +386,14 @@ function mode01Code(architecture, original, scenario) {
       [65, 5, 130], [65, 12, 31, 65]];
     const stages = (offset, bodies) => bodies.reduceRight((next, body, index) => {
       const state = offset + index * 2;
-      const current = wrap(state, body, 4);
+      const stage = ["03", "07", "0a", "00", "05", "0c"][index];
+      const operation = offset === 3 ? "write" : "read";
+      const failHere = scenario.endsWith(`-${stage}-${operation}-failure`);
+      // Fixed error 7, then poison the oracle state. Any later call cannot
+      // proceed as if the failed stage had succeeded. No arbitrary bytecode input.
+      const failure = Buffer.from([...(x86 ? [0xc7, 0x02] : [0x41, 0xc7, 0x02]),
+        ...int32(99), 0xb8, 7, 0, 0, 0, ...(x86 ? [0xc2, 16, 0] : [0xc3])]);
+      const current = wrap(state, failHere ? failure : body, 4);
       return next ? choose(state, current, next) : current;
     }, null);
     return {
