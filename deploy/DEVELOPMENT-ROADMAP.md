@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 選択情報のnative照合・承認済み第一段: 直前の判断待ちに利用者「承認」。既存固定worker入口を変更せず、追加compileflag限定のSelectedSweepFixtureWorkerを実装。受渡しpath/hash/size/architecture/ECU/固定service列/PID列を隣接生成DLLのcompile pinと厳密一致確認してから既存workerへ進む。任意DLLのロード許可ではなく、既存preflight/execution lease/cleanupをそのまま保持。x86/x64で12種の引数拒否、署名代替なしの拒否、同size DLL改変拒否、正常観測の既存固定workerとの一致を確認。既存32経路のbounded親・保存往復検査も実施。これは生成fixture限定で、登録秘密resolverから新入口への親側argv結合は次の未完了作業。実vendor DLL/VCI/実車/別PCは未使用・未確認、本体/606ZIP/保存形式/公開実行権限は不変。判断待ちは解消し、この承認範囲の親子結合を継続する。公開送信とscheduler更新の既存審査拒否は再試行しない。
+
 2026-09-25 次の読取実装・判断待ち: HEADf70481c1を確認。606の配布/保存復元と固定生成一巡のpin統一は確認済み。現J2534DiagnosticSweepFixtureWorkerは引数1個、隣接sweep.dll、compile時digest/size、ECU7E0固定で、登録descriptorをnativeへ渡す一般一巡workerではない。次は登録選択のpath/hash/size/architectureと固定一巡要求をnative側でも照合する別の開発専用受渡しを実装する段階。fixture専用入口の固定制限を緩めず、公開入口から呼べない構成・生成DLL検証のみを提案するが、選択情報の信頼境界追加のため利用者判断まで着手しない。実vendor DLLロード/VCI/実車/公開有効化/依存信頼規約/保存形式変更は提案に含めない。機器購入は不要。同じfixture試験を反復して一般接続完成と扱わない。公開送信とscheduler更新の既存審査拒否は別途維持し再試行しない。
 
 2026-09-25 配布import欠落の再発防止: PC配布buildのstaging検証へ、bridgeとruntimeの静的ESM import/re-exportを再帰的に構文解析する検査を追加。アプリコードは評価せず、未同梱file/範囲外参照/構文不正で配布確定前に拒否し、private pathや子process出力をエラーへ含めない。既存の外部npm依存検査は維持。人工fileで多段参照/循環/欠落/re-export/範囲外/query/構文不正とコメント・文字列の誤検出なしを確認、通常package494項目合格。既存606フォルダーの静的importも非実行で合格。動的importとbare packageは本検査の対象外で、起動・ブラウザー検査を代替しない。NodeのVM module構文解析用flagをbuild時子processだけで使用、車両やDLLは実行しない。本体/606ZIP/保存形式/公開権限を変更せず、公開送信保留は維持。

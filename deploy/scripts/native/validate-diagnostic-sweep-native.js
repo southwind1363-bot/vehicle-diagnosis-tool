@@ -51,6 +51,43 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       const refused = spawnSync(exe, invalid, options);
       assert.equal(refused.status, 2); assert.equal(refused.stdout, "");
     }
+    if (!suffix) {
+      const selectedExe = path.join(root, "selected-sweep-worker.exe");
+      const selectedArgs = args.map(arg => arg === `/out:${exe}` ? `/out:${selectedExe}` :
+        arg.startsWith("/define:") ? `${arg};J2534_SELECTED_SWEEP_FIXTURE` : arg);
+      selectedArgs.push("/main:J2534SelectedSweepFixtureWorker",
+        fileURLToPath(new URL("J2534SelectedSweepFixtureWorker.cs", import.meta.url)));
+      const command = ["--selected-generated-diagnostic-sweep", path.join(root, "sweep.dll"),
+        digest, String(dll.length), arch, "2016", "03,07,0A", "00,05,0C"];
+      const noOverride = spawnSync(compiler, selectedArgs.map(arg => arg.replace(";PREFLIGHT_FIXTURE_TESTS", "")), options);
+      assert.equal(noOverride.status, 0, noOverride.stdout + noOverride.stderr);
+      const unsigned = spawnSync(selectedExe, command, options);
+      assert.equal(unsigned.status, 1); assert.equal(unsigned.stdout, "");
+      const compiled = spawnSync(compiler, selectedArgs, options);
+      assert.equal(compiled.status, 0, compiled.stdout + compiled.stderr);
+      const invalidCommands = [[], command.slice(0, -1), [...command, "extra"],
+        ["--generated-diagnostic-sweep"],
+        ...["--other", path.join(root, "other.dll"), "0".repeat(64), String(dll.length + 1),
+          arch === "x86" ? "x64" : "x86", "2017", "03,07", "00,0C,05"].map((value, index) =>
+          command.map((original, field) => field === index ? value : original))];
+      for (const invalid of invalidCommands) {
+        const refused = spawnSync(selectedExe, invalid, options);
+        assert.equal(refused.status, 2); assert.equal(refused.stdout, "");
+      }
+      const valid = spawnSync(selectedExe, command, options);
+      assert.equal(valid.status, 0, valid.stderr);
+      const fixed = spawnSync(exe, ["--generated-diagnostic-sweep"], options);
+      assert.equal(fixed.status, 0);
+      assert.deepEqual(JSON.parse(valid.stdout), JSON.parse(fixed.stdout));
+      const original = fs.readFileSync(path.join(root, "sweep.dll")), changed = Buffer.from(original);
+      changed[changed.length - 1] ^= 1;
+      try {
+        fs.writeFileSync(path.join(root, "sweep.dll"), changed);
+        const refused = spawnSync(selectedExe, command, options);
+        assert.equal(refused.status, 1); assert.equal(refused.stdout, "");
+      } finally { fs.writeFileSync(path.join(root, "sweep.dll"), original); }
+      console.log(arch, "selected native fixture metadata checks, unsigned/changed DLL refusal and fixed observation equality passed");
+    }
     const descriptor = { root, architecture: arch, fixture_sha256: digest.toLowerCase(),
       worker_sha256: crypto.createHash("sha256").update(fs.readFileSync(exe)).digest("hex") };
     const command = ["--generated-diagnostic-sweep"];
