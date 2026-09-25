@@ -55,6 +55,41 @@ export function validatePackagedDependencies(directory) {
   }
 }
 
+// Parse local static ESM imports without evaluating application/driver code.
+// Dynamic imports and bare package imports are not covered by this check.
+export function validatePackagedLocalImports(directory, entries = ["local-bridge-readonly.js",
+  ...RUNTIME_FILES.filter(file => file.endsWith(".js"))]) {
+  const source = `
+    const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+    const root = fs.realpathSync(process.argv[1]);
+    const pending = JSON.parse(process.argv[2]).map(file => path.resolve(root, file));
+    const visited = new Set();
+    while (pending.length) {
+      const file = pending.pop(), relative = path.relative(root, file);
+      if (!relative || relative === '..' || relative.startsWith('..' + path.sep)
+        || path.isAbsolute(relative) || fs.realpathSync(file) !== file) throw Error();
+      if (visited.has(file)) continue;
+      visited.add(file);
+      const stat = fs.lstatSync(file);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024) throw Error();
+      const module = new vm.SourceTextModule(fs.readFileSync(file, 'utf8'));
+      for (const specifier of module.dependencySpecifiers) {
+        if (specifier.startsWith('./') || specifier.startsWith('../')) {
+          if (specifier.includes('?') || specifier.includes('#')) throw Error();
+          pending.push(path.resolve(path.dirname(file), specifier));
+        }
+      }
+    }
+  `;
+  try {
+    execFileSync(process.execPath, ["--experimental-vm-modules", "-e", source,
+      fs.realpathSync(directory), JSON.stringify(entries)], {
+      windowsHide: true, shell: false, timeout: 10000, maxBuffer: 65536, stdio: "pipe",
+      env: { SystemRoot: process.env.SystemRoot || "C:\\Windows" }
+    });
+  } catch { throw new Error("workstation_package_local_import_invalid"); }
+}
+
 function hashPackagedFile(absolute) {
   const descriptor = fs.openSync(absolute, "r");
   try {
@@ -212,6 +247,7 @@ export function packageWorkstation(options = {}) {
     ].join("\n"));
     validateWorkstationAssets(staging);
     validatePackagedDependencies(staging);
+    validatePackagedLocalImports(staging);
     fs.appendFileSync(path.join(staging, "README.txt"), "\n移行後はverify-workstation.cmdを開いてファイル内容を検査できます。追加の導入や通信はありません。\n不一致・欠落時は元のパッケージを一式移し直してください。自動修復はしません。\n同梱一覧との一致検査であり、署名・真正性・実車適合の証明ではありません。一覧外の追加ファイルは検査しません。\n");
     fs.appendFileSync(path.join(staging, "README.txt"), "通常のstart-workstation.cmd起動とnpm startでは、検査成功後にサーバーを起動します。\n検査一覧やpackage-info.jsonを削除せず、フォルダー一式を保管してください。\n");
     fs.appendFileSync(path.join(staging, "README.txt"), "\nJ2534接続準備はinspect-workstation-j2534.cmdを開いて確認してください。登録ドライバーとDLLの静的検査結果を日本語で表示し、選択した番号は専用workerで非実行検査できます。\nVCI・車両を接続する必要はありません。DLLロード、PassThruOpen、実機通信、診断データ保存、外部送信は行いません。worker終了未確認時だけ再試行防止の隔離状態を端末内に保存し、自動解除しません。検査合格でも実車適合や接続成功の証明ではありません。匿名化JSONは inspect-workstation-j2534.cmd --evidence-json --no-pause で取得でき、DLLパス、名称、device ID、nonceを含みません。取得済みJSONは type 証拠.json | inspect-workstation-j2534.cmd --validate-evidence-stdin --no-pause で32KB上限と意味整合を検証できます。production identityとECU/DID scopeの非送信request準備証拠は inspect-workstation-j2534.cmd --prepare-uds-request 番号 要求ECU 応答ECU DID --no-pause で取得できます。取得済み準備証拠は type 証拠.json | inspect-workstation-j2534.cmd --validate-uds-preparation-stdin --no-pause で32KB上限と安全フラグを検証できます。\n");
@@ -269,7 +305,7 @@ export function formatWorkstationPackageError(error) {
   }
   const internalReasons = new Set([
     "asset_invalid", "cleanup_invalid", "dependency_depth", "dependency_invalid", "dependency_version_mismatch",
-    "external_dependency", "file_invalid", "link_not_allowed", "lock_mismatch", "native_compiler_unsupported",
+    "external_dependency", "file_invalid", "link_not_allowed", "local_import_invalid", "lock_mismatch", "native_compiler_unsupported",
     "output_invalid", "path_invalid", "private_file", "registry_not_allowed"
   ].map(reason => `workstation_package_${reason}`));
   if (internalReasons.has(error?.message)) return error.message;
