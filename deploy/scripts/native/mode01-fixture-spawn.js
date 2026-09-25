@@ -47,8 +47,14 @@ export function createDiagnosticSweepFixtureSpawn({ root, worker_sha256, fixture
     "sweep-worker.exe", "--generated-diagnostic-sweep", [], "sweep.dll", /^sweep-native-[A-Za-z0-9]+$/, true);
 }
 
+export function createSelectedDiagnosticSweepFixtureSpawn({ root, worker_sha256, fixture_sha256, architecture }) {
+  return createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture },
+    "selected-sweep-worker.exe", "--selected-generated-diagnostic-sweep", ["03,07,0A", "00,05,0C"],
+    "sweep.dll", /^sweep-native-[A-Za-z0-9]+$/, false, true);
+}
+
 function createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture }, workerName, command, pids,
-  fixtureName = "mode01.dll", rootPattern = /^mode01-native-[A-Za-z0-9]+$/, fixedOnly = false) {
+  fixtureName = "mode01.dll", rootPattern = /^mode01-native-[A-Za-z0-9]+$/, fixedOnly = false, exposePin = fixedOnly) {
   try {
     if (process.platform !== "win32" || typeof root !== "string" || !["x86", "x64"].includes(architecture)
       || ![worker_sha256, fixture_sha256].every(v => typeof v === "string" && /^[a-f0-9]{64}$/.test(v))
@@ -77,7 +83,7 @@ function createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture },
       return spawn(worker, expected, { cwd: root, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
         env: { SystemRoot: windows, WINDIR: windows, TEMP: root, TMP: root } });
     };
-    if (fixedOnly) {
+    if (exposePin) {
       // Derive selection identity from the very same inspected build used by
       // this closure. Callers cannot substitute another DLL's selection pins.
       Object.defineProperty(spawnWorker, "pinned", { value: Object.freeze({

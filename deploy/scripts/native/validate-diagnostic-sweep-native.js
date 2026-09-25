@@ -12,6 +12,8 @@ import { createDiagnosticSweepFixtureSpawn } from "./mode01-fixture-spawn.js";
 import { createJ2534SweepSelectionHandoff } from "../j2534-sweep-selection-handoff.js";
 import { createJ2534SelectedSweepFixtureSupervisor } from "../j2534-selected-sweep-fixture-supervisor.js";
 import { createRegisteredSweepFixtureSupervisor } from "./sweep-registered-fixture-supervisor.js";
+import { createSelectedNativeSweepFixtureSupervisor, createRegisteredSelectedNativeSweepFixtureSupervisor } from "./selected-sweep-fixture-supervisor.js";
+import { createSelectedDiagnosticSweepFixtureSpawn } from "./mode01-fixture-spawn.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -51,12 +53,16 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       const refused = spawnSync(exe, invalid, options);
       assert.equal(refused.status, 2); assert.equal(refused.stdout, "");
     }
+    const selectedExe = path.join(root, "selected-sweep-worker.exe");
+    const selectedArgs = args.map(arg => arg === `/out:${exe}` ? `/out:${selectedExe}` :
+      arg.startsWith("/define:") ? `${arg};J2534_SELECTED_SWEEP_FIXTURE` : arg);
+    selectedArgs.push("/main:J2534SelectedSweepFixtureWorker",
+      fileURLToPath(new URL("J2534SelectedSweepFixtureWorker.cs", import.meta.url)));
+    if (suffix) {
+      const compiled = spawnSync(compiler, selectedArgs, options);
+      assert.equal(compiled.status, 0, compiled.stdout + compiled.stderr);
+    }
     if (!suffix) {
-      const selectedExe = path.join(root, "selected-sweep-worker.exe");
-      const selectedArgs = args.map(arg => arg === `/out:${exe}` ? `/out:${selectedExe}` :
-        arg.startsWith("/define:") ? `${arg};J2534_SELECTED_SWEEP_FIXTURE` : arg);
-      selectedArgs.push("/main:J2534SelectedSweepFixtureWorker",
-        fileURLToPath(new URL("J2534SelectedSweepFixtureWorker.cs", import.meta.url)));
       const command = ["--selected-generated-diagnostic-sweep", path.join(root, "sweep.dll"),
         digest, String(dll.length), arch, "2016", "03,07,0A", "00,05,0C"];
       const noOverride = spawnSync(compiler, selectedArgs.map(arg => arg.replace(";PREFLIGHT_FIXTURE_TESTS", "")), options);
@@ -123,6 +129,50 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       decodeDtcResponse: obd.decodeObdDtcResponse, decodeLivePidResponse: obd.decodeLivePidResponse,
       buildDiagnosticScanSession: obd.buildDiagnosticScanSession, normalizeBridgeLivePidSnapshot: obd.normalizeBridgeLivePidSnapshot,
       spawnWorker: args => { launches++; return fixedSpawn(args); } };
+    const selectedDescriptor = { ...descriptor,
+      worker_sha256: crypto.createHash("sha256").update(fs.readFileSync(selectedExe)).digest("hex") };
+    const nativeSettings = { ...settings, spawnDescriptor: selectedDescriptor };
+    if (!suffix) {
+      const selectedCommand = ["--selected-generated-diagnostic-sweep", selected.path, digest,
+        String(dll.length), arch, "2016", "03,07,0A", "00,05,0C"];
+      for (let index = 0; index < selectedCommand.length; index++) {
+        const launcher = createSelectedDiagnosticSweepFixtureSpawn(selectedDescriptor);
+        assert.deepEqual(launcher.pinned, pinned);
+        assert.ok(Object.isFrozen(launcher.pinned));
+        const altered = [...selectedCommand]; altered[index] += "x";
+        assert.throws(() => launcher(altered), /spawn_rejected/);
+        assert.throws(() => launcher(selectedCommand), /spawn_consumed/);
+      }
+      for (const change of [() => { now += 5000; }, () => { current = { ...selected, size: dll.length + 1 }; }]) {
+        const parent = createSelectedNativeSweepFixtureSupervisor(nativeSettings);
+        change();
+        const rejected = await parent();
+        assert.equal(rejected.session, null); assert.equal(rejected.completion.worker_started, false);
+        assert.equal((await parent()).reason, "fixture_already_consumed");
+        now = 100; current = selected;
+      }
+      let injected = 0;
+      const unissued = createRegisteredSelectedNativeSweepFixtureSupervisor({ ...nativeSettings,
+        descriptor: { ...selected }, handoff: { prepare() { injected++; } }, spawnWorker() { injected++; } });
+      const rejected = await unissued();
+      assert.equal(rejected.session, null); assert.equal(rejected.completion.worker_started, false);
+      assert.equal(injected, 0);
+    }
+    const selectedParent = createSelectedNativeSweepFixtureSupervisor(nativeSettings);
+    const selectedResult = await selectedParent();
+    assert.equal(selectedResult.completion.worker_exited, true);
+    assert.equal(selectedResult.status, suffix ? "unavailable" : "completed");
+    if (suffix) {
+      assert.equal(selectedResult.session, null); assert.equal(selectedResult.results, null);
+    } else {
+      assert.deepEqual(selectedResult.results.live.map(item => item.evidence.value), [90, 2000.25]);
+      const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(selectedResult.session)));
+      assert.deepEqual(restored.dtcSnapshot.dtcs, selectedResult.session.dtcSnapshot.dtcs);
+      assert.deepEqual(restored.livePidSnapshot.monitorValues, selectedResult.session.livePidSnapshot.monitorValues);
+      assert.equal(restored.vehicleCommandEnabled, false);
+    }
+    assert.equal((await selectedParent()).reason, "fixture_already_consumed");
+    console.log(arch, suffix || "success", "selected handoff -> native metadata entry -> bounded session/archive passed");
     if (!suffix) {
       // Use the actual imported registered factory, not an extracted resolver or
       // injected secret store. A look-alike descriptor must never reach spawn.
