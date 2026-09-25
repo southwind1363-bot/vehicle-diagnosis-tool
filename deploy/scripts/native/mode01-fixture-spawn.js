@@ -63,7 +63,7 @@ function createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture },
       String(fixtureStat.size), architecture, "2016", ...pids]);
     const windows = process.env.SystemRoot || "C:\\Windows";
     let consumed = false;
-    return args => {
+    const spawnWorker = args => {
       if (consumed) throw new Error("mode01_fixture_spawn_consumed");
       consumed = true;
       try {
@@ -77,5 +77,15 @@ function createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture },
       return spawn(worker, expected, { cwd: root, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
         env: { SystemRoot: windows, WINDIR: windows, TEMP: root, TMP: root } });
     };
+    if (fixedOnly) {
+      // Derive selection identity from the very same inspected build used by
+      // this closure. Callers cannot substitute another DLL's selection pins.
+      Object.defineProperty(spawnWorker, "pinned", { value: Object.freeze({
+        path: fixture, sha256: fixture_sha256.toUpperCase(), size: fixtureStat.size,
+        architecture, request_ecu: 0x7e0
+      }) });
+      Object.freeze(spawnWorker);
+    }
+    return spawnWorker;
   } catch { throw new Error("mode01_fixture_descriptor_invalid"); }
 }

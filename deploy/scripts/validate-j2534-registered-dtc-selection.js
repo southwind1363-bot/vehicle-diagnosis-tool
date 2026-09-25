@@ -66,17 +66,24 @@ for (const scenario of ["matched", "expired", "changed", "wrong_pin", "unissued"
   const s = setup(); let launches = 0;
   const context = vm.createContext({ createJ2534SelectedSweepFixtureSupervisor,
     createJ2534RegisteredSweepSelectionHandoff: () => s.sweep,
-    createDiagnosticSweepFixtureSpawn: () => args => {
+    createDiagnosticSweepFixtureSpawn: () => Object.assign(args => {
       launches++; assert.deepEqual(args, ["--generated-diagnostic-sweep"]);
       throw new Error("synthetic spawn failure");
-    } });
+    }, { pinned: { path: s.original.libraryPath, sha256: "A".repeat(64),
+      size: 4096, architecture: "x64", request_ecu: 2016 } }) });
   vm.runInContext(sweepFactory, context);
-  const run = context.createRegisteredSweepFixtureSupervisor({ descriptor: scenario === "unissued" ? {} : s.descriptor,
+  const options = { descriptor: scenario === "unissued" ? {} : s.descriptor,
     pinned: { path: s.original.libraryPath, sha256: (scenario === "wrong_pin" ? "B" : "A").repeat(64),
       size: 4096, architecture: "x64", request_ecu: 2016 }, spawnDescriptor: {},
     handoff: { prepare() { assert.fail("Injected handoff"); } }, spawnWorker() { assert.fail("Injected spawn"); },
     decodeDtcResponse() { assert.fail("No evidence"); }, decodeLivePidResponse() { assert.fail("No evidence"); },
-    buildDiagnosticScanSession() { assert.fail("No session"); }, normalizeBridgeLivePidSnapshot() { assert.fail("No snapshot"); } });
+    buildDiagnosticScanSession() { assert.fail("No session"); }, normalizeBridgeLivePidSnapshot() { assert.fail("No snapshot"); } };
+  if (scenario === "wrong_pin") {
+    assert.throws(() => context.createRegisteredSweepFixtureSupervisor(options), /sweep_fixture_build_mismatch/);
+    assert.equal(launches, 0);
+    continue;
+  }
+  const run = context.createRegisteredSweepFixtureSupervisor(options);
   if (scenario === "expired") s.time += 5000;
   if (scenario === "changed") s.current.fingerprint.inode++;
   if (scenario === "permission_changed") s.metadata.execution_enabled = true;

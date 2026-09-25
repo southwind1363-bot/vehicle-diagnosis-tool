@@ -106,6 +106,16 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
         assert.ok(!JSON.stringify(rejected).includes(root));
       }
       console.log(arch, "actual registered factory rejects unissued descriptors before worker start");
+      assert.deepEqual(fixedSpawn.pinned, pinned);
+      assert.ok(Object.isFrozen(fixedSpawn) && Object.isFrozen(fixedSpawn.pinned));
+      assert.throws(() => { fixedSpawn.pinned.size++; }, TypeError);
+      for (const changed of [{ path: path.join(root, "other.dll") }, { sha256: "0".repeat(64) },
+        { size: dll.length + 1 }, { architecture: arch === "x86" ? "x64" : "x86" },
+        { request_ecu: 0x7e1 }, { extra: true }]) {
+        assert.throws(() => createRegisteredSweepFixtureSupervisor({ ...settings,
+          pinned: { ...pinned, ...changed }, spawnDescriptor: descriptor }), /sweep_fixture_build_mismatch/);
+      }
+      assert.equal(launches, 0);
       for (const change of [() => { now += 5000; }, () => { now--; },
         () => { current = { ...selected, size: selected.size + 1 }; },
         () => { current = { ...selected, sha256: "F".repeat(64) }; }]) {

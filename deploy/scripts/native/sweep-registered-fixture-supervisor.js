@@ -7,8 +7,12 @@ import { createDiagnosticSweepFixtureSpawn } from "./mode01-fixture-spawn.js";
 export function createRegisteredSweepFixtureSupervisor({ descriptor, pinned, spawnDescriptor,
   decodeDtcResponse, decodeLivePidResponse, buildDiagnosticScanSession, normalizeBridgeLivePidSnapshot }) {
   const spawnWorker = createDiagnosticSweepFixtureSpawn(spawnDescriptor);
+  const buildPin = spawnWorker.pinned;
+  if (!pinned || Array.isArray(pinned) || Object.keys(pinned).length !== Object.keys(buildPin).length
+    || !Object.keys(buildPin).every(key => Object.hasOwn(pinned, key) && pinned[key] === buildPin[key]))
+    throw new Error("sweep_fixture_build_mismatch");
   return createJ2534SelectedSweepFixtureSupervisor({
-    handoff: createJ2534RegisteredSweepSelectionHandoff(), descriptor, pinned, spawnWorker,
+    handoff: createJ2534RegisteredSweepSelectionHandoff(), descriptor, pinned: buildPin, spawnWorker,
     decodeDtcResponse, decodeLivePidResponse, buildDiagnosticScanSession, normalizeBridgeLivePidSnapshot
   });
 }
