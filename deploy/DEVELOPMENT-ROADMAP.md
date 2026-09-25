@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-25 一巡の登録選択結合・判断待ち: HEADd5d79706まで固定生成workerの一巡・正常終了・保存復元・起動pin照合を結合済み。現sweep workerは隣接sweep.dll/compile時hashと固定ECUのみ、spawnも引数一つであり、登録秘密descriptorとの対応は確認していない。既存pair ticketはservice01/PID05・0C用でDTC03/07/0Aを含む一巡の承認情報として流用できない。次候補は独立した非実行の一巡ticketへ期限/一回消費/全metadata再照合と固定service/PID列を結び、独立fixture pinと一致した場合だけ検査workerへ渡す内部コード開発。選択情報の信頼境界に関わるため未実装で利用者判断待ちとする。提案は人工登録/固定生成DLLのみ、実vendor DLL/VCI/実車/公開entry/保存形式/依存信頼規約/605ZIPを変更しない。公開送信の審査拒否保留は別件として維持。以前のスケジューラーPAUSED更新拒否を再試行せず、設定停止済みとは扱わない。判断前は同じ検査を繰り返さない。
+
 2026-09-25 固定一巡workerの起動前照合: 既存fixture専用spawnのfile/directory同一性・SHA256・config拒否・限定環境・一回消費を再利用し、sweep-native一時folderのsweep-worker.exe/sweep.dllと固定引数一つだけに限定した別入口を追加。一巡検査親をこの入口へ結合。生成後のexe/DLL改変、引数変更、誤hash/architecture、再使用を拒否し、x86/x64一巡32ケースと既存pair native全ケース・保存往復が合格。compile時DLL pinと親のworker pinを維持し、任意path/ECU/PIDや登録driverへは拡張しない。hash再照合はOS隔離や照合後race防止、メーカー信頼証明ではない。実vendor DLL/VCI/実車/別PCは未検証・未使用、公開entry/605ZIP/保存形式・公開送信保留は不変。一般登録driver選択との一巡結合は依然未接続。
 
 2026-09-25 一巡途中のnative失敗検証: 前回未検証だった固定生成DLLの03/07/0A/00/05/0C各write/readへ固定error7の12ケースを追加。失敗後oracle状態を無効値へ置き、後続呼出しを正常段として受け付けない。x86/x64で各12ケースがbounded親まで終了し、parsed_result/session/resultsがすべてnullになることを確認。正常一巡と3種cleanup失敗も含む計32ケース合格。これは新しい通信許可や模擬接続の完成宣言ではなく、承認済み一巡実装の独立ABI異常経路の検証。実vendor DLL/VCI/実車は未使用。一般登録選択は未接続、固定worker起動前のexe/DLL pin照合の専用spawn結合が次の残作業。公開entry/保存形式/605ZIPは不変、公開送信保留は継続。
