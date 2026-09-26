@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-27 公開送信の承認: このチャットで公開送信保留を説明した直後、利用者が「承認」。既存公開GitHub southwind1363-bot/vehicle-diagnosis-tool のmainへの未送信deploy変更の送信を再開する。送信前のremote mainは5df15065、local c8057971まで41コミット、変更はdeploy内48ファイルで競合なし。実車実行権限やscheduler設定の変更承認へは拡張しない。送信と公開HTTPの成否は実行結果で別途確認する。
+
 2026-09-27 アーカイブから再開・一般一巡の非実行検査受渡し: 旧チャット末尾の利用者「承認」（2026-09-26）を確認。直後はCodex認証401で処理開始前に失敗しており、下記一般選択の内部開発の判断待ちは解消。独立した開発専用createSweepSelectionReviewを追加し、固定service/PID一巡ticketから同一inventoryの配布物/署名観測へ選択path/hash/size/architectureを結合。opaque ticketは一回消費、全体5秒期限、検査後にも秘密descriptorを再照合し、変更/期限切れ/時計逆行/例外時は観測を破棄する。返却はpath/hash/device IDを含まない観測のみで、catalog空や署名Validでもpublisher/dependency/executionはfalse。人工非実行ファイルによる新規5件と既存folder review7件、既存sweep handoff検査が合格。固定native fixture入口は変更せず、本部品は登録factory/native worker/公開入口/配布へ未接続。実vendor DLL/VCI/実車/別PCの検証ではない。本体/606ZIP/保存形式不変。次はこの観測と選択の結合を既存秘密resolverの開発経路へ接続し、一般native workerの実行許可と混同せず進める。既存の公開送信/scheduler変更に対する審査拒否保留は維持。
 
 2026-09-26 一般選択の一巡worker・判断待ち: HEAD94b77e47と作業状態を再確認。選択metadataの親子照合・終了・保存復元は生成fixtureで結合済みだが、SelectedSweepFixtureWorkerは依然として隣接sweep.dll/compile時hash・size/ECU7E0に一致した場合のみ固定workerを呼ぶ。一般登録driverを受けるworkerではない。次候補はfixture入口の制限を維持したまま、独立した開発専用一巡selectionと実行前証拠の受渡しを設計・実装すること。固定compile pinから一般選択へ移る信頼境界変更のため利用者判断まで未着手。提案範囲は非実行metadataと生成DLLの検査のみで、実vendor DLL/VCI/実車/公開実行・メーカー許可登録・依存DLL許可規約・保存形式は変更しない。同一試験の反復なし、公開送信とscheduler変更の審査拒否保留は維持し、scheduler停止済みとは扱わない。
