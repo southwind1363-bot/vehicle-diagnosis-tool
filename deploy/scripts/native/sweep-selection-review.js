@@ -1,5 +1,6 @@
 import { createJ2534SweepSelectionHandoff } from "../j2534-sweep-selection-handoff.js";
 import { createVendorFolderReview } from "./vendor-package-folder-review.js";
+import { convertSupervisedSignatureResult } from "./native-signature-result.js";
 
 const denied = reason => Object.freeze({ status: "unverified", reason,
   execution_enabled: false, publisher_verified: false, dependency_closure_verified: false });
@@ -24,6 +25,35 @@ export function createSweepSelectionReviewFromHandoff({ handoff, now, ttlMs = 50
   const review = createVendorFolderReview(catalog);
   const tickets = new WeakMap();
   const ttl = ttlMs;
+  function inspect(ticket, root, metadata, signatureInput, supervised) {
+    try {
+      const record = ticket && typeof ticket === "object" ? tickets.get(ticket) : null;
+      if (!record) return denied("sweep_review_ticket_unavailable");
+      tickets.delete(ticket); // Failure also consumes the outer capability.
+      const startedAt = now();
+      if (!Number.isFinite(startedAt) || startedAt < record.issuedAt || startedAt - record.issuedAt >= ttl)
+        return denied("sweep_review_selection_unavailable");
+      const { path, sha256, size, architecture } = record.selection;
+      const converted = supervised ? convertSupervisedSignatureResult(signatureInput, sha256) : null;
+      // Reject unconfirmed/failed workers before inspecting any folder. Never
+      // fall back to the untrusted parsed report or a second execution attempt.
+      if (supervised && converted.signature_report === null)
+        return Object.freeze({ ...denied("sweep_review_signature_unavailable"),
+          signature_completion_reason: converted.reason });
+      const signatureReport = supervised ? converted.signature_report : signatureInput;
+      const observed = review.inspect(root, metadata, signatureReport, { path, sha256, size, architecture });
+      const current = consume(record.inner);
+      const finishedAt = now();
+      if (!sameSelection(record.selection, current) || !Number.isFinite(finishedAt)
+        || finishedAt < startedAt || finishedAt - record.issuedAt >= ttl)
+        return denied("sweep_review_selection_unavailable");
+      if (observed.selected_entry_matches !== true) return denied("sweep_review_inventory_unavailable");
+      // Observation only: do not return private identity, path/hash or requests.
+      return Object.freeze({ ...observed, selection_bound: true,
+        ...(supervised ? { signature_completion_reason: converted.reason } : {}),
+        execution_enabled: false, publisher_verified: false, dependency_closure_verified: false });
+    } catch { return denied("sweep_review_unavailable"); }
+  }
   return Object.freeze({
     prepare(descriptor, request) {
       try {
@@ -39,28 +69,9 @@ export function createSweepSelectionReviewFromHandoff({ handoff, now, ttlMs = 50
         return ticket;
       } catch { return null; }
     },
-    inspect(ticket, root, metadata, signatureReport) {
-      try {
-        const record = ticket && typeof ticket === "object" ? tickets.get(ticket) : null;
-        if (!record) return denied("sweep_review_ticket_unavailable");
-        tickets.delete(ticket); // Failure also consumes the outer capability.
-        const startedAt = now();
-        if (!Number.isFinite(startedAt) || startedAt < record.issuedAt || startedAt - record.issuedAt >= ttl)
-          return denied("sweep_review_selection_unavailable");
-        const { path, sha256, size, architecture } = record.selection;
-        const observed = review.inspect(root, metadata, signatureReport, { path, sha256, size, architecture });
-        // Recheck the private descriptor after inventory/signature observation.
-        const current = consume(record.inner);
-        const finishedAt = now();
-        if (!sameSelection(record.selection, current) || !Number.isFinite(finishedAt)
-          || finishedAt < startedAt || finishedAt - record.issuedAt >= ttl)
-          return denied("sweep_review_selection_unavailable");
-        if (observed.selected_entry_matches !== true) return denied("sweep_review_inventory_unavailable");
-        // This is an observation, never preflight permission or a native input.
-        // The private path/hash/device ID and request are not returned.
-        return Object.freeze({ ...observed, selection_bound: true,
-          execution_enabled: false, publisher_verified: false, dependency_closure_verified: false });
-      } catch { return denied("sweep_review_unavailable"); }
-    }
+    inspect: (ticket, root, metadata, report) => inspect(ticket, root, metadata, report, false),
+    // Trusted bounded parent's in-memory completion only, not public/imported JSON.
+    inspectSupervisedCompletion: (ticket, root, metadata, completion) =>
+      inspect(ticket, root, metadata, completion, true)
   });
 }

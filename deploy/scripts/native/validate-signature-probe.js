@@ -10,6 +10,7 @@ import { convertNativeSignatureResult } from "./native-signature-result.js";
 import { createVendorFolderReview } from "./vendor-package-folder-review.js";
 import { createDtcSelectedPackageReview } from "./dtc-selected-package-review.js";
 import { createJ2534DtcSelectionHandoff } from "../j2534-dtc-selection-handoff.js";
+import { createSweepSelectionReview } from "./sweep-selection-review.js";
 
 assert.equal(process.platform, "win32");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "signature-probe-"));
@@ -83,6 +84,25 @@ try {
     assert.equal(supervisedReview.entry_signature.signature_status, "NotSigned");
     assert.equal(supervisedReview.signature_completion_reason, "observation_only");
     assert.equal(supervisedReview.execution_status, "blocked"); checks += 3;
+    // Issue the sweep ticket before the actual generated probe runs, then bind
+    // its confirmed completion to that same file and revalidated selection.
+    const sweep = createSweepSelectionReview({ resolveDescriptor: resolve, revalidateDescriptor: resolve,
+      now: () => performance.now() });
+    const sweepTicket = sweep.prepare(privateDescriptor, { request_ecu: 0x7e0, services: [3, 7, 10], pids: [0, 5, 12] });
+    const sweepCompletion = await createSignatureFixtureSupervisor(descriptor)();
+    const sweepMetadata = { vendor: "Synthetic", version: "test-1", architecture: platform,
+      source_url: "https://example.invalid/unsigned.zip", entry: path.basename(fixture) };
+    const sweepResult = sweep.inspectSupervisedCompletion(sweepTicket, root, sweepMetadata, sweepCompletion);
+    assert.equal(sweepResult.selection_bound, true);
+    assert.equal(sweepResult.signature_completion_reason, "observation_only");
+    assert.equal(sweepResult.entry_signature.signature_status, "NotSigned");
+    assert.equal(sweepResult.entry_signature.observation_accepted, true);
+    assert.equal(sweepResult.execution_enabled, false);
+    assert.equal(sweepResult.publisher_verified, false);
+    assert.equal(sweepResult.dependency_closure_verified, false);
+    assert.ok(!JSON.stringify(sweepResult).includes(root));
+    assert.equal(sweep.inspectSupervisedCompletion(sweepTicket, root, sweepMetadata, sweepCompletion).reason,
+      "sweep_review_ticket_unavailable"); checks += 9;
     const changed = createSignatureFixtureSupervisor(descriptor);
     const original = fs.readFileSync(probe);
     try {
