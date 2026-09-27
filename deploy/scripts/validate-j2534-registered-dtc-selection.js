@@ -17,6 +17,7 @@ import { createJ2534SelectedSweepFixtureSupervisor } from "./j2534-selected-swee
 import { createJ2534RegisteredSweepSelectionHandoff } from "../local-bridge-readonly.js";
 import { createRegisteredSweepPackageReview } from "./native/sweep-registered-package-review.js";
 import { createSweepSelectionReviewFromHandoff } from "./native/sweep-selection-review.js";
+import { createSweepSignatureReviewOperation } from "./native/sweep-signature-review-operation.js";
 
 const source = fs.readFileSync(new URL("../local-bridge-readonly.js", import.meta.url), "utf8");
 const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff", "createJ2534RegisteredMode01SelectionHandoff", "createJ2534RegisteredMode01PairSelectionHandoff"];
@@ -341,7 +342,42 @@ if (process.platform === "win32") {
     }
     assert.equal(sweepReview.inspect(ticket, root, metadata).reason, "sweep_review_ticket_unavailable");
   }
+  const parentSource = fs.readFileSync(new URL("./native/registered-sweep-signature-fixture-review.js", import.meta.url), "utf8");
+  const parentFactory = parentSource.match(/export function createRegisteredSweepSignatureFixtureReview[^]*?\n\}/)[0].replace(/^export /, "");
+  for (const scenario of ["matched", "path", "sha256", "size", "architecture", "unissued", "expired", "changed_after_probe"]) {
+    s.time = 100; s.current.fingerprint.sha256 = hash; s.metadata.execution_enabled = false;
+    fs.writeFileSync(file, "abc"); let starts = 0;
+    const pin = { path: file, sha256: hash, size: 3, architecture: "x64" };
+    if (["path", "sha256", "architecture"].includes(scenario)) pin[scenario] = "different";
+    if (scenario === "size") pin.size = 4;
+    const parentContext = vm.createContext({ createJ2534RegisteredSweepSelectionHandoff: () => s.sweep,
+      createSweepSelectionReviewFromHandoff, createSweepSignatureReviewOperation,
+      performance: { now: () => s.time }, createSweepSignatureFixtureSource: () => ({ selection: pin, root, metadata,
+        async observe() {
+          starts++;
+          if (scenario === "expired") s.time += 5000;
+          if (scenario === "changed_after_probe") s.current.fingerprint.sha256 = "C".repeat(64);
+          return { execution_status: "worker_completed", worker_started: true, worker_exited: true,
+            termination_requested: false, termination_signal_sent: false, errors: [], parsed_result: {
+              reason: "observation_only", signature_report: syntheticValid, execution_enabled: false,
+              publisher_verified: false, dependency_closure_verified: false } };
+        } }) });
+    vm.runInContext(parentFactory, parentContext);
+    const run = parentContext.createRegisteredSweepSignatureFixtureReview({ signatureDescriptor: {},
+      descriptor: scenario === "unissued" ? {} : s.descriptor,
+      observe() { assert.fail("Injected observer"); }, handoff: { prepare() { assert.fail("Injected handoff"); } } });
+    const result = await run();
+    assert.equal(result.execution_enabled, false);
+    assert.equal(result.publisher_verified, false);
+    assert.equal(result.dependency_closure_verified, false);
+    assert.ok(!JSON.stringify(result).includes(root));
+    if (scenario === "matched") assert.equal(result.selection_bound, true);
+    else assert.equal(Object.hasOwn(result, "selection_bound"), false);
+    assert.equal(starts, ["matched", "expired", "changed_after_probe"].includes(scenario) ? 1 : 0);
+    assert.equal((await run()).reason, "sweep_signature_already_attempted");
+  }
   fs.unlinkSync(file); fs.rmdirSync(root);
+  console.log("Registered sweep signature parent: eight synthetic scenarios, independent pins and callback isolation passed");
   console.log("Registered sweep package composition: seven synthetic scenarios passed; observation never permits execution");
 } else console.log("Registered package filesystem integration: skipped (requires Windows paths)");
 console.log(`Registered DTC selection resolver: ${checks} checks / extracted bridge code, synthetic registry/store only / no DLL or vehicle I/O`);

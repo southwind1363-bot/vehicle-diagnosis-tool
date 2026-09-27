@@ -12,6 +12,7 @@ import { createDtcSelectedPackageReview } from "./dtc-selected-package-review.js
 import { createJ2534DtcSelectionHandoff } from "../j2534-dtc-selection-handoff.js";
 import { createSweepSelectionReview } from "./sweep-selection-review.js";
 import { createSweepSignatureFixtureReview } from "./sweep-signature-fixture-review.js";
+import { createRegisteredSweepSignatureFixtureReview } from "./registered-sweep-signature-fixture-review.js";
 
 assert.equal(process.platform, "win32");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "signature-probe-"));
@@ -118,6 +119,13 @@ try {
     const noImportedCompletion = createSweepSignatureFixtureReview(descriptor);
     assert.equal((await noImportedCompletion(asyncResult)).reason, "sweep_signature_arguments_invalid");
     assert.equal((await noImportedCompletion()).reason, "sweep_signature_already_attempted"); checks += 2;
+    const registered = createRegisteredSweepSignatureFixtureReview({ signatureDescriptor: descriptor,
+      descriptor: {}, observe() { assert.fail("Injected observer"); },
+      handoff: { prepare() { assert.fail("Injected handoff"); } } });
+    const unissued = await registered();
+    assert.equal(unissued.reason, "sweep_signature_selection_unavailable");
+    assert.equal(unissued.execution_enabled, false);
+    assert.equal((await registered()).reason, "sweep_signature_already_attempted"); checks += 3;
     const changed = createSignatureFixtureSupervisor(descriptor);
     const changedSweepReview = createSweepSignatureFixtureReview(descriptor);
     const original = fs.readFileSync(probe);
