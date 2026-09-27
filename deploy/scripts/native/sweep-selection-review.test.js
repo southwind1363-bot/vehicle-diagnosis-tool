@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import nodeTest from "node:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createSweepSelectionReview } from "./sweep-selection-review.js";
+
+const test = (name, run) => nodeTest(name, { skip: process.platform !== "win32" }, run);
 
 function fixture(run) {
   const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "sweep-review-")));

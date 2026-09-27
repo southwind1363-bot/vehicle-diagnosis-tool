@@ -10,18 +10,28 @@ const sameSelection = (a, b) => b && ["selected_device_id", "path", "sha256", "s
 // Tickets are local capabilities; caller-supplied review results are never used.
 export function createSweepSelectionReview(dependencies, catalog = []) {
   const handoff = createJ2534SweepSelectionHandoff(dependencies);
+  return createSweepSelectionReviewFromHandoff({ handoff, now: dependencies.now,
+    ttlMs: dependencies.ttlMs ?? 5000, catalog });
+}
+
+// Internal composition hook. Production composition supplies the host's private
+// registered handoff; importing this helper does not grant registry authority.
+export function createSweepSelectionReviewFromHandoff({ handoff, now, ttlMs = 5000, catalog = [] }) {
+  if (!handoff || typeof handoff.prepare !== "function" || typeof handoff.consume !== "function"
+    || typeof now !== "function" || !Number.isInteger(ttlMs) || ttlMs < 1 || ttlMs > 60000)
+    throw new TypeError("sweep_review_dependencies_invalid");
+  const prepare = handoff.prepare.bind(handoff), consume = handoff.consume.bind(handoff);
   const review = createVendorFolderReview(catalog);
   const tickets = new WeakMap();
-  const now = dependencies.now;
-  const ttl = dependencies.ttlMs ?? 5000;
+  const ttl = ttlMs;
   return Object.freeze({
     prepare(descriptor, request) {
       try {
         const issuedAt = now();
         if (!Number.isFinite(issuedAt)) return null;
-        const selection = handoff.consume(handoff.prepare(descriptor, request));
+        const selection = consume(prepare(descriptor, request));
         if (!selection) return null;
-        const inner = handoff.prepare(descriptor, { request_ecu: selection.request_ecu,
+        const inner = prepare(descriptor, { request_ecu: selection.request_ecu,
           services: selection.services, pids: selection.pids });
         if (!inner) return null;
         const ticket = Object.freeze({});
@@ -40,7 +50,7 @@ export function createSweepSelectionReview(dependencies, catalog = []) {
         const { path, sha256, size, architecture } = record.selection;
         const observed = review.inspect(root, metadata, signatureReport, { path, sha256, size, architecture });
         // Recheck the private descriptor after inventory/signature observation.
-        const current = handoff.consume(record.inner);
+        const current = consume(record.inner);
         const finishedAt = now();
         if (!sameSelection(record.selection, current) || !Number.isFinite(finishedAt)
           || finishedAt < startedAt || finishedAt - record.issuedAt >= ttl)

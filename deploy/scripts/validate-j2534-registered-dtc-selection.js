@@ -15,6 +15,8 @@ import { createRegisteredMode01PairFixtureSupervisor } from "./native/mode01-pai
 import { createJ2534SweepSelectionHandoff } from "./j2534-sweep-selection-handoff.js";
 import { createJ2534SelectedSweepFixtureSupervisor } from "./j2534-selected-sweep-fixture-supervisor.js";
 import { createJ2534RegisteredSweepSelectionHandoff } from "../local-bridge-readonly.js";
+import { createRegisteredSweepPackageReview } from "./native/sweep-registered-package-review.js";
+import { createSweepSelectionReviewFromHandoff } from "./native/sweep-selection-review.js";
 
 const source = fs.readFileSync(new URL("../local-bridge-readonly.js", import.meta.url), "utf8");
 const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff", "createJ2534RegisteredMode01SelectionHandoff", "createJ2534RegisteredMode01PairSelectionHandoff"];
@@ -47,6 +49,16 @@ function setup() {
 }
 const request = { request_ecu: 0x7e0, service: 3 };
 const sweepIntent = { request_ecu: 0x7e0, services: [3, 7, 10], pids: [0, 5, 12] };
+// Real imported composition: no forged descriptor or injected callbacks can
+// cause registry/folder access. Success below uses only an artificial store.
+const registeredReview = createRegisteredSweepPackageReview({
+  handoff: { prepare() { assert.fail("Injected handoff"); }, consume() { assert.fail("Injected consume"); } },
+  now() { assert.fail("Injected clock"); }, ttlMs: Infinity
+});
+for (const descriptor of [{}, { path: "C:\\synthetic\\driver.dll", sha256: "A".repeat(64) }])
+  assert.equal(registeredReview.prepare(descriptor, sweepIntent), null);
+assert.equal(registeredReview.inspect({}, "invalid", {}).reason, "sweep_review_ticket_unavailable");
+console.log("Registered sweep review actual import: unissued descriptors and callback injection rejected");
 assert.equal(createJ2534RegisteredSweepSelectionHandoff().prepare({}, sweepIntent), null);
 for (const [index, mutate] of [() => {}, s => s.current = null, s => s.current.descriptorSource = "test_fixture_registry",
   s => s.current.libraryPath += ".changed", s => s.metadata.execution_enabled = true,
@@ -294,5 +306,42 @@ if (process.platform === "win32") {
   s.current.fingerprint.sha256 = "changed";
   assert.equal(modeReview.inspect(s.descriptor, { request_ecu: 2016, pid: 5 }, root, metadata).reason, "selection_unavailable");
   console.log("Mode01 registered package composition: matched inventory remains blocked; invalid PID and changed identity rejected; private paths omitted");
+  s.current.fingerprint.sha256 = hash;
+  const sweepReviewSource = fs.readFileSync(new URL("./native/sweep-registered-package-review.js", import.meta.url), "utf8");
+  const sweepReviewFactory = sweepReviewSource.match(/export function createRegisteredSweepPackageReview[^]*?\n\}/)[0].replace(/^export /, "");
+  const sweepContext = vm.createContext({ createSweepSelectionReviewFromHandoff,
+    createJ2534RegisteredSweepSelectionHandoff: () => s.sweep, performance: { now: () => s.time } });
+  vm.runInContext(sweepReviewFactory, sweepContext);
+  const sweepReview = sweepContext.createRegisteredSweepPackageReview({ catalog: [{ ...metadata,
+    files: [{ name: "driver.dll", size: 3, sha256: hash }] }],
+    handoff: { prepare() { assert.fail("Injected handoff"); } }, now() { assert.fail("Injected clock"); } });
+  for (const scenario of ["matched", "changed", "expired", "rollback", "permissions", "replaced_file", "invalid_request"]) {
+    s.time = 100; s.current.fingerprint.sha256 = hash; s.metadata.execution_enabled = false;
+    fs.writeFileSync(file, "abc");
+    const ticket = sweepReview.prepare(s.descriptor, scenario === "invalid_request" ? { ...sweepIntent, services: [4] } : sweepIntent);
+    if (scenario === "changed") s.current.fingerprint.sha256 = "B".repeat(64);
+    if (scenario === "expired") s.time += 5000;
+    if (scenario === "rollback") s.time--;
+    if (scenario === "permissions") s.metadata.execution_enabled = true;
+    if (scenario === "replaced_file") fs.writeFileSync(file, "abd");
+    const result = sweepReview.inspect(ticket, root, metadata, syntheticValid);
+    assert.equal(result.execution_enabled, false);
+    assert.equal(result.publisher_verified, false);
+    assert.equal(result.dependency_closure_verified, false);
+    assert.ok(!JSON.stringify(result).includes(root));
+    assert.ok(!JSON.stringify(result).includes(s.original.selectedDeviceId));
+    if (scenario === "matched") {
+      assert.equal(result.selection_bound, true);
+      assert.equal(result.status, "metadata_match_only");
+      assert.equal(result.entry_signature.observation_accepted, true);
+    } else {
+      assert.equal(result.status, "unverified");
+      assert.equal(Object.hasOwn(result, "selection_bound"), false);
+      assert.equal(Object.hasOwn(result, "entry_signature"), false);
+    }
+    assert.equal(sweepReview.inspect(ticket, root, metadata).reason, "sweep_review_ticket_unavailable");
+  }
+  fs.unlinkSync(file); fs.rmdirSync(root);
+  console.log("Registered sweep package composition: seven synthetic scenarios passed; observation never permits execution");
 } else console.log("Registered package filesystem integration: skipped (requires Windows paths)");
 console.log(`Registered DTC selection resolver: ${checks} checks / extracted bridge code, synthetic registry/store only / no DLL or vehicle I/O`);
