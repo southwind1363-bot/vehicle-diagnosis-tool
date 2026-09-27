@@ -11,6 +11,7 @@ import { createVendorFolderReview } from "./vendor-package-folder-review.js";
 import { createDtcSelectedPackageReview } from "./dtc-selected-package-review.js";
 import { createJ2534DtcSelectionHandoff } from "../j2534-dtc-selection-handoff.js";
 import { createSweepSelectionReview } from "./sweep-selection-review.js";
+import { createSweepSignatureFixtureReview } from "./sweep-signature-fixture-review.js";
 
 assert.equal(process.platform, "win32");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "signature-probe-"));
@@ -103,7 +104,22 @@ try {
     assert.ok(!JSON.stringify(sweepResult).includes(root));
     assert.equal(sweep.inspectSupervisedCompletion(sweepTicket, root, sweepMetadata, sweepCompletion).reason,
       "sweep_review_ticket_unavailable"); checks += 9;
+    const runSweepReview = createSweepSignatureFixtureReview(descriptor);
+    const pendingSweepReview = runSweepReview();
+    assert.equal((await runSweepReview()).reason, "sweep_signature_already_attempted");
+    const ownedReview = await pendingSweepReview;
+    assert.equal(ownedReview.selection_bound, true);
+    assert.equal(ownedReview.entry_signature.signature_status, "NotSigned");
+    assert.equal(ownedReview.execution_enabled, false);
+    assert.equal(ownedReview.publisher_verified, false);
+    assert.equal(ownedReview.dependency_closure_verified, false);
+    assert.ok(!JSON.stringify(ownedReview).includes(root));
+    assert.equal((await runSweepReview()).reason, "sweep_signature_already_attempted"); checks += 8;
+    const noImportedCompletion = createSweepSignatureFixtureReview(descriptor);
+    assert.equal((await noImportedCompletion(asyncResult)).reason, "sweep_signature_arguments_invalid");
+    assert.equal((await noImportedCompletion()).reason, "sweep_signature_already_attempted"); checks += 2;
     const changed = createSignatureFixtureSupervisor(descriptor);
+    const changedSweepReview = createSweepSignatureFixtureReview(descriptor);
     const original = fs.readFileSync(probe);
     try {
       fs.writeFileSync(probe, Buffer.alloc(original.length));
@@ -111,6 +127,11 @@ try {
       assert.equal(blocked.worker_started, false);
       assert.equal(blocked.parsed_result, null);
       assert.equal(blocked.errors[0], "worker_spawn_failed"); checks += 3;
+      const deniedSweep = await changedSweepReview();
+      assert.equal(deniedSweep.reason, "sweep_review_signature_unavailable");
+      assert.equal(deniedSweep.execution_enabled, false);
+      assert.equal(Object.hasOwn(deniedSweep, "entry_signature"), false);
+      assert.equal((await changedSweepReview()).reason, "sweep_signature_already_attempted"); checks += 4;
     } finally { fs.writeFileSync(probe, original); }
     assert.equal((await changed()).errors[0], "signature_worker_already_attempted"); checks++;
     const configGuard = createSignatureFixtureSupervisor(descriptor);
