@@ -54,7 +54,9 @@ async function capturePackagedUpdateState({ expectedStorage, expectedManifest })
   assert.notEqual(packages[0].manifest.version, packages[1].manifest.version);
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-update-'));
   const failedUpdate = process.argv.includes('--failed-update');
-  const closeWaitingClient = process.argv.includes('--close-waiting-client');
+  // Keep the historical flag as an alias. Current workers call skipWaiting,
+  // so requiring a waiting worker silently skipped the close/reopen exercise.
+  const reopenAfterUpdate = process.argv.includes('--reopen-after-update') || process.argv.includes('--close-waiting-client');
   let clientClosedForUpdate = false;
   let failedAssetRequests = 0;
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -165,7 +167,7 @@ async function capturePackagedUpdateState({ expectedStorage, expectedManifest })
         await context.setOffline(false);
         await page.reload();
       }
-      if (index === 1 && closeWaitingClient) {
+      if (index === 1 && reopenAfterUpdate) {
         const deadline = Date.now() + 20000;
         let prepared;
         do {
@@ -187,8 +189,9 @@ async function capturePackagedUpdateState({ expectedStorage, expectedManifest })
         } while (!prepared);
         console.log(JSON.stringify({ phase: 'before-client-close', prepared }));
         await checkSaved();
-        if (prepared.waiting) {
-          // Explicit user-like close/reopen; never send skipWaiting or clear storage.
+        {
+          // Close after the new cache is complete, including an already active
+          // worker. Never force worker activation or clear browser storage.
           const errorListeners = page.listeners('pageerror'), consoleListeners = page.listeners('console');
           assert.equal(context.pages().length, 1, 'Unexpected test client');
           await page.close();
@@ -199,6 +202,8 @@ async function capturePackagedUpdateState({ expectedStorage, expectedManifest })
           page.setDefaultTimeout(20000);
           await page.goto(origin);
           clientClosedForUpdate = true;
+          await page.waitForFunction(version => document.querySelector('#appVersion').textContent === version, pkg.manifest.version);
+          await checkSaved();
         }
       }
       await waitCache(pkg.manifest);
@@ -234,9 +239,10 @@ async function capturePackagedUpdateState({ expectedStorage, expectedManifest })
       versions.push(pkg.manifest.version);
       console.log('Package version and synthetic case retained offline: ' + pkg.manifest.version);
     }
+    if (reopenAfterUpdate) assert.equal(clientClosedForUpdate, true, 'Requested close/reopen was not exercised');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     for (const pkg of packages) assert.deepEqual(pkg.verify(pkg.root), pkg.integrity);
-    console.log(JSON.stringify({ passed: true, versions, output, failedUpdate, failedAssetRequests, clientClosedForUpdate, savedDataUnchanged: true, optionalIconErrors,
+    console.log(JSON.stringify({ passed: true, versions, output, failedUpdate, failedAssetRequests, reopenAfterUpdate, clientClosedForUpdate, savedDataUnchanged: true, optionalIconErrors,
       limitations: 'Same PC and origin; synthetic case only; no real password, vehicle, OS restart, or format migration' }));
   } catch (error) {
     try {
