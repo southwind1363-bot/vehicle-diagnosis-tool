@@ -13,6 +13,7 @@ import { createJ2534DtcSelectionHandoff } from "../j2534-dtc-selection-handoff.j
 import { createSweepSelectionReview } from "./sweep-selection-review.js";
 import { createSweepSignatureFixtureReview } from "./sweep-signature-fixture-review.js";
 import { createRegisteredSweepSignatureFixtureReview } from "./registered-sweep-signature-fixture-review.js";
+import { validateRegisteredSweepSignature } from "./validate-registered-sweep-signature.js";
 
 assert.equal(process.platform, "win32");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "signature-probe-"));
@@ -126,6 +127,7 @@ try {
     assert.equal(unissued.reason, "sweep_signature_selection_unavailable");
     assert.equal(unissued.execution_enabled, false);
     assert.equal((await registered()).reason, "sweep_signature_already_attempted"); checks += 3;
+    await validateRegisteredSweepSignature(descriptor);
     const changed = createSignatureFixtureSupervisor(descriptor);
     const changedSweepReview = createSweepSignatureFixtureReview(descriptor);
     const original = fs.readFileSync(probe);
