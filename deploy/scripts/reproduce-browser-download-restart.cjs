@@ -10,6 +10,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const outputArg = process.argv.find(arg => arg.startsWith('--output='));
   const output = outputArg ? outputArg.slice('--output='.length) : fs.mkdtempSync(path.join(os.tmpdir(), 'browser-download-restart-'));
   const nativeDownload = process.argv.includes('--native-download');
+  const pageDownloadSession = process.argv.includes('--page-download-session');
   const httpDownload = process.argv.includes('--http-download');
   const clearTestHistory = process.argv.includes('--clear-test-download-history');
   const restoreTestHistory = process.argv.includes('--restore-test-download-history');
@@ -22,7 +23,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     for (const phase of [0, 1]) {
       const args = [__filename, `--output=${output}`, `--phase=${phase}`];
       if (nativeDownload) args.push('--native-download');
-      for (const flag of ['--http-download', '--online', '--no-first-download', '--settle-before-close']) {
+      for (const flag of ['--http-download', '--online', '--no-first-download', '--settle-before-close', '--page-download-session', '--immediate-after-open']) {
         if (process.argv.includes(flag)) args.push(flag);
       }
       const run = spawnSync(process.execPath, args, { stdio: 'inherit', timeout: 60000, windowsHide: true });
@@ -39,8 +40,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   };
   const report = {
     schemaVersion: 1, nodeVersion: process.version, platform: process.platform,
-    channel: options.channel, nativeDownload, downloadSource: httpDownload ? 'http' : 'blob', offlineAfterRestart: !process.argv.includes('--online'),
-    clearTestHistory, restoreTestHistory,
+    channel: options.channel, nativeDownload, pageDownloadSession, downloadSource: httpDownload ? 'http' : 'blob', offlineAfterRestart: !process.argv.includes('--online'),
+    clearTestHistory, restoreTestHistory, settleAfterOpen: !process.argv.includes('--immediate-after-open'),
     phases: [], passed: false,
     scope: 'Temporary profile and synthetic JSON only; no application, service worker, vehicle or user data'
   };
@@ -75,9 +76,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       }
       const page = await context.newPage();
       const nativeDownloadPath = path.resolve(output, `native-downloads-${phase}`);
+      let downloadGuid, downloadProgress;
       if (nativeDownload) {
         fs.mkdirSync(nativeDownloadPath, { recursive: true });
-        const cdp = await context.newCDPSession(page);
+        const cdp = pageDownloadSession ? await context.newCDPSession(page) : await context.browser().newBrowserCDPSession();
+        cdp.on('Browser.downloadWillBegin', event => { downloadGuid = event.guid; });
+        cdp.on('Browser.downloadProgress', event => {
+          if (event.guid !== downloadGuid) return;
+          downloadProgress = { state: event.state, receivedBytes: event.receivedBytes, totalBytes: event.totalBytes };
+          observation.downloadProgress = downloadProgress;
+        });
         await cdp.send('Browser.setDownloadBehavior', {
           behavior: 'allow',
           downloadPath: nativeDownloadPath,
@@ -99,6 +107,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         };
       }, httpDownload);
       if (phase && !process.argv.includes('--online')) await context.setOffline(true);
+      // Immediate downloads can finish before persisted history is processed.
+      // This bounded observation delay reproduces the known delayed failure;
+      // it is not proof that every browser background task has completed.
+      if (phase && report.settleAfterOpen) await new Promise(resolve => setTimeout(resolve, 2000));
       observation.stage = 'download';
       if (nativeDownload) {
         const file = path.join(nativeDownloadPath, 'synthetic.json');
@@ -113,12 +125,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
           assert.ok(!pageClosed && browserConnected, `Native download closed before completion: ${file} (pageClosed=${pageClosed}, browserConnected=${browserConnected})`);
           if (fs.existsSync(file)) {
             actual = fs.readFileSync(file);
-            if (Buffer.compare(actual, expected) === 0) break;
+            if (Buffer.compare(actual, expected) === 0 && downloadProgress?.state === 'completed') break;
           }
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         assert.ok(actual, `Native download did not create ${file} within 20000ms`);
         assert.deepEqual(actual, expected, `Native download bytes differ: ${file}`);
+        assert.equal(downloadProgress?.state, 'completed', 'File bytes alone do not prove browser download completion');
       } else {
         const pending = page.waitForEvent('download', { timeout: 20000 });
         await page.click('#save');
