@@ -627,4 +627,14 @@ for (const stage of ["renderCases", "renderSimilarCases", "setNextCaseId"]) {
   c.import([{ id: "saved-before-render-failure", model: "artificial" }]);
   check(c.context.savedCases.length === 2 && c.context.caseImportStatus.textContent.includes("重複スキップ 1件"), `${stage}: retry duplicated saved records`);
 }
+for (const failed of [false, true]) {
+  const c = client();
+  const previous = "保存事例を読み込めません。事例の変更・出力を停止しています。";
+  c.context.caseImportStatus.textContent = previous;
+  if (failed) c.store.set(key, "{broken");
+  c.context.reloadSavedCases();
+  check(c.context.caseImportStatus.textContent === (failed ? previous : c.context.caseStatus.textContent), "Reload status is inconsistent with its outcome");
+  check(failed || c.context.caseImportStatus.textContent.includes("再読込しました。保存件数: 1件"), "Successful reload left a stale import warning");
+  check(c.calls.writes.length === 0, "Status recovery wrote case data");
+}
 console.log(`Case storage checks: ${checks} / Errors: 0`);

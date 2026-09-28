@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.609";
+const APP_VERSION = "3.13.610";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -17149,7 +17149,7 @@ function reloadSavedCases() {
   renderCases();
   renderSimilarCases();
   updateCaseQualityPreview();
-  caseStatus.textContent = `保存事例を再読込しました。保存件数: ${savedCases.length}件`;
+  setCaseImportStatus(`保存事例を再読込しました。保存件数: ${savedCases.length}件`);
 }
 
 function readOptionalBrowserSetting(key, session = false) {

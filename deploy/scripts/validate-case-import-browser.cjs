@@ -83,6 +83,57 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
     const input = page.locator('#importJsonInput');
     const status = page.locator('#caseImportStatus');
+    if (process.argv.includes('--corrupt-storage-recovery')) {
+      const record = { id: 'corruption-recovery-fixture', model: '保存復元試験専用', symptom: '人工事例' };
+      const file = { name: 'synthetic-original.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([record])) };
+      await input.setInputFiles(file);
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('JSONインポート完了'));
+      const original = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+      const downloads = [];
+      page.on('download', download => downloads.push(download));
+      page.on('dialog', dialog => dialog.accept());
+      const malformedRow = [...JSON.parse(original), { id: 'invalid-field-fixture', model: { invalid: true } }];
+      for (const [kind, corrupted] of [['syntax', '{"private-fixture":'], ['field', JSON.stringify(malformedRow)]]) {
+        // Fault injection and restoration affect this temporary browser only.
+        // Restoring known fixture bytes is not an automatic product repair.
+        await page.evaluate(bytes => localStorage.setItem('vehicle-diagnosis-cases-v1', bytes), corrupted);
+        await page.reload();
+        await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+        await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+        assert.equal(await page.locator('#caseStorageWarning').isVisible(), true);
+        assert.match(await page.locator('#caseStorageWarningText').innerText(), /元データ保護/);
+        assert.equal(await page.evaluate(() => savedCases.length), 0);
+        const beforeDownloads = downloads.length;
+        for (const label of ['JSONバックアップ', 'CSVエクスポート']) {
+          await page.getByRole('button', { name: label, exact: true }).click();
+          assert.match(await page.locator('#caseExportStatus').innerText(), /開始しませんでした/);
+        }
+        await input.setInputFiles(file);
+        await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('元データ保護'));
+        assert.equal(downloads.length, beforeDownloads);
+        assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), corrupted);
+        assert.equal(await input.inputValue(), '');
+        assert.equal(await page.locator('#cancelCaseImportButton').isDisabled(), true);
+        assert.equal(await page.evaluate(() => obdAccessUnlocked), false);
+        await page.locator('#caseStorageWarning').scrollIntoViewIfNeeded();
+        await page.screenshot({ path: path.join(output, `case-corrupt-${kind}-blocked.png`) });
+        await page.evaluate(bytes => localStorage.setItem('vehicle-diagnosis-cases-v1', bytes), original);
+        await page.getByRole('button', { name: '保存事例を再読込', exact: true }).click();
+        assert.equal(await page.locator('#caseStorageWarning').isVisible(), false);
+        assert.match(await status.innerText(), /保存事例を再読込しました.*1件/);
+        assert.deepEqual(await page.evaluate(() => savedCases.map(item => item.id)), [record.id]);
+        assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), original);
+        const downloaded = page.waitForEvent('download');
+        await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
+        const backupPath = path.join(output, `recovered-${kind}.json`);
+        await (await downloaded).saveAs(backupPath);
+        assert.deepEqual(JSON.parse(fs.readFileSync(backupPath, 'utf8')).records, JSON.parse(original));
+        assert.equal(downloads.length, beforeDownloads + 1);
+      }
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(JSON.stringify({ passed: true, flow: 'malformed stored JSON and field type -> reload blocked -> import/export preserve raw bytes -> synthetic restoration -> manual reload -> exact backup', output }));
+      return;
+    }
     if (process.argv.includes('--post-save-render-failure')) {
       const record = { id: 'saved-before-render-failure', model: '表示失敗試験専用', symptom: '人工事例' };
       await page.evaluate(() => { renderCases = () => { throw new Error('private-render-detail'); }; });
