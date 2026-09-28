@@ -33,6 +33,14 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   };
   const errors = [], blocked = [];
   const pendingRequests = new Map();
+  const runtimes = [];
+  const recordRuntime = phase => {
+    const runtime = { phase, nodeVersion: process.version, channel,
+      browserVersion: context.browser().version(), restart, offline, live };
+    runtimes.push(runtime);
+    fs.writeFileSync(path.join(output, 'browser-runtime.json'), JSON.stringify(runtimes, null, 2) + '\n');
+    console.log('Scanner browser runtime:', JSON.stringify(runtime));
+  };
   try {
     if (offline) {
       server = http.createServer((request, response) => {
@@ -52,6 +60,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       context = await browser.newContext(contextOptions);
       await require('./validate-scanner-access.cjs')(browser, root, output);
     }
+    recordRuntime('initial');
     const configureContext = async (preUnlocked = true) => {
       context.on('request', request => pendingRequests.set(request, request.url()));
       context.on('requestfinished', request => pendingRequests.delete(request));
@@ -473,6 +482,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await context.close();
       assert.equal(page.isClosed(), true);
       context = await chromium.launchPersistentContext(profile, { ...contextOptions, ...persistentOptions });
+      recordRuntime('restarted');
       if (!serverStopOnly) await context.setOffline(true);
       await configureContext();
       page = await context.newPage();
