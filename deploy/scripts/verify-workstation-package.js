@@ -65,8 +65,9 @@ export function verifyWorkstationPackage(directory) {
   if (!fs.lstatSync(root).isDirectory() || fs.lstatSync(root).isSymbolicLink()) fail("package_integrity_root_invalid");
   const manifestFile = packageFile(root, MANIFEST);
   if (manifestFile.size > 4 * 1024 * 1024) fail("package_integrity_manifest_invalid");
+  const manifestBytes = readPackageBytes(manifestFile, MANIFEST);
   let manifest;
-  try { manifest = JSON.parse(readPackageBytes(manifestFile, MANIFEST).toString("utf8")); }
+  try { manifest = JSON.parse(manifestBytes.toString("utf8")); }
   catch { fail("package_integrity_manifest_invalid"); }
   if (manifest?.schemaVersion !== "workstation_package_integrity_v1" || manifest.algorithm !== "sha256"
     || typeof manifest.appVersion !== "string" || !/^\d+\.\d+\.\d+$/.test(manifest.appVersion)
@@ -101,9 +102,13 @@ export function verifyWorkstationPackage(directory) {
   }
   let info;
   let assets;
+  // I/O and concurrent-change failures are not malformed JSON. Preserve their
+  // existing error codes; only syntax failures become metadata_invalid.
+  const infoBytes = readPackageBytes(packageFile(root, "package-info.json"), "package-info.json");
+  const assetBytes = readPackageBytes(packageFile(root, "offline-assets.json"), "offline-assets.json");
   try {
-    info = JSON.parse(readPackageBytes(packageFile(root, "package-info.json"), "package-info.json").toString("utf8"));
-    assets = JSON.parse(readPackageBytes(packageFile(root, "offline-assets.json"), "offline-assets.json").toString("utf8"));
+    info = JSON.parse(infoBytes.toString("utf8"));
+    assets = JSON.parse(assetBytes.toString("utf8"));
   } catch { fail("package_integrity_metadata_invalid"); }
   if (info?.appVersion !== manifest.appVersion || assets?.version !== manifest.appVersion
     || info.fileCount !== manifest.files.length + 1) fail("package_integrity_metadata_invalid");

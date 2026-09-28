@@ -404,6 +404,59 @@ try {
   const originalInfo = fs.readFileSync(path.join(result.directory, "package-info.json"));
   const assetsPath = path.join(result.directory, "offline-assets.json");
   const originalAssets = fs.readFileSync(assetsPath);
+  // Metadata is read again after hashing. Exercise failures at that read,
+  // where the JSON parser previously concealed filesystem errors.
+  for (const relative of ["package-integrity.json", "package-info.json", "offline-assets.json"]) {
+    for (const failure of ["changed", "unreadable"]) {
+      const originalOpen = fs.openSync;
+      const originalStat = fs.fstatSync;
+      const target = path.join(result.directory, relative);
+      const expectedRead = relative === "package-integrity.json" ? 1 : 2;
+      const denied = Object.assign(new Error("private filesystem detail"), { code: "EACCES" });
+      let reads = 0;
+      let selectedDescriptor;
+      let stats = 0;
+      try {
+        fs.openSync = function (filename, ...args) {
+          const selected = filename === target && ++reads === expectedRead;
+          if (selected && failure === "unreadable") throw denied;
+          const descriptor = originalOpen.call(fs, filename, ...args);
+          if (selected) selectedDescriptor = descriptor;
+          return descriptor;
+        };
+        fs.fstatSync = function (descriptor, ...args) {
+          const stat = originalStat.call(fs, descriptor, ...args);
+          if (descriptor === selectedDescriptor && ++stats === 2) stat.mtimeMs += 1;
+          return stat;
+        };
+        assert.throws(() => verifyWorkstationPackage(result.directory), (error) => failure === "unreadable"
+          ? error === denied : error.code === "package_integrity_file_changed" && error.file === relative);
+        check(reads === expectedRead, `Read failure was not reached: ${relative}/${failure}`);
+      } finally {
+        fs.openSync = originalOpen;
+        fs.fstatSync = originalStat;
+      }
+    }
+  }
+  for (const relative of ["package-info.json", "offline-assets.json"]) {
+    const target = path.join(result.directory, relative);
+    const original = fs.readFileSync(target);
+    const invalid = Buffer.from('{"private_fragment":');
+    const manifest = JSON.parse(originalManifest);
+    const entry = manifest.files.find((file) => file.path === relative);
+    entry.size = invalid.length;
+    entry.sha256 = createHash("sha256").update(invalid).digest("hex");
+    try {
+      fs.writeFileSync(target, invalid);
+      fs.writeFileSync(integrityPath, JSON.stringify(manifest));
+      assert.throws(() => verifyWorkstationPackage(result.directory), (error) =>
+        error.code === "package_integrity_metadata_invalid" && !error.message.includes("private_fragment"));
+      check(fs.readFileSync(target).equals(invalid), "Invalid JSON should not be repaired");
+    } finally {
+      fs.writeFileSync(target, original);
+      fs.writeFileSync(integrityPath, originalManifest);
+    }
+  }
   for (const mutate of [
     (a) => { a.assets = null; },
     (a) => { a.asset_count += 1; },
