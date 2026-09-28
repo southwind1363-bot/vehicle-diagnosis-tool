@@ -83,6 +83,33 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
     const input = page.locator('#importJsonInput');
     const status = page.locator('#caseImportStatus');
+    if (process.argv.includes('--post-save-render-failure')) {
+      const record = { id: 'saved-before-render-failure', model: '表示失敗試験専用', symptom: '人工事例' };
+      await page.evaluate(() => { renderCases = () => { throw new Error('private-render-detail'); }; });
+      await input.setInputFiles({ name: 'synthetic-render-failure.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([record])) });
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('保存は完了しました'));
+      assert.match(await status.innerText(), /一覧表示の更新に失敗.*画面を再読込/);
+      assert.doesNotMatch(await status.innerText(), /形式・内容|private-render-detail/);
+      const committed = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+      assert.equal(JSON.parse(committed)[0].id, record.id);
+      assert.equal(await input.inputValue(), '');
+      assert.equal(await page.locator('#cancelCaseImportButton').isDisabled(), true);
+      await status.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(output, 'saved-render-failure.png') });
+      await page.reload();
+      await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
+      await page.locator('#caseList').getByText(record.model, { exact: false }).waitFor();
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), committed);
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      await input.setInputFiles({ name: 'synthetic-render-failure.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([record])) });
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('重複スキップ 1件'));
+      assert.equal(await page.evaluate(() => savedCases.length), 1);
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), committed);
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(JSON.stringify({ passed: true, flow: 'post-save render failure -> truthful status -> reload saved record -> duplicate retry retained', output }));
+      return;
+    }
     if (process.argv.includes('--oversized-file')) {
       const record = { id: 'size-bound-original', model: 'size-bound-test', symptom: '人工事例' };
       await input.setInputFiles({ name: 'original.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([record])) });

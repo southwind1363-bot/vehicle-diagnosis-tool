@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.608";
+const APP_VERSION = "3.13.609";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -17028,6 +17028,7 @@ function importCasesJson(event) {
   reader.onload = () => {
     if (caseImportOperation !== operation) return;
     clearTimeout(operation.timeout);
+    let saved = false;
     try {
       const parsed = JSON.parse(reader.result);
       const records = Array.isArray(parsed) ? parsed : parsed.records;
@@ -17064,14 +17065,17 @@ function importCasesJson(event) {
       });
 
       if (!persistCases(nextCases)) { setCaseImportStatus(caseStatus.textContent); return; }
+      saved = true;
       renderCases();
       renderSimilarCases();
       setCaseImportStatus(`JSONインポート完了: 追加 ${added}件 / 重複スキップ ${skipped}件 / 不正行スキップ ${invalid}件`);
       setNextCaseId();
     } catch (_) {
-      // Engine exceptions may include file contents. Do not display raw details,
-      // or claim storage is unchanged if a post-save rendering step failed.
-      setCaseImportStatus("JSONインポート失敗: ファイルの形式・内容を確認してください。保存済み一覧を確認してから、ファイルを選び直してください。");
+      // Report a confirmed save separately from later display failures. Engine
+      // exceptions can contain imported text, so never display raw details.
+      setCaseImportStatus(saved
+        ? "JSONインポートの保存は完了しましたが、一覧表示の更新に失敗しました。入力中の内容を控えてから画面を再読込し、保存済み一覧を確認してください。"
+        : "JSONインポート失敗: ファイルの形式・内容を確認してください。保存済み一覧を確認してから、ファイルを選び直してください。");
     } finally {
       if (caseImportOperation === operation) {
         caseImportOperation = null;

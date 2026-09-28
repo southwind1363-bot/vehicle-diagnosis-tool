@@ -609,4 +609,22 @@ for (const field of ["confirmedFacts", "measurements", "memo", "maker", "id", "s
   check(!c.context.caseStorageReadError && c.context.caseStorageWarning.hidden, `${field}: valid data did not recover on explicit reload`);
   check(c.context.savedCases.length === 1, `${field}: recovery lost valid records`);
 }
+for (const stage of ["renderCases", "renderSimilarCases", "setNextCaseId"]) {
+  const c = client();
+  const original = c.context[stage];
+  c.context[stage] = () => { throw new Error("private-render-detail"); };
+  c.import([{ id: "saved-before-render-failure", model: "artificial" }]);
+  const committed = c.store.get(key);
+  check(JSON.parse(committed).length === 2 && c.context.savedCases.length === 2, `${stage}: successful save was lost`);
+  check(c.context.caseImportStatus.textContent.includes("保存は完了しました")
+    && c.context.caseImportStatus.textContent.includes("画面を再読込")
+    && !c.context.caseImportStatus.textContent.includes("形式・内容"), `${stage}: rendering failure was reported as invalid input`);
+  check(!c.context.caseImportStatus.textContent.includes("private-render-detail"), `${stage}: private failure disclosed`);
+  check(c.context.caseImportOperation === null && c.timers.size === 0 && c.context.importJsonInput.value === "", `${stage}: import remained pending`);
+  c.context[stage] = original;
+  c.context.reloadSavedCases();
+  check(c.context.savedCases.length === 2 && c.store.get(key) === committed, `${stage}: explicit reload changed committed data`);
+  c.import([{ id: "saved-before-render-failure", model: "artificial" }]);
+  check(c.context.savedCases.length === 2 && c.context.caseImportStatus.textContent.includes("重複スキップ 1件"), `${stage}: retry duplicated saved records`);
+}
 console.log(`Case storage checks: ${checks} / Errors: 0`);
