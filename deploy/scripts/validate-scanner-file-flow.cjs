@@ -16,6 +16,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const restart = process.argv.includes('--restart');
   const denseLive = process.argv.includes('--dense-live');
   const live = denseLive || process.argv.includes('--live');
+  const restartLiveArchive = process.argv.includes('--restart-live-archive');
+  assert.ok(!restartLiveArchive || (restart && live), '--restart-live-archive requires --restart and --live');
   const serverStopOnly = process.argv.includes('--server-stop-only');
   const offline = restart || process.argv.includes('--offline');
   const profile = path.join(output, 'browser-profile');
@@ -36,7 +38,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const runtimes = [];
   const recordRuntime = phase => {
     const runtime = { phase, nodeVersion: process.version, channel,
-      browserVersion: context.browser().version(), restart, offline, live };
+      browserVersion: context.browser().version(), restart, offline, live, restartLiveArchive };
     runtimes.push(runtime);
     fs.writeFileSync(path.join(output, 'browser-runtime.json'), JSON.stringify(runtimes, null, 2) + '\n');
     console.log('Scanner browser runtime:', JSON.stringify(runtime));
@@ -1045,6 +1047,56 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await (await multiDownload).saveAs(multiFile);
     await openReplacement(multiFile);
     await verifyEcuRows();
+    if (restartLiveArchive) {
+      const readFacts = () => page.evaluate(() => ({
+        values: obdDevSession.lastSession.livePidSnapshot.monitorValues,
+        timeline: obdDevSession.lastSession.livePidTimeline
+      }));
+      const expected = await readFacts();
+      const savedBytes = fs.readFileSync(multiFile);
+      assert.equal(server, null, 'The fixture server must stay stopped');
+      await context.close();
+      assert.equal(page.isClosed(), true);
+      context = await chromium.launchPersistentContext(profile, { ...contextOptions, ...persistentOptions });
+      recordRuntime('live-archive-restarted');
+      await context.setOffline(true);
+      await configureContext(false);
+      page = await context.newPage();
+      page.on('pageerror', error => errors.push(error.message));
+      page.setDefaultTimeout(20000);
+      assert.equal((await page.goto(origin + '/')).fromServiceWorker(), true);
+      await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor({ timeout: 45000 });
+      await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await checkLocked();
+      // Check restart lock first, then use the existing synthetic unlock fixture.
+      // This is not proof of a successful real-password login or vehicle access.
+      await context.addInitScript(() => sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled'));
+      await page.reload();
+      await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await page.getByRole('button', { name: '読取結果を開く', exact: true }).click();
+      assert.equal(await page.locator('#obdResultsEmptyState').isVisible(), true);
+      await openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), multiFile);
+      assert.deepEqual(await readFacts(), expected);
+      await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      const resavedDownload = page.waitForEvent('download');
+      await page.locator('#obdStageResultsView [data-obd-session-export]').click();
+      const resavedFile = path.join(output, 'multi-ecu-after-browser-restart.json');
+      await (await resavedDownload).saveAs(resavedFile);
+      await openReplacement(resavedFile);
+      assert.deepEqual(await readFacts(), expected);
+      assert.deepEqual(fs.readFileSync(multiFile), savedBytes);
+      await page.locator('.obd-results-nav').getByRole('button', { name: '追加データ', exact: true }).click();
+      await page.locator('#obdReadoutDetailMenu').getByRole('button', { name: 'ライブ推移', exact: true }).click();
+      await page.setViewportSize({ width: 390, height: 900 });
+      assert.equal(await page.locator('#obdSessionDetailLiveTimeline .obd-timeline-chart-row').count(), 2);
+      assert.match(await page.locator('#obdSessionDetailLiveTimeline').innerText(), /7E8/);
+      assert.match(await page.locator('#obdSessionDetailLiveTimeline').innerText(), /7E9/);
+      await page.locator('#obdSessionDetailLiveTimeline').screenshot({ path: path.join(output, 'multi-ecu-after-browser-restart.png') });
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(`Live archive restart passed: save two-ECU readout -> full browser restart offline -> locked -> synthetic unlock -> restore -> resave -> exact measured facts retained; no real hardware / Artifacts: ${output}`);
+      return;
+    }
     }
     assert.deepEqual(errors, []);
     // Start empty: connection attempts have their own session, separate from archive playback.
