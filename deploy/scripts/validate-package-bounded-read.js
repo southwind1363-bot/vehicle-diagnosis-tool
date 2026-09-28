@@ -11,13 +11,21 @@ assert.ok(helper, "Production bounded reader missing");
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "package-bounded-read-"));
 const target = path.join(directory, "synthetic.bin");
 try {
-  for (const scenario of ["normal", "short-reads", "grow-before-open", "grow-during-read", "shrink-during-read", "same-size-after-read", "read-error"]) {
+  for (const scenario of ["normal", "short-reads", "grow-before-open", "grow-during-read", "shrink-during-read", "same-size-after-read", "replace-after-read", "read-error"]) {
     fs.writeFileSync(target, Buffer.from("original"));
-    let closed = 0, bytesRead = 0, changed = false;
+    let closed = 0, bytesRead = 0, changed = false, statCalls = 0;
     const testFs = { ...fs,
       openSync(...args) {
         if (scenario === "grow-before-open") fs.appendFileSync(target, "extra");
         return fs.openSync(...args);
+      },
+      fstatSync(fd) {
+        const stat = fs.fstatSync(fd);
+        if (scenario === "replace-after-read" && ++statCalls === 2) {
+          fs.renameSync(target, `${target}.previous`);
+          fs.writeFileSync(target, Buffer.from("modified"));
+        }
+        return stat;
       },
       readSync(fd, buffer, offset, length, position) {
         if (!changed) {
@@ -43,15 +51,16 @@ try {
     const invoke = () => read({ absolute: target, size: 8 }, "synthetic.bin");
     if (["normal", "short-reads"].includes(scenario)) assert.equal(invoke().toString(), "original");
     else if (scenario === "read-error") assert.throws(invoke, /synthetic_read_failure/);
-    else if (scenario === "same-size-after-read") assert.throws(invoke,
+    else if (["same-size-after-read", "replace-after-read"].includes(scenario)) assert.throws(invoke,
       error => error.code === "package_integrity_file_changed" && error.file === "synthetic.bin");
     else assert.throws(invoke, error => error.code === "package_integrity_size_mismatch" && error.file === "synthetic.bin");
     assert.equal(closed, 1, `${scenario}: descriptor not closed`);
     assert.ok(bytesRead <= 9, `${scenario}: read exceeded inspected size plus one byte`);
     const expectedSize = scenario === "grow-before-open" ? 13 : scenario === "grow-during-read" ? 8 + 1024 * 1024 : scenario === "shrink-during-read" ? 2 : 8;
     assert.equal(fs.statSync(target).size, expectedSize, "Reader modified fixture");
+    if (scenario === "replace-after-read") fs.unlinkSync(`${target}.previous`);
   }
-  console.log("Package bounded reads: growth, truncation, short reads and handle cleanup passed");
+  console.log("Package bounded reads: growth, truncation, name replacement, short reads and handle cleanup passed");
   const generator = fs.readFileSync(new URL("./package-workstation.js", import.meta.url), "utf8");
   const hashHelper = generator.match(/function hashPackagedFile\(absolute\) \{[\s\S]*?\n\}/)?.[0];
   assert.ok(hashHelper, "Generator bounded hash missing");
@@ -97,5 +106,6 @@ try {
   console.log("Package generation hashing: bounded chunks, size changes and handle cleanup passed");
 } finally {
   fs.unlinkSync(target);
+  if (fs.existsSync(`${target}.previous`)) fs.unlinkSync(`${target}.previous`);
   fs.rmdirSync(directory);
 }

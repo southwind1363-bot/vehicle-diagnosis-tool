@@ -47,6 +47,14 @@ function readPackageBytes(file, relative) {
     // Detect observable changes; this is not a filesystem snapshot or lock.
     if (after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs)
       fail("package_integrity_file_changed", relative);
+    // The open handle may still refer to the old file after a name replacement.
+    // Check the current name too; this is observation, not an atomic file lock.
+    let named;
+    try { named = fs.lstatSync(file.absolute); }
+    catch { fail("package_integrity_file_changed", relative); }
+    if (!named.isFile() || named.isSymbolicLink()
+      || !["dev", "ino", "size", "mtimeMs", "ctimeMs"].every(key => named[key] === after[key]))
+      fail("package_integrity_file_changed", relative);
     return bytes.subarray(0, size);
   } finally { fs.closeSync(descriptor); }
 }
