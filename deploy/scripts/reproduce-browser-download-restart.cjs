@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const http = require('node:http');
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -9,10 +10,21 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const outputArg = process.argv.find(arg => arg.startsWith('--output='));
   const output = outputArg ? outputArg.slice('--output='.length) : fs.mkdtempSync(path.join(os.tmpdir(), 'browser-download-restart-'));
   const nativeDownload = process.argv.includes('--native-download');
+  const httpDownload = process.argv.includes('--http-download');
+  const clearTestHistory = process.argv.includes('--clear-test-download-history');
+  const restoreTestHistory = process.argv.includes('--restore-test-download-history');
+  assert.ok(!restoreTestHistory || clearTestHistory, 'Restoration experiment requires --clear-test-download-history');
+  assert.ok(!clearTestHistory || (!outputArg && !process.argv.some(arg => arg.startsWith('--phase='))
+    && !process.argv.includes('--separate-process') && !process.argv.includes('--no-first-download')),
+    'History experiment requires a newly generated temporary profile and both phases');
+  assert.ok(!httpDownload || process.argv.includes('--online'), '--http-download requires --online');
   if (process.argv.includes('--separate-process')) {
     for (const phase of [0, 1]) {
       const args = [__filename, `--output=${output}`, `--phase=${phase}`];
       if (nativeDownload) args.push('--native-download');
+      for (const flag of ['--http-download', '--online', '--no-first-download', '--settle-before-close']) {
+        if (process.argv.includes(flag)) args.push(flag);
+      }
       const run = spawnSync(process.execPath, args, { stdio: 'inherit', timeout: 60000, windowsHide: true });
       assert.equal(run.status, 0, `Separate process phase ${phase} failed`);
     }
@@ -20,20 +32,35 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     return;
   }
   const phaseArg = process.argv.find(arg => arg.startsWith('--phase='));
-  const phases = phaseArg ? [Number(phaseArg.slice('--phase='.length))] : [0, 1];
+  const phases = phaseArg ? [Number(phaseArg.slice('--phase='.length))] : restoreTestHistory ? [0, 1, 2] : [0, 1];
   const options = {
     channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true,
     acceptDownloads: true, downloadsPath: path.join(output, 'downloads')
   };
   const report = {
     schemaVersion: 1, nodeVersion: process.version, platform: process.platform,
-    channel: options.channel, nativeDownload, offlineAfterRestart: !process.argv.includes('--online'),
+    channel: options.channel, nativeDownload, downloadSource: httpDownload ? 'http' : 'blob', offlineAfterRestart: !process.argv.includes('--online'),
+    clearTestHistory, restoreTestHistory,
     phases: [], passed: false,
     scope: 'Temporary profile and synthetic JSON only; no application, service worker, vehicle or user data'
   };
   const reportFile = path.join(output, `restart-report${phaseArg ? '-' + phases[0] : ''}.json`);
   let context;
+  let server, origin;
   try {
+    if (httpDownload) {
+      server = http.createServer((request, response) => {
+        if (request.method === 'GET' && request.url === '/download') {
+          response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': 'attachment; filename="synthetic.json"', 'Cache-Control': 'no-store' });
+          response.end('{"test":true}');
+        } else if (request.method === 'GET' && request.url === '/') {
+          response.writeHead(200, { 'Content-Type': 'text/html' });
+          response.end('<button id="save">Save JSON</button>');
+        } else response.writeHead(404).end();
+      });
+      await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+      origin = `http://127.0.0.1:${server.address().port}`;
+    }
     for (const phase of phases) {
       const observation = { phase, stage: 'launch', status: 'running' };
       report.phases.push(observation);
@@ -57,19 +84,20 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
           eventsEnabled: true
         });
       }
-      await page.setContent('<button id="save">Save JSON</button>');
-      await page.evaluate(() => {
+      if (httpDownload) await page.goto(origin);
+      else await page.setContent('<button id="save">Save JSON</button>');
+      await page.evaluate(httpDownload => {
         document.querySelector('#save').onclick = () => {
           const link = document.createElement('a');
-          const url = URL.createObjectURL(new Blob(['{"test":true}'], { type: 'application/json;charset=utf-8' }));
+          const url = httpDownload ? '/download' : URL.createObjectURL(new Blob(['{"test":true}'], { type: 'application/json;charset=utf-8' }));
           link.href = url;
           link.download = 'synthetic.json';
           document.body.append(link);
           link.click();
           link.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 0);
+          if (!httpDownload) setTimeout(() => URL.revokeObjectURL(url), 0);
         };
-      });
+      }, httpDownload);
       if (phase && !process.argv.includes('--online')) await context.setOffline(true);
       observation.stage = 'download';
       if (nativeDownload) {
@@ -104,6 +132,25 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       if (process.argv.includes('--settle-before-close')) await new Promise(resolve => setTimeout(resolve, 2000));
       await context.close();
       context = null;
+      if (phase === 0 && clearTestHistory) {
+        // Diagnostic intervention in this run's new synthetic profile only.
+        // Preserve the closed database before removing just download records.
+        const history = path.join(output, 'profile', 'Default', 'History');
+        fs.copyFileSync(history, path.join(output, 'History-before-experiment'), fs.constants.COPYFILE_EXCL);
+        const { DatabaseSync } = require('node:sqlite');
+        const db = new DatabaseSync(history);
+        try {
+          observation.downloadHistoryRows = db.prepare('SELECT count(*) AS count FROM downloads').get().count;
+          assert.ok(observation.downloadHistoryRows > 0, 'No prior download records to isolate');
+          db.exec('BEGIN; DELETE FROM downloads_slices; DELETE FROM downloads_url_chains; DELETE FROM downloads; COMMIT;');
+        } finally { db.close(); }
+      }
+      if (phase === 1 && restoreTestHistory) {
+        const history = path.join(output, 'profile', 'Default', 'History');
+        fs.copyFileSync(history, path.join(output, 'History-after-experiment'), fs.constants.COPYFILE_EXCL);
+        fs.copyFileSync(path.join(output, 'History-before-experiment'), history);
+        observation.originalHistoryRestored = true;
+      }
     }
     report.passed = true;
     console.log(`${phaseArg ? 'Single download phase' : 'Browser download restart'} passed: ${output}`);
@@ -119,6 +166,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   } finally {
     try { await context?.close(); }
     finally {
+      if (server) await new Promise(resolve => server.close(resolve));
       fs.writeFileSync(reportFile, JSON.stringify(report, null, 2) + '\n');
       console.log(`Restart evidence: ${reportFile}`);
     }
