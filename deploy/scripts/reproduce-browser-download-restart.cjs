@@ -25,12 +25,23 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true,
     acceptDownloads: true, downloadsPath: path.join(output, 'downloads')
   };
+  const report = {
+    schemaVersion: 1, nodeVersion: process.version, platform: process.platform,
+    channel: options.channel, nativeDownload, offlineAfterRestart: !process.argv.includes('--online'),
+    phases: [], passed: false,
+    scope: 'Temporary profile and synthetic JSON only; no application, service worker, vehicle or user data'
+  };
+  const reportFile = path.join(output, `restart-report${phaseArg ? '-' + phases[0] : ''}.json`);
   let context;
   try {
     for (const phase of phases) {
+      const observation = { phase, stage: 'launch', status: 'running' };
+      report.phases.push(observation);
       context = await chromium.launchPersistentContext(path.join(output, 'profile'), { ...options, downloadsPath: path.join(output, `downloads-${phase}`) });
-      console.log(`browser.version: ${context.browser().version()}`);
+      observation.browserVersion = context.browser().version();
+      console.log(`browser.version: ${observation.browserVersion}`);
       if (!phase && process.argv.includes('--no-first-download')) {
+        observation.status = 'skipped-download';
         await context.close();
         context = null;
         continue;
@@ -60,6 +71,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         };
       });
       if (phase && !process.argv.includes('--online')) await context.setOffline(true);
+      observation.stage = 'download';
       if (nativeDownload) {
         const file = path.join(nativeDownloadPath, 'synthetic.json');
         const expected = Buffer.from('{"test":true}', 'utf8');
@@ -87,12 +99,28 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { test: true });
       }
       console.log(`Minimal download phase ${phase}: passed`);
+      observation.status = 'passed';
+      observation.stage = 'verified-bytes';
       if (process.argv.includes('--settle-before-close')) await new Promise(resolve => setTimeout(resolve, 2000));
       await context.close();
       context = null;
     }
+    report.passed = true;
     console.log(`${phaseArg ? 'Single download phase' : 'Browser download restart'} passed: ${output}`);
+  } catch (error) {
+    const observation = report.phases.at(-1);
+    if (observation) {
+      observation.status = 'failed';
+      observation.browserConnected = context?.browser()?.isConnected() ?? false;
+    }
+    // Keep reusable evidence free of arbitrary browser output and profile paths.
+    report.failure = 'phase_did_not_complete';
+    throw error;
   } finally {
-    await context?.close();
+    try { await context?.close(); }
+    finally {
+      fs.writeFileSync(reportFile, JSON.stringify(report, null, 2) + '\n');
+      console.log(`Restart evidence: ${reportFile}`);
+    }
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });
