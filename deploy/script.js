@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.610";
+const APP_VERSION = "3.13.611";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8406,6 +8406,7 @@ function formatObdLocalBridgeFailure(error) {
   if (codes.includes("pairing_token_mismatch")) return "ブリッジ接続キーが一致しません。起動時のペアリング値を「ブリッジ接続キー（今回のみ）」へ入力し直してください。";
   if (codes.includes("bridge_pairing_token_not_configured")) return "ブリッジ側の接続キーが未設定です。ブリッジの起動設定を確認してください。";
   if (codes.includes("vci_not_detected")) return "VCI未検出です。PCのドライバー登録と機器の接続を確認してください。車両データは未取得です。";
+  if (codes.includes("registry_query_failed")) return "J2534ドライバーの登録状態を確認できませんでした。登録先の存在と読取権限を確認し、ブリッジを起動し直してください。未登録と確定したものではありません。車両通信は行っていません。";
   if (codes.includes("vci_not_connected")) return "ドライバーは検出済みですが、VCIは未接続です。ドライバーの登録だけでは車両を読み取れません。";
   if (codes.includes("local_bridge_timeout")) return "ブリッジの応答が時間切れになりました。PC側のブリッジが動作しているか確認してください。";
   if (codes.includes("sample_mode_no_vehicle_readout")) return "サンプルモードのため車両データは取得できません。実車読取の結果ではありません。";

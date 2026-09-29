@@ -633,8 +633,11 @@ export function createLocalBridgeApp(options = {}) {
   const j2534DiscoveryRequested = typeof options.j2534RegistryText === "string"
     || options.discoverJ2534 === true
     || process.env.LOCAL_BRIDGE_DISCOVER_J2534 === "1";
+  const registryInspection = j2534DiscoveryRequested && typeof options.j2534RegistryText !== "string"
+    ? inspectJ2534RegistryQueries({ platform: options.j2534RegistryPlatform, queryRegistry: options.j2534RegistryQuery }) : null;
+  const registryIncomplete = !replayMode && registryInspection?.complete === false;
   const discoveredVciDevices = discoverJ2534RegistryDrivers({
-    registryText: options.j2534RegistryText,
+    registryText: registryInspection?.registryText ?? options.j2534RegistryText,
     enabled: j2534DiscoveryRequested,
     inspectLibraries: j2534DiscoveryRequested
   });
@@ -651,7 +654,7 @@ export function createLocalBridgeApp(options = {}) {
 
     if (request.method === "GET" && request.url === "/health") {
       sendJson(response, 200, {
-        ok: true,
+        ok: !registryIncomplete,
         bridge_version: bridgeVersion,
         api_version: API_VERSION,
         vehicle_command_enabled: false,
@@ -668,8 +671,9 @@ export function createLocalBridgeApp(options = {}) {
           planned_network_protocols: [...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY.planned_network_protocols]
         },
         ...(j2534DiscoveryRequested ? {
-          driver_readiness_status: j2534DiscoveryEnvironment.driver_readiness_status,
-          next_check: j2534DiscoveryEnvironment.next_check
+          driver_readiness_status: registryIncomplete ? "not_checked" : j2534DiscoveryEnvironment.driver_readiness_status,
+          next_check: registryIncomplete ? null : j2534DiscoveryEnvironment.next_check,
+          ...(registryIncomplete ? { errors: ["registry_query_failed"] } : {})
         } : {})
       });
       return;
@@ -687,6 +691,10 @@ export function createLocalBridgeApp(options = {}) {
       return;
     }
 
+    if (registryIncomplete) {
+      sendJson(response, 200, buildBlockedResponse(body.request_id, "registry_query_failed"));
+      return;
+    }
     sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices, j2534DiscoveryRequested, j2534DiscoveryEnvironment, sampleReadoutsEnabled, udsReadAdapterCompletionManifest, udsReadAdapterTransportResultStatus));
   });
 }
@@ -2244,20 +2252,29 @@ function normalizePeExportName(name = "") {
 }
 
 function readJ2534RegistryText() {
-  if (process.platform !== "win32") return "";
-  return J2534_REGISTRY_ROOTS.map((registryRoot) => {
-    try {
-      return execFileSync("reg.exe", ["query", registryRoot, "/s"], {
-        encoding: "utf8",
-        windowsHide: true,
-        stdio: ["ignore", "pipe", "ignore"],
-        timeout: 4000,
-        maxBuffer: 1024 * 1024
-      });
-    } catch (_error) {
-      return "";
+  return inspectJ2534RegistryQueries().registryText;
+}
+
+// Non-executing query diagnostics. Missing keys and access failures can share
+// reg.exe's exit status; never infer absence from a failed/localized query.
+export function inspectJ2534RegistryQueries({ platform = process.platform, queryRegistry = execFileSync } = {}) {
+  const queries = [], texts = [];
+  for (const root of J2534_REGISTRY_ROOTS) {
+    if (platform !== "win32") {
+      queries.push({ root, status: "unsupported_platform" });
+      continue;
     }
-  }).filter(Boolean).join("\n");
+    try {
+      const text = queryRegistry("reg.exe", ["query", root, "/s"], {
+        encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "ignore"],
+        timeout: 4000, maxBuffer: 1024 * 1024
+      });
+      if (typeof text !== "string") throw new Error("registry_output_invalid");
+      texts.push(text);
+      queries.push({ root, status: "completed" });
+    } catch { queries.push({ root, status: "query_failed" }); }
+  }
+  return { registryText: texts.join("\n"), queries, complete: queries.every(item => item.status === "completed") };
 }
 
 function buildReplaySnapshot(options = {}) {

@@ -3,6 +3,8 @@ import test from "node:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import vm from "node:vm";
+import { createLocalBridgeApp } from "../local-bridge-readonly.js";
 import { inspectJ2534Drivers } from "./inspect-j2534-drivers.js";
 
 function checkBlocked(result) {
@@ -74,4 +76,60 @@ test("unsupported platforms never launch a registry query", () => {
   assert.ok(result.registry_queries.every(item => item.status === "unsupported_platform"));
   assert.deepEqual(result.registry_roots_checked, []);
   checkBlocked(result);
+});
+
+test("bridge rejects incomplete discovery using existing failure envelope and preserves authentication priority", async () => {
+  for (const partial of [false, true]) {
+    let calls = 0;
+    const server = createLocalBridgeApp({ pairingToken: "synthetic-registry-test", discoverJ2534: true,
+      j2534RegistryPlatform: "win32", j2534RegistryQuery() {
+        if (partial && ++calls === 1) return "";
+        throw new Error("private registry failure");
+      } });
+    await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const origin = `http://127.0.0.1:${server.address().port}`;
+      const health = await fetch(origin + "/health").then(r => r.json());
+      assert.equal(health.ok, false);
+      assert.equal(health.driver_readiness_status, "not_checked");
+      assert.equal(health.next_check, null);
+      assert.equal(health.sample_mode, false);
+      assert.deepEqual(health.errors, ["registry_query_failed"]);
+      const send = (intent, token = "synthetic-registry-test") => fetch(origin + "/v1/bridge", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_version: "v1", request_id: "synthetic", timestamp: new Date().toISOString(),
+          intent, pairing_token: token, data: {} })
+      }).then(r => r.json());
+      for (const intent of ["bridge_status", "list_vci", "adapter_identity", "read_stored_dtc", "read_live_pid_snapshot"]) {
+        assert.deepEqual(await send(intent), { request_id: "synthetic", ok: false, blocked: true,
+          would_transmit: false, errors: ["registry_query_failed"], data: null });
+      }
+      assert.deepEqual((await send("clear_dtc")).errors, ["write_intent_blocked"]);
+      assert.deepEqual((await send("read_stored_dtc", "wrong")).errors, ["pairing_token_mismatch"]);
+    } finally { await new Promise(resolve => server.close(resolve)); }
+  }
+});
+
+test("completed empty registry queries preserve the existing no-driver bridge response", async () => {
+  const server = createLocalBridgeApp({ pairingToken: "synthetic-registry-test", discoverJ2534: true,
+    j2534RegistryPlatform: "win32", j2534RegistryQuery: () => "" });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const health = await fetch(`http://127.0.0.1:${server.address().port}/health`).then(r => r.json());
+    assert.equal(health.ok, true);
+    assert.equal(health.driver_readiness_status, "no_registered_driver");
+    assert.equal(health.vehicle_command_enabled, false);
+  } finally { await new Promise(resolve => server.close(resolve)); }
+});
+
+test("registry failure has an actionable Japanese message without an absent-driver claim", () => {
+  const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
+  const match = source.match(/function formatObdLocalBridgeFailure\(error\) \{[^]*?\n\}/);
+  assert.ok(match);
+  const context = vm.createContext({});
+  vm.runInContext(match[0], context);
+  const message = context.formatObdLocalBridgeFailure({ message: "registry_query_failed" });
+  assert.match(message, /登録状態を確認できません/);
+  assert.match(message, /読取権限/);
+  assert.match(message, /未登録と確定したものではありません/);
 });

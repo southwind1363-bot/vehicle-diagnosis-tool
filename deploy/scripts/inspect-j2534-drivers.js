@@ -1,4 +1,4 @@
-import { buildJ2534IdentityProbeReadiness, discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment } from "../local-bridge-readonly.js";
+import { buildJ2534IdentityProbeReadiness, discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment, inspectJ2534RegistryQueries } from "../local-bridge-readonly.js";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,28 +6,8 @@ import { fileURLToPath } from "node:url";
 // CLI-only diagnostics. Failed reg.exe queries do not prove absence: status 1
 // can mean either a missing key or denied access. Never classify localized stderr.
 export function inspectJ2534Drivers({ platform = process.platform, queryRegistry = execFileSync } = {}) {
-  const roots = getJ2534DiscoveryEnvironment([]).registry_roots_checked;
-  const observations = [];
-  const texts = [];
-  for (const root of roots) {
-    if (platform !== "win32") {
-      observations.push({ root, status: "unsupported_platform" });
-      continue;
-    }
-    try {
-      const text = queryRegistry("reg.exe", ["query", root, "/s"], {
-        encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "ignore"],
-        timeout: 4000, maxBuffer: 1024 * 1024
-      });
-      if (typeof text !== "string") throw new Error("registry_output_invalid");
-      texts.push(text);
-      observations.push({ root, status: "completed" });
-    } catch {
-      observations.push({ root, status: "query_failed" });
-    }
-  }
-  const complete = observations.every(item => item.status === "completed");
-  const devices = discoverJ2534RegistryDrivers({ registryText: texts.join("\n"), inspectLibraries: true });
+  const { registryText, queries: observations, complete } = inspectJ2534RegistryQueries({ platform, queryRegistry });
+  const devices = discoverJ2534RegistryDrivers({ registryText, inspectLibraries: true });
   const environment = getJ2534DiscoveryEnvironment(devices);
   const readiness = buildJ2534IdentityProbeReadiness(devices);
   if (!complete) {

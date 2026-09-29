@@ -18,7 +18,13 @@ an unsupported platform yields `registry_query_status: "incomplete"` and exit
 code 2, rather than claiming no registered driver. Successfully found candidates
 remain visible during a partial failure. Only successful query roots appear in
 `registry_roots_checked`. Raw errors and registry text are not printed. This CLI
-diagnostic does not alter the bridge API's discovery response or authorize loading.
+diagnostic never authorizes loading. The live bridge now uses the same bounded
+query collector. An incomplete live query returns the existing blocked response
+with `registry_query_failed` and no diagnostic data; health reports `ok: false`
+and readiness `not_checked`. Successful empty queries retain the no-driver result.
+Replay and explicitly supplied test registry text retain their existing behavior.
+Saved session and packaged preflight-evidence formats are unchanged; the separate
+workstation inspection/evidence command has not yet adopted these query diagnostics.
 
 `createDtcSelectedPackageReview` accepts the trusted host's existing registered
 DTC handoff. It prepares and consumes its expiring one-use ticket before passing
