@@ -4,7 +4,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createLocalBridgeApp } from "../local-bridge-readonly.js";
+import { discoverJ2534WorkstationDrivers } from "./inspect-workstation-j2534.js";
 import { inspectJ2534Drivers } from "./inspect-j2534-drivers.js";
 
 function checkBlocked(result) {
@@ -132,4 +135,49 @@ test("registry failure has an actionable Japanese message without an absent-driv
   assert.match(message, /登録状態を確認できません/);
   assert.match(message, /読取権限/);
   assert.match(message, /未登録と確定したものではありません/);
+});
+
+test("workstation discovery refuses full and partial failure before static inspection", () => {
+  for (const partial of [false, true]) {
+    let calls = 0;
+    assert.throws(() => discoverJ2534WorkstationDrivers({ platform: "win32", queryRegistry() {
+      if (partial && ++calls === 1) return 'HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Synthetic\n    FunctionLibrary    REG_SZ    private.dll';
+      throw new Error("private");
+    } }), { code: "j2534_registry_query_incomplete" });
+  }
+  assert.deepEqual(discoverJ2534WorkstationDrivers({ platform: "win32", queryRegistry: () => "" }), []);
+  assert.deepEqual(discoverJ2534WorkstationDrivers({ platform: "linux", queryRegistry() { assert.fail("Unexpected query"); } }), []);
+});
+
+test("workstation CLI emits no evidence or preflight on query failure; completed empty queries still export", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workstation-query-cli-"));
+  const preload = path.join(root, "query.mjs");
+  try {
+    const entry = fileURLToPath(new URL("./inspect-workstation-j2534.js", import.meta.url));
+    const writePreload = query => fs.writeFileSync(preload, `import cp from 'node:child_process';\nimport {syncBuiltinESMExports} from 'node:module';\nObject.defineProperty(process,'platform',{value:'win32'});\ncp.execFileSync=${query};\nsyncBuiltinESMExports();\n`);
+    const run = (args, input = "") => spawnSync(process.execPath, ["--import", pathToFileURL(preload).href, entry, ...args],
+      { encoding: "utf8", windowsHide: true, timeout: 10000, shell: false, input });
+    writePreload(`()=>{throw new Error('private failure');}`);
+    for (const args of [[], ["--evidence-json"], ["--preflight-index", "1"],
+      ["--preflight-index", "1", "--evidence-json"], ["--prepare-uds-request", "1", "7E0", "7E8", "F189"]]) {
+      const result = run(args);
+      assert.equal(result.status, 2);
+      assert.equal(result.stdout, "");
+      assert.match(result.stderr, /登録状態を確認できませんでした/);
+      assert.match(result.stderr, /証拠JSONは生成していません/);
+      assert.doesNotMatch(result.stderr, /private failure|非実行事前検査/);
+    }
+    writePreload(`()=>''`);
+    const result = run(["--evidence-json"]);
+    assert.equal(result.status, 0);
+    const evidence = JSON.parse(result.stdout);
+    assert.equal(evidence.registration_status, "no_registered_driver");
+    assert.equal(evidence.dll_load_attempted, false);
+    assert.equal(evidence.vehicle_communication_started, false);
+    writePreload(`()=>{throw new Error('private failure');}`);
+    const validation = run(["--validate-evidence-stdin"], JSON.stringify(evidence));
+    assert.equal(validation.status, 0);
+    assert.equal(JSON.parse(validation.stdout).valid, true);
+    assert.equal(JSON.parse(validation.stdout).evidence_authorizes_execution, false);
+  } finally { fs.unlinkSync(preload); fs.rmdirSync(root); }
 });

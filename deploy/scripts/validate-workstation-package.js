@@ -680,18 +680,22 @@ try {
         && !/Press any key|\. \. \./i.test(rejected.output), "Windows verifier disclosed arguments, claimed success, or paused after rejection");
     }
     const inspection = await runEntry("inspect");
-    check(inspection.code === 0 && inspection.output.includes("J2534接続準備チェック"), `Packaged J2534 inspection failed: ${inspection.output}`);
+    check((inspection.code === 0 || (inspection.code === 2 && inspection.output.includes("登録状態を確認できませんでした")))
+      && inspection.output.includes("J2534接続準備チェック"), `Packaged J2534 inspection failed: ${inspection.output}`);
     check(inspection.output.includes("Package files match:") && inspection.output.indexOf("Package files match:") < inspection.output.indexOf("J2534接続準備チェック"), "Driver inspection started before package verification");
     check(!inspection.output.includes("診断画面:") && !inspection.output.includes("ペアリング値") && inspection.output.includes("車両通信: 未実施 / DLL実行: 未実施"), "Driver inspection started a server or overstated vehicle access");
     check(!inspection.output.includes("J2534登録ドライバー 非実行事前検査"), "Non-interactive J2534 inspection ran preflight without explicit selection");
     const evidenceInspection = await runEntry("inspect-evidence");
     const evidenceLine = evidenceInspection.output.split(/\r?\n/).find((line) => line.startsWith('{"schema_version":"j2534-native-preflight-evidence-v1"'));
     const packagedEvidence = JSON.parse(evidenceLine || "null");
-    check(evidenceInspection.code === 0 && evidenceInspection.output.includes("Package files match:")
+    check(evidenceInspection.output.includes("Package files match:") && (evidenceInspection.code === 2
+      ? evidenceInspection.stdout.trim() === "" && evidenceInspection.stderr.includes("証拠JSONは生成していません")
+        && evidenceInspection.stderr.includes("未登録と確定したものではありません")
+      : evidenceInspection.code === 0
       && packagedEvidence?.registration_status === "no_registered_driver" && packagedEvidence?.preflight_verification_status === "not_requested"
       && packagedEvidence?.private_fields_included === false && packagedEvidence?.evidence_authorizes_execution === false
-      && packagedEvidence?.dll_load_attempted === false && packagedEvidence?.vehicle_communication_started === false,
-    "Packaged J2534 evidence did not verify integrity first or preserve a sanitized no-driver state");
+      && packagedEvidence?.dll_load_attempted === false && packagedEvidence?.vehicle_communication_started === false),
+    "Packaged J2534 evidence failed to distinguish incomplete discovery from a sanitized no-driver state");
     const validatedInspection = await runEntry("inspect-validate");
     const validationLine = validatedInspection.output.split(/\r?\n/).find((line) => line.startsWith('{"schema_version":"j2534-native-preflight-evidence-validation-v1"'));
     const packagedValidation = JSON.parse(validationLine || "null");
@@ -728,6 +732,7 @@ try {
     const oversizedResult = JSON.parse(oversizedLine || "null");
     for (const response of [evidenceInspection, validatedInspection, validatedUdsPreparation,
       rejectedUdsValidation, oversizedUdsValidation, oversizedValidation]) {
+      if (response === evidenceInspection && response.code === 2) continue; // No evidence on failed discovery, checked above.
       const standalone = JSON.parse(response.stdout.trim());
       check(typeof standalone.schema_version === "string" && response.stderr.includes("Package files match:"),
         "Machine-readable inspection stdout was contaminated by package verification text");
@@ -740,7 +745,8 @@ try {
       && invalidInspection.output.includes("検査番号を確認できません") && !invalidInspection.output.includes("DLLロード: 実施"), "Invalid packaged J2534 selection was not rejected after package verification");
     const invalidUdsPreparation = await runEntry("inspect-uds-invalid");
     check(invalidUdsPreparation.code === 2 && invalidUdsPreparation.output.includes("Package files match:")
-      && invalidUdsPreparation.output.includes("UDS準備引数を確認できません")
+      && (invalidUdsPreparation.output.includes("UDS準備引数を確認できません")
+        || (invalidUdsPreparation.stdout.trim() === "" && invalidUdsPreparation.stderr.includes("証拠JSONは生成していません")))
       && !invalidUdsPreparation.output.includes('vehicle_command_enabled":true'),
     "Invalid packaged J2534 UDS preparation did not fail closed after package verification");
   }

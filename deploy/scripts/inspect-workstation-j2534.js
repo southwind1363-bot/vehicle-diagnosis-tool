@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
-import { createJ2534ProductionIdentityBoundUdsFixtureBoundary, createJ2534RegisteredDriverDescriptor, discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment, issueJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight } from "../local-bridge-readonly.js";
+import { createJ2534ProductionIdentityBoundUdsFixtureBoundary, createJ2534RegisteredDriverDescriptor, discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment, inspectJ2534RegistryQueries, issueJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight } from "../local-bridge-readonly.js";
 import { parseJ2534UdsPreparationArguments, runJ2534UdsPreparationEvidence, validateJ2534UdsPreparationEvidence } from "./j2534-uds-preparation-evidence.js";
 
 const READINESS = {
@@ -39,6 +39,15 @@ const PREFLIGHT_BLOCKERS = {
 const safeLabel = (value) => typeof value === "string"
   ? value.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, " ").slice(0, 120).trim() || "名称未確認"
   : "名称未確認";
+
+// A failed query cannot produce a no-driver evidence record or reach preflight.
+// Keep the existing evidence schema; do not invent a new saved registration state.
+export function discoverJ2534WorkstationDrivers(options = {}) {
+  if ((options.platform ?? process.platform) !== "win32") return [];
+  const inspection = inspectJ2534RegistryQueries(options);
+  if (!inspection.complete) throw Object.assign(new Error("j2534_registry_query_incomplete"), { code: "j2534_registry_query_incomplete" });
+  return discoverJ2534RegistryDrivers({ registryText: inspection.registryText, inspectLibraries: true });
+}
 
 export function formatJ2534WorkstationInspection(devices = [], platform = process.platform) {
   const lines = ["J2534接続準備チェック", "車両通信: 未実施 / DLL実行: 未実施 / 診断データ保存・外部送信: なし / 異常終了時のみ安全隔離状態を端末保存"];
@@ -305,7 +314,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       console.log(JSON.stringify(validation));
       if (!validation.valid) process.exitCode = 1;
     } else if (rawArgs[0] === "--prepare-uds-request") {
-      const devices = process.platform === "win32" ? discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true }) : [];
+      const devices = discoverJ2534WorkstationDrivers();
       const selection = parseJ2534UdsPreparationArguments(rawArgs, devices.length);
       if (selection.status !== "selected") {
         console.error("UDS準備引数を確認できません。登録候補番号、要求ECU、応答ECU、4桁DIDを指定してください。車両通信・DLL実行は行っていません。");
@@ -319,7 +328,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         if (evidence.preparation_status !== "prepared_non_executable") process.exitCode = 1;
       }
     } else {
-      const devices = process.platform === "win32" ? discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true }) : [];
+      if (parseJ2534InspectionArguments(rawArgs, Number.MAX_SAFE_INTEGER).status === "invalid") {
+        throw Object.assign(new Error("j2534_inspection_arguments_invalid"), { code: "j2534_inspection_arguments_invalid" });
+      }
+      const devices = discoverJ2534WorkstationDrivers();
       const parsed = parseJ2534InspectionArguments(rawArgs, devices.length);
       if (!parsed.evidenceJson) console.log(formatJ2534WorkstationInspection(devices));
       if (process.platform !== "win32") {
@@ -346,8 +358,16 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         }
       }
     }
-  } catch {
-    console.error("J2534接続準備チェックを完了できませんでした。配布ファイルとドライバー登録の読込権限を確認してください。車両通信・DLL実行は行っていません。");
-    process.exitCode = 1;
+  } catch (error) {
+    if (error?.code === "j2534_inspection_arguments_invalid") {
+      console.error("検査番号を確認できません。表示された候補番号を1件だけ指定してください。DLLロード・車両通信は行っていません。");
+      process.exitCode = 2;
+    } else if (error?.code === "j2534_registry_query_incomplete") {
+      console.error("J2534接続準備チェック: 登録状態を確認できませんでした。登録先の存在と読取権限を確認してください。未登録と確定したものではありません。証拠JSONは生成していません。車両通信: 未実施 / DLL実行: 未実施");
+      process.exitCode = 2;
+    } else {
+      console.error("J2534接続準備チェックを完了できませんでした。配布ファイルとドライバー登録の読込権限を確認してください。車両通信・DLL実行は行っていません。");
+      process.exitCode = 1;
+    }
   }
 }

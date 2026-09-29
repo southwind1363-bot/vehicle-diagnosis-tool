@@ -23,8 +23,11 @@ query collector. An incomplete live query returns the existing blocked response
 with `registry_query_failed` and no diagnostic data; health reports `ok: false`
 and readiness `not_checked`. Successful empty queries retain the no-driver result.
 Replay and explicitly supplied test registry text retain their existing behavior.
-Saved session and packaged preflight-evidence formats are unchanged; the separate
-workstation inspection/evidence command has not yet adopted these query diagnostics.
+Saved session and packaged preflight-evidence formats are unchanged. The workstation
+inspection/evidence command also requires complete registry queries before inspecting
+libraries, prompting for a selection or preparing evidence. Failure exits with code 2,
+a Japanese stderr message and no stdout evidence, including the UDS preparation path.
+Validation of already saved evidence remains available without registry discovery.
 
 `createDtcSelectedPackageReview` accepts the trusted host's existing registered
 DTC handoff. It prepares and consumes its expiring one-use ticket before passing
