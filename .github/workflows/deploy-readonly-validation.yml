@@ -78,11 +78,20 @@ jobs:
           PLAYWRIGHT_CHANNEL: chromium
           TMPDIR: ${{ runner.temp }}
 
-      - name: Preserve synthetic test screenshots
+      - name: Validate saved multi-ECU archive after offline browser restart
+        run: npm run validate:scanner-restart
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/scanner-browser/node_modules/playwright
+          PLAYWRIGHT_CHANNEL: chromium
+          TMPDIR: ${{ runner.temp }}
+
+      - name: Preserve synthetic test screenshots and runtime versions
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: scanner-workflow-screenshots
-          path: ${{ runner.temp }}/obd-file-flow-*/*.png
+          path: |
+            ${{ runner.temp }}/obd-file-flow-*/*.png
+            ${{ runner.temp }}/obd-file-flow-*/browser-runtime.json
           if-no-files-found: warn
           retention-days: 7
