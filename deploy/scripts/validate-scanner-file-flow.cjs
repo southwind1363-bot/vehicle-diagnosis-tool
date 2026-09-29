@@ -1079,6 +1079,33 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), multiFile);
       assert.deepEqual(await readFacts(), expected);
       await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      const restoredState = await page.evaluate(() => JSON.stringify({ session: obdDevSession.lastSession, text: obdScannerText.value }));
+      const assertRestoredRetained = async () => {
+        assert.equal(await page.evaluate(() => JSON.stringify({ session: obdDevSession.lastSession, text: obdScannerText.value })), restoredState,
+          'Rejected replacement after restart must retain the full live session and input');
+        assert.deepEqual(await readFacts(), expected);
+        assert.deepEqual(fs.readFileSync(multiFile), savedBytes);
+        assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true);
+      };
+      await openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }),
+        { name: 'broken-after-restart.json', mimeType: 'application/json', buffer: Buffer.from('{') });
+      await page.locator('#obdImportStatus').filter({ hasText: 'JSONの構文を読み取れません' }).waitFor();
+      assert.equal(await page.locator('#obdImportFileInput').inputValue(), '');
+      await assertRestoredRetained();
+      await page.setViewportSize({ width: 390, height: 900 });
+      await page.locator('#obdImportStatus').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(output, 'live-restart-invalid-file-retained.png') });
+      await page.getByRole('button', { name: '前の診断画面へ戻る', exact: true }).click();
+      const cancelReplacementDialog = page.waitForEvent('dialog');
+      const cancelReplacementImport = openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), multiFile);
+      const cancelReplacementConfirmation = await cancelReplacementDialog;
+      assert.equal(cancelReplacementConfirmation.type(), 'confirm');
+      assert.match(cancelReplacementConfirmation.message(), /^現在の読取結果を新しい入力で置き換えますか？/);
+      await cancelReplacementConfirmation.dismiss();
+      await cancelReplacementImport;
+      await page.locator('#obdImportStatus').filter({ hasText: '読取結果の置換を中止しました' }).waitFor();
+      await assertRestoredRetained();
+      await page.getByRole('button', { name: '前の診断画面へ戻る', exact: true }).click();
       const resavedDownload = page.waitForEvent('download');
       await page.locator('#obdStageResultsView [data-obd-session-export]').click();
       const resavedFile = path.join(output, 'multi-ecu-after-browser-restart.json');
@@ -1094,7 +1121,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.match(await page.locator('#obdSessionDetailLiveTimeline').innerText(), /7E9/);
       await page.locator('#obdSessionDetailLiveTimeline').screenshot({ path: path.join(output, 'multi-ecu-after-browser-restart.png') });
       assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
-      console.log(`Live archive restart passed: save two-ECU readout -> full browser restart offline -> locked -> synthetic unlock -> restore -> resave -> exact measured facts retained; no real hardware / Artifacts: ${output}`);
+      console.log(`Live archive restart passed: save two-ECU readout -> full browser restart offline -> locked -> synthetic unlock -> restore -> reject broken file and cancel replacement without losing session -> resave -> exact measured facts retained; no real hardware / Artifacts: ${output}`);
       return;
     }
     }
