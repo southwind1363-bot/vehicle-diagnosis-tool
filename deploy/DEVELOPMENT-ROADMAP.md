@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-30 開発用J2534登録検査の確認不能表示: inspect-j2534-drivers.jsは従来、reg.exeの失敗を空の登録一覧として受け取り、未登録と案内していた。CLIで2つの固定rootを各4秒/1MiB上限で照会し、成功root・失敗・非Windowsを個別記録するよう修正。失敗時はregistry_discovery_incomplete、確認先はquery権限/キー存在、終了code2とし、既に検出した候補は保持する。reg.exeの失敗だけではキー不存在とアクセス拒否を区別せず、生stderr/登録textを出さない。人工の空成功、拒否/timeout/不正出力、部分成功、非Windowsを検証へ追加し、既存vendor検証は41件合格/skip0。実CLIも終了2と実行権限falseを確認。Windows/Ubuntu CIの既存vendor検証へ統合。製品610本体、bridge API、配布ZIP、保存形式、DLLロード/車両通信の権限は変更なし。この修正は開発CLI限定で、bridgeの既存discovery応答への展開は別工程。
+
 2026-09-30 Windowsのドライバー選択証拠を継続検証へ追加: 前回25f0cdfcの全CI成功を確認。既存Ubuntu CIではWindows専用filesystem選択検証がskipされるため、windows-2022/Node24の独立jobで既存validate-vendor-review.jsを実行する構成を追加。固定8file、60秒の子検証期限と非zero失敗伝播を維持し、job期限は5分。ローカルWindowsで37項目合格/skip0、選択と実file照合、差替え/期限切れ/失効、署名観測と終了確認、一回制限を確認。人工一時fileと模擬processイベントだけを使い、native compile・実registry探索・vendor DLL読み込み・VCI/車両通信は実行しない。READMEの古い6file表記も8fileへ訂正。GitHub Windows実行結果はpush後確認。製品610本体/ZIP/保存形式/実行許可変更なし。実ドライバー/実車適合の証明や、Chrome153終了問題の解消ではない。
 
 2026-09-29 完全再起動後の複数ECU記録の置換失敗保護: 前回4722328bのGitHub全検証successを確認。既存のrestart-live-archive経路へ、offline復元した人工7E8/7E9記録に対する破損JSON選択と正常file置換の確認取消を追加。実file picker経路で拒否/取消案内を待ち、lastSession全体と入力文字列、monitorValues/livePidTimeline、元保存file bytesの不変、保存ボタン再有効を確認した上で再保存→再取込まで実施。npm run validate:scanner-restartがChrome for Testing151.0.7922.34/Node24.15.0で合格（Temp/obd-file-flow-ZLouU9）、390pxの拒否案内を目視確認。既存のGitHub再起動工程でも継続実行される。製品の不具合は再現せず、製品610本体/ZIP/保存形式/車両権限は変更なし。実password・OS再起動・別PC・実VCI/実車は未確認、Chrome153の終了問題は未解決。

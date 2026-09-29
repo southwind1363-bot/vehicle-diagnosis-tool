@@ -3,7 +3,7 @@
 ## Native signature probe (development only)
 
 The existing bridge validator now runs `scripts/validate-vendor-review.js`, a
-fixed eight-file Node test suite with a 60-second deadline and nonzero-exit failure
+fixed nine-file Node test suite with a 60-second deadline and nonzero-exit failure
 propagation. This includes package/signature adapters and simulated lifecycle
 checks, not native compilation or vendor execution. Windows-only filesystem
 selection integration is explicitly skipped on other platforms; a skip is not
@@ -11,6 +11,14 @@ hardware or Windows validation. A separate Windows CI job runs the same suite,
 including those filesystem selection checks, using inert temporary files and
 simulated process events. It needs only Node.js, not installed VCI drivers.
 Native generated-PE checks and real vendor/vehicle verification remain separate.
+
+The development `inspect-j2534-drivers.js` CLI reports each registry query
+separately. A failed query (including ambiguous missing-key/access failures) or
+an unsupported platform yields `registry_query_status: "incomplete"` and exit
+code 2, rather than claiming no registered driver. Successfully found candidates
+remain visible during a partial failure. Only successful query roots appear in
+`registry_roots_checked`. Raw errors and registry text are not printed. This CLI
+diagnostic does not alter the bridge API's discovery response or authorize loading.
 
 `createDtcSelectedPackageReview` accepts the trusted host's existing registered
 DTC handoff. It prepares and consumes its expiring one-use ticket before passing

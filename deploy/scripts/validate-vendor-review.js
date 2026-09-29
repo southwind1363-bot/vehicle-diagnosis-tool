@@ -7,6 +7,7 @@ const tests = ["vendor-package-review", "vendor-package-folder-review", "vendor-
   "native-signature-result", "signature-observation-worker", "dtc-selected-package-review", "sweep-selection-review",
   "sweep-signature-review-operation"];
 const files = tests.map(name => fileURLToPath(new URL(`./native/${name}.test.js`, import.meta.url)));
+files.push(fileURLToPath(new URL("./inspect-j2534-drivers.test.js", import.meta.url)));
 const result = spawnSync(process.execPath, ["--test", ...files], {
   shell: false, windowsHide: true, stdio: "inherit", timeout: 60000
 });
