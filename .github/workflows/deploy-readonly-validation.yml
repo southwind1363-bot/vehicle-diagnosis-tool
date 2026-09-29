@@ -52,6 +52,25 @@ jobs:
       - name: Report DTC coverage
         run: node scripts/report-dtc-coverage.js
 
+  windows-vendor-review:
+    name: Validate non-executing driver review on Windows
+    runs-on: windows-2022
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Inert temporary files and simulated process events only. No native
+      # compilation, live registry discovery, vendor DLL loading or vehicle I/O.
+      - name: Validate selected driver evidence and observation lifecycle
+        run: node scripts/validate-vendor-review.js
+
   scanner-browser:
     name: Validate offline scanner workflow in Chromium
     runs-on: ubuntu-24.04
