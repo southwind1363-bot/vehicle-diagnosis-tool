@@ -1811,6 +1811,19 @@ async function validateBridgeOperationLifecycle(webUrl) {
   const readOwner = stageClient.beginObdBridgeOperation();
   stageClient.finishObdBridgeOperation(readOwner, "Read complete");
   check(stageClient.activeObdStage === "results", "Readout completion lost the existing results route");
+  stageClient.activeObdStage = "details";
+  let readCallbacks = 0;
+  stageClient.sendObdLocalBridgeIntent = async () => {
+    check(stageClient.activeObdStage === "details", "Pending readout hid its controls before the response");
+    return { ok: false, blocked: true, errors: ["vci_not_detected"] };
+  };
+  await stageClient.runObdLocalBridgeRead("DTC", "read_stored_dtc", {}, () => { readCallbacks++; });
+  check(stageClient.activeObdStage === "details" && stageClient.obdDevStatus.textContent.includes("VCI未検出") && readCallbacks === 0,
+    "Failed readout hid its reason or reached the success callback");
+  stageClient.sendObdLocalBridgeIntent = async () => ({ ok: true, data: {} });
+  await stageClient.runObdLocalBridgeRead("DTC", "read_stored_dtc", {}, () => { readCallbacks++; });
+  check(stageClient.activeObdStage === "results" && readCallbacks === 1,
+    "Successful readout no longer entered its results view");
 
   const serialClient = createClient(webUrl, options.pairingToken, async () => { throw new Error("Must not call bridge while serial is active"); });
   serialClient.obdDevSession.connectionState = "selecting";

@@ -13,15 +13,19 @@ module.exports = async function validateScannerRegistryFailure(browser, root, ou
       throw new Error('synthetic-private-registry-detail');
     } });
   const context = await browser.newContext({ viewport: { width: 390, height: 900 }, serviceWorkers: 'block' });
+  const emptyServer = createLocalBridgeApp({ pairingToken: 'synthetic-registry-failure-key', discoverJ2534: true, j2534RegistryText: '' });
+  let responseServer = server;
   const origin = 'http://127.0.0.1';
   const intents = [], errors = [], blocked = [];
   try {
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+    await new Promise((resolve, reject) => { emptyServer.once('error', reject); emptyServer.listen(0, '127.0.0.1', resolve); });
     await context.addInitScript(() => {
       localStorage.setItem('vehicle-diagnosis-notice-accepted-v1', 'accepted');
       localStorage.setItem('vehicle-diagnosis-obd-ui-mode-v1', 'details');
       sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled');
       sessionStorage.setItem('vehicle-diagnosis-obd-dev-mode-v1', 'enabled');
+      localStorage.setItem('vehicle-diagnosis-obd-dev-token-v1', 'synthetic-registry-failure-key');
       Object.defineProperty(navigator, 'serial', { value: undefined });
       Object.defineProperty(navigator, 'bluetooth', { value: undefined });
     });
@@ -31,8 +35,8 @@ module.exports = async function validateScannerRegistryFailure(browser, root, ou
         && ['/local-bridge/v1/request', '/v1/bridge'].includes(url.pathname)) {
         const body = JSON.parse(request.postData());
         intents.push(body.intent);
-        if (body.intent !== 'bridge_status') { blocked.push(body.intent); return route.abort(); }
-        const response = await fetch(`http://127.0.0.1:${server.address().port}/v1/bridge`, {
+        if (!['bridge_status', 'adapter_identity', 'read_stored_dtc', 'read_live_pid_snapshot'].includes(body.intent)) { blocked.push(body.intent); return route.abort(); }
+        const response = await fetch(`http://127.0.0.1:${responseServer.address().port}/v1/bridge`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: request.postData(), signal: AbortSignal.timeout(5000)
         });
         return route.fulfill({ status: response.status, contentType: 'application/json', body: await response.text() });
@@ -105,12 +109,35 @@ module.exports = async function validateScannerRegistryFailure(browser, root, ou
     assert.deepEqual(fs.readFileSync(originalFile), originalBytes);
     assert.deepEqual(intents, ['bridge_status', 'bridge_status']);
     assert.equal(queries, 2, 'Explicit status checks must not trigger automatic registry retries');
+
+    // Explicitly switch the test endpoint to successful empty discovery. This
+    // establishes a bridge normally, but cannot provide any vehicle readout.
+    responseServer = emptyServer;
+    await page.evaluate(() => renderObdStageView('details'));
+    await page.locator('#obdDevBridgeStatusButton').click();
+    await page.waitForFunction(() => !obdBridgeOperation && Boolean(obdDevSession.bridgeEndpoint));
+    for (const button of ['#obdDevBridgeDtcButton', '#obdDevBridgeLiveButton']) {
+      await page.evaluate(() => renderObdStageView('details'));
+      const task = page.locator('details[name="obd-readout-task"]').filter({ has: page.locator(button) });
+      if (!await task.evaluate(node => node.open)) await task.locator(':scope > summary').click();
+      await page.locator(button).click();
+      await page.waitForFunction(() => !obdBridgeOperation && document.getElementById('obdDevStatus').textContent.includes('VCI未検出'));
+      assert.equal(await status.isVisible(), true, 'Failed readout must leave its reason visible');
+      await status.scrollIntoViewIfNeeded();
+      await status.screenshot({ path: path.join(output, `failed-readout-${button.slice(1)}-390.png`) });
+      assert.deepEqual(await page.evaluate(() => ({ session: obdDevSession.lastSession,
+        input: document.getElementById('obdScannerText').value })), retained);
+    }
+    assert.deepEqual(await saveReadout('after-failed-readouts.json'), beforeExport);
+    assert.deepEqual(intents, ['bridge_status', 'bridge_status', 'bridge_status', 'adapter_identity', 'read_stored_dtc', 'read_live_pid_snapshot']);
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, []);
     console.log('Registry failure UI: real blocked response, Japanese notice, no readout or identity request');
     console.log('Registry failure retention: imported session/input/original preserved; exported payload unchanged except timestamp');
+    console.log('Missing VCI: DTC/live button failures stay visible, preserve the imported readout and retain the full exported payload');
   } finally {
     await context.close();
     await new Promise(resolve => server.close(resolve));
+    await new Promise(resolve => emptyServer.close(resolve));
   }
 };

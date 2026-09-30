@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.613";
+const APP_VERSION = "3.13.614";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8348,7 +8348,7 @@ async function readObdLocalBridgeLiveSnapshot() {
 
 async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
   if (!obdDevModeUnlocked) return;
-  const operation = beginObdBridgeOperation();
+  const operation = beginObdBridgeOperation({ preserveStage: true });
   if (!operation) return;
   let resultMessage = "";
   try {
@@ -8360,6 +8360,9 @@ async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
       throw new Error((response.errors || []).join(" / ") || "bridge_response_not_ok");
     }
     onSuccess(response);
+    // Only a completed read returns to the normal results route. A failed
+    // request keeps its current controls and failure notice visible.
+    operation.preserveStage = false;
     resultMessage = `${label}が完了しました。`;
   } catch (error) {
     resultMessage = `${label}に失敗しました: ${formatObdLocalBridgeFailure(error)}`;
@@ -8400,8 +8403,8 @@ function finishObdBridgeOperation(operation, resultMessage) {
   const stage = activeObdStage;
   obdBridgeOperation = null;
   renderObdDeveloperGate();
-  // Status-only checks keep the current view, including a user's navigation
-  // during the request. Reading operations retain their existing result route.
+  // Status checks and unsuccessful reads keep the current view, including a
+  // user's navigation. Successful reads retain their existing results route.
   if (operation.preserveStage) renderObdStageView(stage);
   if (!operation.cancelled && obdDevModeUnlocked && resultMessage) obdDevStatus.textContent = resultMessage;
 }
