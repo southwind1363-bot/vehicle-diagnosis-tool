@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.612";
+const APP_VERSION = "3.13.613";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8250,7 +8250,7 @@ async function readObdDeveloperSupportedPidMaps() {
 }
 
 async function probeObdLocalBridge(contextLabel = "ローカルブリッジ") {
-  const operation = beginObdBridgeOperation();
+  const operation = beginObdBridgeOperation({ preserveStage: true });
   if (!operation) return;
   let resultMessage = "";
   try {
@@ -8373,13 +8373,15 @@ function isObdBridgeOperationBlocked() {
     || Boolean(obdDevSession.connectionState && obdDevSession.connectionState !== "disconnected");
 }
 
-function beginObdBridgeOperation() {
+function beginObdBridgeOperation({ preserveStage = false } = {}) {
   if (isObdBridgeOperationBlocked()) return null;
   obdDtcClearTargetBindingController.invalidate("transport_connection_not_current");
   obdSerialRevision += 1;
-  const operation = { cancelled: false, controller: typeof AbortController === "function" ? new AbortController() : null };
+  const stage = activeObdStage;
+  const operation = { cancelled: false, preserveStage, controller: typeof AbortController === "function" ? new AbortController() : null };
   obdBridgeOperation = operation;
   renderObdDeveloperGate();
+  if (preserveStage) renderObdStageView(stage);
   return operation;
 }
 
@@ -8395,8 +8397,12 @@ function throwIfObdBridgeOperationCancelled(operation) {
 
 function finishObdBridgeOperation(operation, resultMessage) {
   if (obdBridgeOperation !== operation) return;
+  const stage = activeObdStage;
   obdBridgeOperation = null;
   renderObdDeveloperGate();
+  // Status-only checks keep the current view, including a user's navigation
+  // during the request. Reading operations retain their existing result route.
+  if (operation.preserveStage) renderObdStageView(stage);
   if (!operation.cancelled && obdDevModeUnlocked && resultMessage) obdDevStatus.textContent = resultMessage;
 }
 

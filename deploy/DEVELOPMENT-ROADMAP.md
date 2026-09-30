@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-01 3.13.613・接続確認の失敗案内を画面に保持: 保存結果取込後、詳細画面の実「接続確認」buttonを押すとgate更新で結果画面へ移り、登録照会失敗の案内が不可視になる不具合を再現。status確認だけbegin/finish時の現在stageを保持し、応答待ち中の利用者の画面移動も巻戻さない。読取操作の結果画面遷移、取消/所有者照合、通信・保存形式は維持。実button経路で失敗通知可視・既存session/input/原本不変・再保存JSONの日時以外完全一致を確認。画面遷移、bridge384、offline183、package501、ブラウザー全工程、workstation1363、serial lifecycle1021が合格。画面位置を持たない既存VM harnessへ状態を補い、status中の利用者移動と通常read遷移の追加3検査も実行する。613ZIPを別folder展開し850files/16923581bytes一致、HTTP200/版613/vehicleとsample falseを確認。ZIP SHA256 C3BDEB6A6116A77BFF947CD5C26A0452A2E8AB07A03330B0107B59A679F95924。実DLL/VCI/実車通信なし。公開とCIはpush後確認。
+
 2026-09-30 登録照会失敗後の既存結果保護: 前回a1b185a0のGitHub全3job成功を確認。空sessionだけだったregistry failure browser検査へ、人工保存fileの実picker取込→JSON保存→接続確認失敗→再保存を追加。lastSession全体と入力文字列、原本bytesが不変、再保存JSONがexported_at以外完全一致することを確認。status要求は明示操作の計2件だけでidentity/readへ進まず、起動時2root照会の自動再実行なし。Chromium151.0.7922.34で対象検査合格、Temp/obd-file-flow-DaUi4v。診断結果保持の不具合は再現せず、本体612/保存形式/配布ZIP/実行権限は変更なし。実車/VCI/DLL実行なし。既存scanner-browser CIで継続実行する。
 
 2026-09-30 登録照会失敗画面の継続検証: 前回528f6da8の公開3.13.612とGitHub全3job成功を確認。単発確認だった失敗画面を通常scanner-browser検査へ組込み、実bridgeを人工query例外で起動して同一originのrequest経路へ応答を返す。390pxで日本語の確認不能/未登録未確定の案内、private例外非表示、lastSessionなし、bridge_status一件のみでidentity/readへ進まないこと、固定2rootの照会各1回を確認。実reg.exe/DLL/VCI/実車は使わず、外部requestは拒否する。Chromium151.0.7922.34/Node24.15.0で既存のoffline・dense live・事例取込全工程が合格、Temp/obd-file-flow-tK9n4mの画面も目視確認。既存CIから自動実行・画像保存される。本体612/配布ZIP/保存形式/車両権限は変更なし。

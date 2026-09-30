@@ -25,6 +25,7 @@ function client() {
   };
   const context = vm.createContext({
     obdAccessUnlocked: true, obdDevModeUnlocked: true, obdBridgeOperation: null, obdUiMode: "details",
+    activeObdStage: "details",
     obdSerialRevision: 0, obdSerialResultOwner: null, obdSerialConnectPending: false, obdSerialDisconnectOperation: null,
     obdSerialReadErrors: new WeakMap(),
     obdDtcClearTargetBindingController: { invalidate: (reason) => { calls.bindingInvalidations.push({ reason, selects: calls.select }); } },

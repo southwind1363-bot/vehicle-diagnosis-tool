@@ -736,6 +736,7 @@ function createClient(webUrl, token, fetchRequest = fetch) {
   const context = vm.createContext({
     location: new URL(webUrl), obdDevSession: { bridgeEndpoint: null },
     obdDevModeUnlocked: true, obdBridgePairingToken: "", obdBridgeOperation: null, obdScannerImportOperation: null,
+    activeObdStage: "details",
     // Serial lifecycle behavior is covered by validate-serial-lifecycle.js.
     obdSerialRevision: 0, obdSerialResultOwner: null, obdSerialConnectPending: false, obdSerialDisconnectOperation: null, disconnectObdDeveloperVci: async () => {},
     obdBridgePairingControls: {}, obdBridgePairingInput: { value: "" },
@@ -756,6 +757,7 @@ function createClient(webUrl, token, fetchRequest = fetch) {
   const constants = ["OBD_DEV_TOKEN_KEY", "OBD_LOCAL_BRIDGE_PORTS", "OBD_LOCAL_BRIDGE_PATHS", "OBD_LOCAL_BRIDGE_TIMEOUT_MS"]
     .map((name) => appSource.match(new RegExp(`const ${name} = [^;]+;`))?.[0]).join("\n");
   vm.runInContext(`${constants}\n${clientSource}`, context);
+  context.renderObdStageView = stage => { context.activeObdStage = stage; };
   context.exportStatuses = ["", ""];
   context.setObdSessionExportStatus = (message) => { context.exportStatuses.fill(message); };
   vm.runInContext(appSource.match(/function handleObdReadoutSessionReplacement\(\) \{[\s\S]*?\r?\n\}/)[0], context);
@@ -1797,6 +1799,18 @@ async function validateBridgeOperationLifecycle(webUrl) {
   fallbackClient.clearTimeout = () => {};
   await fallbackClient.runObdLocalBridgeRead("Fallback", "list_vci", {}, () => { accepted += 1; });
   check(accepted === 3 && fallbackSignals.length === 2 && fallbackSignals[0].aborted && !fallbackSignals[1].aborted && fallbackSignals[0] !== fallbackSignals[1], "Normal timeout fallback reused an aborted controller or lost the successful result");
+
+  const stageClient = createClient(webUrl, options.pairingToken);
+  stageClient.renderObdDeveloperGate = () => { stageClient.activeObdStage = "results"; };
+  const statusOwner = stageClient.beginObdBridgeOperation({ preserveStage: true });
+  check(stageClient.activeObdStage === "details", "Status check left its initiating view before response");
+  stageClient.activeObdStage = "setup"; // User navigates while the response is pending.
+  stageClient.finishObdBridgeOperation(statusOwner, "Status complete");
+  check(stageClient.activeObdStage === "setup" && stageClient.obdDevStatus.textContent === "Status complete",
+    "Status completion forced the user back to a previous view or lost its message");
+  const readOwner = stageClient.beginObdBridgeOperation();
+  stageClient.finishObdBridgeOperation(readOwner, "Read complete");
+  check(stageClient.activeObdStage === "results", "Readout completion lost the existing results route");
 
   const serialClient = createClient(webUrl, options.pairingToken, async () => { throw new Error("Must not call bridge while serial is active"); });
   serialClient.obdDevSession.connectionState = "selecting";

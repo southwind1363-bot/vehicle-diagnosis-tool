@@ -52,8 +52,10 @@ module.exports = async function validateScannerRegistryFailure(browser, root, ou
     await page.goto(origin);
     await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
     await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
-    // Invoke the existing operation boundary; access unlocking above is a fixture.
-    await page.evaluate(async () => { renderObdStageView('setup'); await probeObdLocalBridge(); });
+    // Access unlocking above is a fixture; use the real connection-check button.
+    await page.evaluate(() => renderObdStageView('details'));
+    await page.locator('#obdDevBridgeStatusButton').click();
+    await page.waitForFunction(() => !obdBridgeOperation && document.getElementById('obdDevStatus').textContent.includes('登録状態を確認できませんでした'));
     const status = page.locator('#obdDevStatus');
     const message = await status.innerText();
     assert.match(message, /登録状態を確認できませんでした/);
@@ -88,7 +90,12 @@ module.exports = async function validateScannerRegistryFailure(browser, root, ou
       return payload;
     };
     const beforeExport = await saveReadout('registry-before-failure.json');
-    await page.evaluate(async () => { setObdUiMode('details'); renderObdStageView('setup'); await probeObdLocalBridge(); });
+    await page.evaluate(() => { setObdUiMode('details'); renderObdStageView('details'); });
+    await page.locator('#obdDevBridgeStatusButton').click();
+    await page.waitForFunction(() => !obdBridgeOperation && document.getElementById('obdDevStatus').textContent.includes('登録状態を確認できませんでした'));
+    assert.equal(await status.isVisible(), true, 'Connection failure must remain visible with a retained readout');
+    await status.scrollIntoViewIfNeeded();
+    await status.screenshot({ path: path.join(output, 'registry-failure-visible-with-readout-390.png') });
     assert.match(await status.innerText(), /登録状態を確認できませんでした/);
     assert.deepEqual(await page.evaluate(() => ({ session: obdDevSession.lastSession,
       input: document.getElementById('obdScannerText').value })), retained);
