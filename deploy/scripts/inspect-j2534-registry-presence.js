@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Development-only observation. Enumerate the fixed parent; a failed open or
+// Supplemental observation only. Enumerate the fixed parent; a failed open or
 // enumeration is never interpreted as an absent J2534 registration key.
 const COMMAND = String.raw`
 $ErrorActionPreference = 'Stop'

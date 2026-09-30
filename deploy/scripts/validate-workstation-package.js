@@ -82,7 +82,7 @@ function fixture() {
   fs.writeFileSync(path.join(sourceDirectory, "script.js"), 'const APP_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "service-worker.js"), 'const CACHE_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "offline-assets.json"), JSON.stringify({ version: "1.0.0", asset_count: assets.length, assets }));
-  for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-dtc-selection-handoff.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
+  for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/inspect-j2534-registry-presence.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-dtc-selection-handoff.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
   fs.copyFileSync(new URL("./j2534-mode01-selection-handoff.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-mode01-selection-handoff.js"));
   fs.copyFileSync(new URL("./j2534-mode01-pair-selection-handoff.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-mode01-pair-selection-handoff.js"));
   fs.copyFileSync(new URL("./j2534-sweep-selection-handoff.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-sweep-selection-handoff.js"));
@@ -502,7 +502,7 @@ try {
       fs.writeFileSync(integrityPath, originalManifest);
     }
   }
-  for (const relative of ["README.txt", "script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-preparation-evidence.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
+  for (const relative of ["README.txt", "script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/inspect-j2534-registry-presence.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-preparation-evidence.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
     const target = path.join(result.directory, relative);
     const original = fs.readFileSync(target);
     const changed = Buffer.from(original);
@@ -531,6 +531,7 @@ try {
     (m) => { m.files = m.files.filter((entry) => entry.path !== "style.css"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "inspect-workstation-j2534.cmd"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/inspect-workstation-j2534.js"); },
+    (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/inspect-j2534-registry-presence.js"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/j2534-native-quarantine.js"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/j2534-registered-driver-native-preflight.js"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/native/j2534-preflight-workers.json"); },
@@ -644,6 +645,8 @@ try {
     for (const key of ["NODE_OPTIONS", "LOCAL_BRIDGE_REPLAY_LOG", "LOCAL_BRIDGE_PAIRING_TOKEN"]) delete env[key];
     const windows = process.platform === "win32";
     const command = entry === "inspect" ? '""inspect-workstation-j2534.cmd" --no-pause"'
+      : entry === "inspect-presence" ? '""inspect-workstation-j2534.cmd" --registry-presence --no-pause"'
+      : entry === "inspect-presence-invalid" ? '""inspect-workstation-j2534.cmd" --registry-presence --no-pause extra"'
       : entry === "inspect-evidence" ? '""inspect-workstation-j2534.cmd" --evidence-json --no-pause"'
       : entry === "inspect-validate" ? '""inspect-workstation-j2534.cmd" --validate-evidence-stdin --no-pause"'
       : entry === "inspect-validate-large" ? '""inspect-workstation-j2534.cmd" --validate-evidence-stdin --no-pause"'
@@ -680,6 +683,18 @@ try {
         && !/Press any key|\. \. \./i.test(rejected.output), "Windows verifier disclosed arguments, claimed success, or paused after rejection");
     }
     const inspection = await runEntry("inspect");
+    const presenceInspection = await runEntry("inspect-presence");
+    const presence = JSON.parse(presenceInspection.stdout);
+    check(presenceInspection.stderr.includes("Package files match:")
+      && presence.inspection === "j2534_registry_parent_enumeration"
+      && presenceInspection.code === (presence.observation_complete ? 0 : 2)
+      && presence.driver_inventory_verified === false && presence.execution_enabled === false
+      && presence.dll_load_attempted === false && presence.vehicle_communication_started === false,
+    "Packaged registry presence did not verify first, isolate JSON or retain observation-only scope");
+    const invalidPresence = await runEntry("inspect-presence-invalid");
+    check(invalidPresence.code === 2 && !invalidPresence.output.includes("j2534_registry_parent_enumeration")
+      && !invalidPresence.output.includes("extra") && invalidPresence.output.includes("Unknown inspection option"),
+    "Registry presence accepted extra input, echoed it or started the observation");
     check((inspection.code === 0 || (inspection.code === 2 && inspection.output.includes("登録状態を確認できませんでした")))
       && inspection.output.includes("J2534接続準備チェック"), `Packaged J2534 inspection failed: ${inspection.output}`);
     check(inspection.output.includes("Package files match:") && inspection.output.indexOf("Package files match:") < inspection.output.indexOf("J2534接続準備チェック"), "Driver inspection started before package verification");
@@ -750,8 +765,8 @@ try {
       && !invalidUdsPreparation.output.includes('vehicle_command_enabled":true'),
     "Invalid packaged J2534 UDS preparation did not fail closed after package verification");
   }
-  const guardedEntries = process.platform === "win32" ? [...entries, "inspect", "inspect-evidence", "inspect-validate", "inspect-validate-uds", "inspect-uds-invalid"] : entries;
-  for (const [relative, missing] of [["script.js", false], ["node_modules/express/index.js", false], ["package-integrity.json", true], ["package-info.json", true], ["scripts/verify-workstation-package.js", true], ["scripts/inspect-workstation-j2534.js", false]]) {
+  const guardedEntries = process.platform === "win32" ? [...entries, "inspect", "inspect-evidence", "inspect-validate", "inspect-validate-uds", "inspect-uds-invalid", "inspect-presence"] : entries;
+  for (const [relative, missing] of [["script.js", false], ["node_modules/express/index.js", false], ["package-integrity.json", true], ["package-info.json", true], ["scripts/verify-workstation-package.js", true], ["scripts/inspect-workstation-j2534.js", false], ["scripts/inspect-j2534-registry-presence.js", false]]) {
     const target = path.join(actual.directory, relative);
     const original = fs.readFileSync(target);
     try {
@@ -761,6 +776,7 @@ try {
         const blocked = await runEntry(entry);
         check(blocked.code !== 0 && !blocked.output.includes("診断画面:") && !blocked.output.includes("ペアリング値"), `${entry}: ${relative} failure started a server or disclosed a key`);
         check(!blocked.output.includes("dependency-loaded-before-check"), `${entry}: damaged dependency executed before verification`);
+        if (entry === "inspect-presence") check(!blocked.output.includes("j2534_registry_parent_enumeration"), "Failed verification reached registry presence observation");
         if (entry === "inspect") check(!blocked.output.includes("J2534接続準備チェック"), "Failed verification reached driver inspection");
         if (entry.startsWith("inspect")) check(!/Press any key|\. \. \./i.test(blocked.output),
           `${entry}: --no-pause was ignored on early verification failure`);

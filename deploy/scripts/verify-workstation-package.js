@@ -84,7 +84,7 @@ export function verifyWorkstationPackage(directory) {
   }
   for (const required of ["index.html", "script.js", "obd-readonly.js", "offline-assets.json", "package.json", "package-lock.json",
     "package-info.json", "start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd",
-    "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js",
+    "scripts/inspect-workstation-j2534.js", "scripts/inspect-j2534-registry-presence.js", "scripts/verify-workstation-package.js",
     "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js",
     "scripts/j2534-dtc-selection-handoff.js", "scripts/j2534-mode01-selection-handoff.js",
     "scripts/j2534-mode01-pair-selection-handoff.js", "scripts/j2534-sweep-selection-handoff.js",

@@ -29,7 +29,7 @@ libraries, prompting for a selection or preparing evidence. Failure exits with c
 a Japanese stderr message and no stdout evidence, including the UDS preparation path.
 Validation of already saved evidence remains available without registry discovery.
 
-For a supplemental, development-only observation on Windows, run
+For a supplemental observation on Windows, run
 `node scripts/inspect-j2534-registry-presence.js` from `deploy`. It opens only the
 local HKLM SOFTWARE parent read-only, explicitly in Registry64 and Registry32,
 and enumerates its immediate child names. `listed` means the fixed
@@ -47,6 +47,13 @@ change permissions, install drivers or authorize execution. CI mocks the process
 output; it does not read the runner registry. Source references checked 2026-10-01:
 [GetSubKeyNames](https://learn.microsoft.com/en-us/dotnet/api/microsoft.win32.registrykey.getsubkeynames?view=netframework-4.8.1)
 and [RegistryView](https://learn.microsoft.com/en-us/dotnet/api/microsoft.win32.registryview?view=netframework-4.8.1).
+
+From package 3.13.615, `inspect-workstation-j2534.cmd --registry-presence --no-pause`
+runs that same observation only after the package integrity check. The helper
+is included in the required hashed files. Verification goes to stderr so stdout
+contains only the observation JSON on successful verification; missing/changed
+package files stop before observation. Extra arguments are rejected. This is a
+manual support command, not a new bridge endpoint or preflight authorization.
 
 `createDtcSelectedPackageReview` accepts the trusted host's existing registered
 DTC handoff. It prepares and consumes its expiring one-use ticket before passing

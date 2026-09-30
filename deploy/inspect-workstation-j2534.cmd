@@ -33,6 +33,7 @@ if /i "%~3"=="--evidence-json" set "inspection_json_output=1"
 if /i "%~1"=="--validate-evidence-stdin" set "inspection_json_output=1"
 if /i "%~1"=="--validate-uds-preparation-stdin" set "inspection_json_output=1"
 if /i "%~1"=="--prepare-uds-request" set "inspection_json_output=1"
+if /i "%~1"=="--registry-presence" set "inspection_json_output=1"
 if defined inspection_json_output (
   node "scripts\verify-workstation-package.js" 1>&2
 ) else (
@@ -46,7 +47,12 @@ if errorlevel 1 (
 )
 
 :inspect
-if /i "%~1"=="--validate-uds-preparation-stdin" (
+if /i "%~1"=="--registry-presence" (
+  if "%~2"=="" if not "%2"=="" goto invalid_option
+  if not "%~2"=="" if /i not "%~2"=="--no-pause" goto invalid_option
+  if not "%3"=="" goto invalid_option
+  node "scripts\inspect-j2534-registry-presence.js"
+) else if /i "%~1"=="--validate-uds-preparation-stdin" (
   if not "%~2"=="" if /i not "%~2"=="--no-pause" goto invalid_option
   node "scripts\inspect-workstation-j2534.js" --validate-uds-preparation-stdin
 ) else if /i "%~1"=="--prepare-uds-request" (
@@ -87,7 +93,7 @@ set "inspection_exit=%errorlevel%"
 goto finish
 
 :invalid_option
-echo Unknown inspection option. Use --preflight-index NUMBER, --prepare-uds-request INDEX TARGET_ECU RESPONSE_ECU DID, --evidence-json, --validate-evidence-stdin, or --validate-uds-preparation-stdin.
+echo Unknown inspection option. Use --registry-presence, --preflight-index NUMBER, --prepare-uds-request INDEX TARGET_ECU RESPONSE_ECU DID, --evidence-json, --validate-evidence-stdin, or --validate-uds-preparation-stdin.
 set "inspection_exit=2"
 
 :finish
