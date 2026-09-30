@@ -3,7 +3,7 @@
 ## Native signature probe (development only)
 
 The existing bridge validator now runs `scripts/validate-vendor-review.js`, a
-fixed nine-file Node test suite with a 60-second deadline and nonzero-exit failure
+fixed ten-file Node test suite with a 60-second deadline and nonzero-exit failure
 propagation. This includes package/signature adapters and simulated lifecycle
 checks, not native compilation or vendor execution. Windows-only filesystem
 selection integration is explicitly skipped on other platforms; a skip is not
@@ -28,6 +28,25 @@ inspection/evidence command also requires complete registry queries before inspe
 libraries, prompting for a selection or preparing evidence. Failure exits with code 2,
 a Japanese stderr message and no stdout evidence, including the UDS preparation path.
 Validation of already saved evidence remains available without registry discovery.
+
+For a supplemental, development-only observation on Windows, run
+`node scripts/inspect-j2534-registry-presence.js` from `deploy`. It opens only the
+local HKLM SOFTWARE parent read-only, explicitly in Registry64 and Registry32,
+and enumerates its immediate child names. `listed` means the fixed
+PassThruSupport.04.04 name was found; `not_listed` means a successful enumeration
+did not contain that name. Missing/unreadable parent, enumeration exceptions,
+timeout and malformed output remain `query_failed`, never `not_listed`.
+Registry64 is `view_unavailable` on a 32-bit OS, avoiding an implicit 32-bit fallback.
+The observation is not an atomic registry snapshot. Neither a listed name nor
+its absence validates the driver inventory, DLL, connected device or vehicle.
+Other child names, values and raw errors are never output. PowerShell runs once
+with no profile, no policy override, a four-second limit and a 16 KiB output cap.
+Arguments are rejected. Incomplete/unsupported observations exit with code 2.
+This command does not feed the bridge or packaged evidence, retry discovery,
+change permissions, install drivers or authorize execution. CI mocks the process
+output; it does not read the runner registry. Source references checked 2026-10-01:
+[GetSubKeyNames](https://learn.microsoft.com/en-us/dotnet/api/microsoft.win32.registrykey.getsubkeynames?view=netframework-4.8.1)
+and [RegistryView](https://learn.microsoft.com/en-us/dotnet/api/microsoft.win32.registryview?view=netframework-4.8.1).
 
 `createDtcSelectedPackageReview` accepts the trusted host's existing registered
 DTC handoff. It prepares and consumes its expiring one-use ticket before passing
