@@ -64,9 +64,44 @@ module.exports = async function validateScannerRegistryFailure(browser, root, ou
     assert.equal(queries, 2, 'Each fixed root is inspected once, without a registry retry');
     await status.scrollIntoViewIfNeeded();
     await status.screenshot({ path: path.join(output, 'registry-query-failure-390.png') });
+
+    // A failed connection check must not replace a previously imported readout.
+    const originalFile = path.join(__dirname, 'fixtures/native-elm327-scan-archive.json');
+    const originalBytes = fs.readFileSync(originalFile);
+    await page.evaluate(() => { setObdUiMode('simple'); renderObdStageView('home'); });
+    const [picker] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#obdHomeOpenSessionButton').click()]);
+    await picker.setFiles(originalFile);
+    await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().waitFor();
+    assert.match(await page.locator('#obdDetectedCodes').innerText(), /P0420/);
+    const retained = await page.evaluate(() => ({ session: obdDevSession.lastSession,
+      input: document.getElementById('obdScannerText').value }));
+    assert.ok(retained.session);
+    const saveReadout = async name => {
+      await page.evaluate(() => renderObdStageView('results'));
+      const pending = page.waitForEvent('download');
+      await page.locator('#obdStageResultsView [data-obd-session-export]').click();
+      const saved = path.join(output, name);
+      await (await pending).saveAs(saved);
+      const payload = JSON.parse(fs.readFileSync(saved, 'utf8'));
+      assert.equal(typeof payload.exported_at, 'string');
+      delete payload.exported_at; // Only the export timestamp may change.
+      return payload;
+    };
+    const beforeExport = await saveReadout('registry-before-failure.json');
+    await page.evaluate(async () => { setObdUiMode('details'); renderObdStageView('setup'); await probeObdLocalBridge(); });
+    assert.match(await status.innerText(), /登録状態を確認できませんでした/);
+    assert.deepEqual(await page.evaluate(() => ({ session: obdDevSession.lastSession,
+      input: document.getElementById('obdScannerText').value })), retained);
+    assert.deepEqual(await saveReadout('registry-after-failure.json'), beforeExport);
+    await page.locator('#obdStageResultsView [data-obd-session-export-status]').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(output, 'registry-failure-retained-readout-390.png') });
+    assert.deepEqual(fs.readFileSync(originalFile), originalBytes);
+    assert.deepEqual(intents, ['bridge_status', 'bridge_status']);
+    assert.equal(queries, 2, 'Explicit status checks must not trigger automatic registry retries');
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, []);
     console.log('Registry failure UI: real blocked response, Japanese notice, no readout or identity request');
+    console.log('Registry failure retention: imported session/input/original preserved; exported payload unchanged except timestamp');
   } finally {
     await context.close();
     await new Promise(resolve => server.close(resolve));

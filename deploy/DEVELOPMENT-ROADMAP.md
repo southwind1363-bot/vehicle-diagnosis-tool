@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-30 登録照会失敗後の既存結果保護: 前回a1b185a0のGitHub全3job成功を確認。空sessionだけだったregistry failure browser検査へ、人工保存fileの実picker取込→JSON保存→接続確認失敗→再保存を追加。lastSession全体と入力文字列、原本bytesが不変、再保存JSONがexported_at以外完全一致することを確認。status要求は明示操作の計2件だけでidentity/readへ進まず、起動時2root照会の自動再実行なし。Chromium151.0.7922.34で対象検査合格、Temp/obd-file-flow-DaUi4v。診断結果保持の不具合は再現せず、本体612/保存形式/配布ZIP/実行権限は変更なし。実車/VCI/DLL実行なし。既存scanner-browser CIで継続実行する。
+
 2026-09-30 登録照会失敗画面の継続検証: 前回528f6da8の公開3.13.612とGitHub全3job成功を確認。単発確認だった失敗画面を通常scanner-browser検査へ組込み、実bridgeを人工query例外で起動して同一originのrequest経路へ応答を返す。390pxで日本語の確認不能/未登録未確定の案内、private例外非表示、lastSessionなし、bridge_status一件のみでidentity/readへ進まないこと、固定2rootの照会各1回を確認。実reg.exe/DLL/VCI/実車は使わず、外部requestは拒否する。Chromium151.0.7922.34/Node24.15.0で既存のoffline・dense live・事例取込全工程が合格、Temp/obd-file-flow-tK9n4mの画面も目視確認。既存CIから自動実行・画像保存される。本体612/配布ZIP/保存形式/車両権限は変更なし。
 
 2026-09-30 3.13.612・配布検査の登録照会失敗を明示: inspect-workstation-j2534も共通query collectorを使用し、全体/部分照会失敗時は候補検査・preflight・UDS準備へ進まず、終了2と日本語stderrで停止する。未登録の証拠JSONを生成せずstdoutを空に保つ。成功した空照会の既存形式と、登録照会不要の保存済み証拠検証は維持。保存schemaの追加・変更なし。人工CLI子processと部分失敗、保存済み検証を含むvendor46件、package501件、offline183件が合格。612ZIPを別folderへ展開し850files/16923186bytes一致、実cmdで照会失敗時の終了2/stdout空/証拠未生成を確認。展開版HTTP200/版612/vehicle・sample falseも確認。ZIP SHA256 34C4579AED2322B26FF0A6B0FDF48EB8B0B6256AC3147A3B4FD54BC07A4DC0ED。既存版を上書きせず、実DLLロード・VCI・実車通信は未実施。公開版とGitHub CIはpush後確認。
