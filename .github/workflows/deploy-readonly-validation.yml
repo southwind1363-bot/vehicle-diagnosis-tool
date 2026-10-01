@@ -71,6 +71,31 @@ jobs:
       - name: Validate selected driver evidence and observation lifecycle
         run: node scripts/validate-vendor-review.js
 
+  windows-workstation-package:
+    name: Validate packaged workstation on Windows
+    runs-on: windows-2022
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: deploy/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # Builds temporary packages and generated preflight workers, exercises
+      # Windows launchers and loopback HTTP, and queries fixed registry roots
+      # read-only. No vendor DLL loading or VCI/vehicle communication.
+      - name: Validate package integrity and guarded Windows entry points
+        run: npm run validate:package
+
   scanner-browser:
     name: Validate offline scanner workflow in Chromium
     runs-on: ubuntu-24.04
