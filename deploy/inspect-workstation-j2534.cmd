@@ -53,38 +53,52 @@ if /i "%~1"=="--registry-presence" (
   if not "%3"=="" goto invalid_option
   node "scripts\inspect-j2534-registry-presence.js"
 ) else if /i "%~1"=="--validate-uds-preparation-stdin" (
+  if "%~2"=="" if not "%2"=="" goto invalid_option
   if not "%~2"=="" if /i not "%~2"=="--no-pause" goto invalid_option
+  if not "%3"=="" goto invalid_option
   node "scripts\inspect-workstation-j2534.js" --validate-uds-preparation-stdin
 ) else if /i "%~1"=="--prepare-uds-request" (
   if "%~2"=="" goto invalid_option
   if "%~3"=="" goto invalid_option
   if "%~4"=="" goto invalid_option
   if "%~5"=="" goto invalid_option
+  if "%~6"=="" if not "%6"=="" goto invalid_option
   if not "%~6"=="" if /i not "%~6"=="--no-pause" goto invalid_option
+  if not "%7"=="" goto invalid_option
   node "scripts\inspect-workstation-j2534.js" --prepare-uds-request "%~2" "%~3" "%~4" "%~5"
 ) else if /i "%~1"=="--validate-evidence-stdin" (
+  if "%~2"=="" if not "%2"=="" goto invalid_option
   if not "%~2"=="" if /i not "%~2"=="--no-pause" goto invalid_option
+  if not "%3"=="" goto invalid_option
   node "scripts\inspect-workstation-j2534.js" --validate-evidence-stdin
 ) else if /i "%~1"=="--preflight-index" (
   if "%~2"=="" goto invalid_option
   if "%~3"=="" (
+    if not "%3"=="" goto invalid_option
+    if not "%4"=="" goto invalid_option
     node "scripts\inspect-workstation-j2534.js" --preflight-index "%~2"
   ) else if /i "%~3"=="--no-pause" (
-    if not "%~4"=="" goto invalid_option
+    if not "%4"=="" goto invalid_option
     node "scripts\inspect-workstation-j2534.js" --preflight-index "%~2"
   ) else if /i "%~3"=="--evidence-json" (
+    if "%~4"=="" if not "%4"=="" goto invalid_option
     if not "%~4"=="" if /i not "%~4"=="--no-pause" goto invalid_option
+    if not "%5"=="" goto invalid_option
     node "scripts\inspect-workstation-j2534.js" --preflight-index "%~2" --evidence-json
   ) else (
     goto invalid_option
   )
 ) else if /i "%~1"=="--evidence-json" (
+  if "%~2"=="" if not "%2"=="" goto invalid_option
   if not "%~2"=="" if /i not "%~2"=="--no-pause" goto invalid_option
+  if not "%3"=="" goto invalid_option
   node "scripts\inspect-workstation-j2534.js" --evidence-json
 ) else if "%~1"=="" (
+  if not "%1"=="" goto invalid_option
+  if not "%2"=="" goto invalid_option
   node "scripts\inspect-workstation-j2534.js"
 ) else if /i "%~1"=="--no-pause" (
-  if not "%~2"=="" goto invalid_option
+  if not "%2"=="" goto invalid_option
   node "scripts\inspect-workstation-j2534.js"
 ) else (
   goto invalid_option

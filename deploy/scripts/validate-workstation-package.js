@@ -640,11 +640,23 @@ try {
   const verified = await run(`import {pathToFileURL} from "node:url";import path from "node:path";const {verifyWorkstationPackage}=await import(pathToFileURL(path.join(process.argv[1],"scripts/verify-workstation-package.js")));console.log(verifyWorkstationPackage(process.argv[1]).appVersion);`, [actual.directory]);
   check(verified.code === 0 && verified.output.trim() === actual.appVersion, "Relocated verifier borrowed runtime files or failed offline");
   const entries = process.platform === "win32" ? ["cmd", "start", "workstation:dev"] : ["start", "workstation:dev"];
+  const rejectedInspectionArguments = Object.fromEntries([
+    "--registry-presence --no-pause", "--evidence-json --no-pause",
+    "--validate-evidence-stdin --no-pause", "--validate-uds-preparation-stdin --no-pause",
+    "--prepare-uds-request 1 7E0 7E8 F189 --no-pause",
+    "--preflight-index 1 --no-pause", "--preflight-index 1 --evidence-json --no-pause",
+    "--no-pause"
+  ].flatMap((args, index) => [[`inspect-extra-${index}`, `${args} unexpected`], [`inspect-empty-${index}`, `${args} ""`]])
+    .concat([["inspect-empty-first", '"" --no-pause'],
+      ["inspect-empty-optional", '--evidence-json "" --no-pause'],
+      ["inspect-empty-preflight", '--preflight-index 1 "" --no-pause']]));
   const runEntry = (entry) => new Promise((resolve) => {
     const env = { ...process.env, NODE_PATH: "", PORT: "0", LOCAL_BRIDGE_PORT: "0" };
     for (const key of ["NODE_OPTIONS", "LOCAL_BRIDGE_REPLAY_LOG", "LOCAL_BRIDGE_PAIRING_TOKEN"]) delete env[key];
     const windows = process.platform === "win32";
-    const command = entry === "inspect" ? '""inspect-workstation-j2534.cmd" --no-pause"'
+    const command = Object.hasOwn(rejectedInspectionArguments, entry)
+      ? `""inspect-workstation-j2534.cmd" ${rejectedInspectionArguments[entry]}"`
+      : entry === "inspect" ? '""inspect-workstation-j2534.cmd" --no-pause"'
       : entry === "inspect-presence" ? '""inspect-workstation-j2534.cmd" --registry-presence --no-pause"'
       : entry === "inspect-presence-invalid" ? '""inspect-workstation-j2534.cmd" --registry-presence --no-pause extra"'
       : entry === "inspect-evidence" ? '""inspect-workstation-j2534.cmd" --evidence-json --no-pause"'
@@ -675,6 +687,13 @@ try {
     check(launched.output.indexOf("Package files match:") < launched.output.indexOf("診断画面:"), `${entry}: started before package verification`);
   }
   if (process.platform === "win32") {
+    for (const entry of Object.keys(rejectedInspectionArguments)) {
+      const rejected = await runEntry(entry);
+      check(rejected.code === 2 && rejected.output.includes("Unknown inspection option"),
+        `${entry}: unsupported inspection arguments were not rejected`);
+      check(!/unexpected|schema_version|j2534_registry_parent_enumeration|J2534接続準備チェック|Press any key/.test(rejected.output),
+        `${entry}: rejected input was echoed, an inspection started, or the launcher paused`);
+    }
     for (const entry of ["verify-extra", "verify-target", "verify-empty"]) {
       const rejected = await runEntry(entry);
       check(rejected.code === 1 && rejected.output.includes("unsupported_arguments")

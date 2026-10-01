@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-01 3.13.616・配布検査cmdの余分な引数拒否: 別展開615で--validate-evidence-stdin --no-pause unexpectedが余分な引数を無視しvalidatorを実行することを再現。各既存分岐で引数上限と明示空文字を検査し、処理開始前に終了2で拒否する。19通りの余分/空引数を追加し、入力非表示・検査未開始・pauseなしを確認。package612/offline183合格。616ZIP別展開で851files/16929429bytes一致、HTTP200/版616/helper URL404/vehicleとsample false、再現入力の拒否を確認。ZIP SHA256 584F6A20172F8A7EC536780B56D64FC11C1F881426FEE501F9302E1E55870051。最初のOneDrive内615はmanifest読取中のfile_changedで停止したため、既存の別展開615で再現した。その読取時変化の原因は未確定。実DLL/VCI/実車通信・保存形式変更なし。前回f4aca164のGitHub全4job成功済み、今回の公開とCIはpush後確認。
+
 2026-10-01 Windows配布版の継続検証: GitHub CIへ独立したwindows-2022/Node24のpackage検査jobを追加。依存関係をnpm ci --ignore-scriptsで固定導入し、既存validate:packageで一時配布物生成・生成preflight workerのcompile・整合性/改変拒否・Windows起動cmd・loopback HTTP・固定registryのread-only補助観測を検証する。実vendor DLLロードやVCI/実車通信は行わない。直前615のlocal package574項目と公開資材一致・GitHub全3job成功は確認済み。今回追加jobの実行結果はpush後に確認。本体615・配布ZIP・保存形式は変更なし。
 
 2026-10-01 3.13.615・配布版の登録先補助確認: inspect-workstation-j2534.cmdへ--registry-presenceを追加。既存整合検査をstderrへ出して成功後に固定観測helperを実行、stdoutは観測JSONだけとする。helperを明示runtime/必須hash一覧へ追加し、余分な引数・manifest除外・欠落・改変で起動前に拒否する検査を追加。query結果をbridge可否やpreflight evidenceへ結合せず、read-only補助観測に限定。package574/offline183合格。615ZIPを別folder展開し851files/16928824bytes一致、同梱cmd終了0/両view not_listed/実行権限false、HTTP200/版615/helper URL404/vehicleとsample falseを確認。ZIP SHA256 92C183FF0259A614CC7F34163CF0006BA6401E8E1531DAC071551B3516000782。既存版を上書きせず、実DLL/VCI/実車/別PC確認は未実施。VCI製品名・接続方式を利用者へ質問済み。公開とGitHub CIはpush後確認。
