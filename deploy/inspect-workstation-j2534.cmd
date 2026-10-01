@@ -11,7 +11,7 @@ cd /d "%~dp0"
 if errorlevel 1 exit /b 1
 node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 22 ? 0 : 1)" >nul 2>&1
 if errorlevel 1 (
-  echo Node.js 22 or newer is required. No software was installed automatically.
+  echo Node.js 22 or newer is required. No software was installed automatically. 1>&2
   set "inspection_exit=1"
   goto finish
 )
@@ -20,8 +20,8 @@ if not exist "package-integrity.json" goto package_missing
 goto package_check
 
 :package_missing
-echo Package verification files are missing. Restore the complete original package.
-echo No driver inspection or vehicle connection was started.
+echo Package verification files are missing. Restore the complete original package. 1>&2
+echo No driver inspection or vehicle connection was started. 1>&2
 set "inspection_exit=1"
 goto finish
 
@@ -40,8 +40,8 @@ if defined inspection_json_output (
   node "scripts\verify-workstation-package.js"
 )
 if errorlevel 1 (
-  echo Package verification failed. Restore the complete original package.
-  echo No driver inspection or vehicle connection was started.
+  echo Package verification failed. Restore the complete original package. 1>&2
+  echo No driver inspection or vehicle connection was started. 1>&2
   set "inspection_exit=1"
   goto finish
 )
@@ -107,9 +107,9 @@ set "inspection_exit=%errorlevel%"
 goto finish
 
 :invalid_option
-echo Unknown inspection option. Use --registry-presence, --preflight-index NUMBER, --prepare-uds-request INDEX TARGET_ECU RESPONSE_ECU DID, --evidence-json, --validate-evidence-stdin, or --validate-uds-preparation-stdin.
+echo Unknown inspection option. Use --registry-presence, --preflight-index NUMBER, --prepare-uds-request INDEX TARGET_ECU RESPONSE_ECU DID, --evidence-json, --validate-evidence-stdin, or --validate-uds-preparation-stdin. 1>&2
 set "inspection_exit=2"
 
 :finish
-if not defined inspection_no_pause pause
+if not defined inspection_no_pause pause 1>&2
 exit /b %inspection_exit%

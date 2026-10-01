@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-01 3.13.617・配布検査のエラー出力分離: metadataがない人工folderで--registry-presence --no-pauseを実行すると、終了1でも案内文がstdoutへ出ることを再現。inspect-workstation-j2534.cmdのNode不足/metadata不足/整合失敗/不正引数とpause案内をstderrへ統一。正常JSONの形式と終了codeは維持。既存の不正引数・7種の欠落/改変・metadata両欠落検査に、機械読取modeのstdout空とstderr案内を追加し、package665/offline183合格。617ZIP別展開で851files/16929579bytes一致、HTTP200/版617/helper URL404/vehicleとsample false、manifest欠落時のstdout空/終了1を確認し原本復元。ZIP SHA256 7F561AFDBA426D63B58E9C4F89B6C96F5B284A490EE911A9B76BC9523AD585CE。実DLL/VCI/実車通信・保存形式変更なし。公開資材とGitHub全4jobはpush後確認。
+
 2026-10-01 3.13.616・配布検査cmdの余分な引数拒否: 別展開615で--validate-evidence-stdin --no-pause unexpectedが余分な引数を無視しvalidatorを実行することを再現。各既存分岐で引数上限と明示空文字を検査し、処理開始前に終了2で拒否する。19通りの余分/空引数を追加し、入力非表示・検査未開始・pauseなしを確認。package612/offline183合格。616ZIP別展開で851files/16929429bytes一致、HTTP200/版616/helper URL404/vehicleとsample false、再現入力の拒否を確認。ZIP SHA256 584F6A20172F8A7EC536780B56D64FC11C1F881426FEE501F9302E1E55870051。最初のOneDrive内615はmanifest読取中のfile_changedで停止したため、既存の別展開615で再現した。その読取時変化の原因は未確定。実DLL/VCI/実車通信・保存形式変更なし。前回f4aca164のGitHub全4job成功済み、今回の公開とCIはpush後確認。
 
 2026-10-01 Windows配布版の継続検証: GitHub CIへ独立したwindows-2022/Node24のpackage検査jobを追加。依存関係をnpm ci --ignore-scriptsで固定導入し、既存validate:packageで一時配布物生成・生成preflight workerのcompile・整合性/改変拒否・Windows起動cmd・loopback HTTP・固定registryのread-only補助観測を検証する。実vendor DLLロードやVCI/実車通信は行わない。直前615のlocal package574項目と公開資材一致・GitHub全3job成功は確認済み。今回追加jobの実行結果はpush後に確認。本体615・配布ZIP・保存形式は変更なし。

@@ -691,6 +691,10 @@ try {
       const rejected = await runEntry(entry);
       check(rejected.code === 2 && rejected.output.includes("Unknown inspection option"),
         `${entry}: unsupported inspection arguments were not rejected`);
+      if (/--registry-presence|--evidence-json|--validate-evidence-stdin|--validate-uds-preparation-stdin|--prepare-uds-request/.test(rejectedInspectionArguments[entry])) {
+        check(rejected.stdout === "" && rejected.stderr.includes("Unknown inspection option"),
+          `${entry}: argument failure contaminated machine-readable stdout`);
+      }
       check(!/unexpected|schema_version|j2534_registry_parent_enumeration|J2534接続準備チェック|Press any key/.test(rejected.output),
         `${entry}: rejected input was echoed, an inspection started, or the launcher paused`);
     }
@@ -796,6 +800,8 @@ try {
         check(blocked.code !== 0 && !blocked.output.includes("診断画面:") && !blocked.output.includes("ペアリング値"), `${entry}: ${relative} failure started a server or disclosed a key`);
         check(!blocked.output.includes("dependency-loaded-before-check"), `${entry}: damaged dependency executed before verification`);
         if (entry === "inspect-presence") check(!blocked.output.includes("j2534_registry_parent_enumeration"), "Failed verification reached registry presence observation");
+        if (entry.startsWith("inspect-") && entry !== "inspect") check(blocked.stdout === "" && blocked.stderr.length > 0,
+          `${entry}: ${relative} failure contaminated machine-readable stdout`);
         if (entry === "inspect") check(!blocked.output.includes("J2534接続準備チェック"), "Failed verification reached driver inspection");
         if (entry.startsWith("inspect")) check(!/Press any key|\. \. \./i.test(blocked.output),
           `${entry}: --no-pause was ignored on early verification failure`);
@@ -817,6 +823,8 @@ try {
         const blocked = await runEntry(entry);
         check(blocked.code === 1 && /Package verification (?:failed|files are missing)/.test(blocked.output),
           `${entry}: both missing metadata files did not stop the entry point (exit=${blocked.code}; diagnostic=${blocked.output.split(/\r?\n/).filter(line => /Package verification|ERR_|Error:/.test(line)).join(" | ").slice(0, 400)})`);
+        if (entry.startsWith("inspect-")) check(blocked.stdout === "" && blocked.stderr.includes("Package verification files are missing"),
+          `${entry}: missing metadata contaminated machine-readable stdout`);
         check(!blocked.output.includes("診断画面:") && !blocked.output.includes("ペアリング値")
           && !blocked.output.includes("J2534接続準備チェック") && !blocked.output.includes("Package files match:"),
           `${entry}: missing metadata reached startup, inspection, or a successful verification`);
