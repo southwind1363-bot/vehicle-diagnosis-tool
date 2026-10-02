@@ -421,4 +421,55 @@ for (const [command, service, status, label] of [["03", "43", "stored", "保存D
   await client.context.disconnectObdDeveloperVci();
 }
 
+{
+  const client = createClient(successfulResponses);
+  await connect(client);
+  await client.context.readObdDeveloperDtc();
+  const saved = client.context.obdDevSession.lastSession;
+  const savedJson = JSON.stringify(saved);
+  let finishWrite;
+  let notifyWrite;
+  const writeStarted = new Promise(resolve => { notifyWrite = resolve; });
+  client.port.responses["03"] = () => new Promise(resolve => {
+    finishWrite = resolve;
+    notifyWrite();
+  });
+  const reading = client.context.runObdDeveloperRead("cancel pending write", ["03", "07"]);
+  await writeStarted;
+  const writes = client.port.calls.writes.length;
+  const disconnecting = client.context.disconnectObdDeveloperVci();
+  await delay(5);
+  check(client.context.obdDevSession.connectionState === "disconnecting" && client.port.calls.close === 0,
+    "Cancellation closed the port before its pending write settled");
+  await client.context.connectObdDeveloperVci();
+  check(client.port.calls.select === 1 && client.port.calls.writes.length === writes,
+    "Cancellation allowed reconnection or a follow-up command before write settlement");
+  finishWrite();
+  await disconnecting;
+  check(await reading === false, "Cancelled read was reported as completed");
+  check(client.port.closed && !client.port.readerLocked && !client.port.writerLocked,
+    "Cancelled read did not release and close the original port");
+  check(client.context.obdDevSession.lastSession === saved && JSON.stringify(saved) === savedJson,
+    "Cancelled pending write replaced or mutated the previous readout");
+
+  const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 01 00" });
+  client.context.navigator.serial.requestPort = async () => { replacement.calls.select += 1; return replacement; };
+  await connect(client);
+  // Old data arriving after a new connection must not enter its response buffer.
+  client.port.enqueue("7E8 03 43 04 20>");
+  await client.context.readObdDeveloperDtc();
+  const session = client.context.obdDevSession.lastSession;
+  check(session?.dtcSnapshot?.codes?.join(",") === "P0100",
+    "Reconnected readout mixed cancelled-port data with the replacement port response");
+  check(client.port.calls.writes.length === writes && replacement.calls.select === 1,
+    "Recovery wrote to the old port or automatically selected the replacement again");
+  const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(
+    JSON.stringify(client.context.ObdReadOnly.buildBridgeSessionExportPayload(session)));
+  check(restored?.dtcSnapshot?.codes?.join(",") === "P0100" && JSON.stringify(saved) === savedJson,
+    "Recovered archive lost its new readout or changed the previous saved session");
+  await client.context.disconnectObdDeveloperVci();
+  check(replacement.closed && replacement.calls.close === 1 && client.port.calls.close === 1,
+    "Recovery did not close each port exactly once");
+}
+
 console.log(`validate-serial-integration: ${checks} checks passed`);

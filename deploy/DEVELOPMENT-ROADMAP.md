@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-02 読取取消から再接続・保存復元の結合検証: 既存Web Serial模擬portで取得済みDTCを保持した後、Mode03のwrite完了を保留して取消。write確定前はportを閉じず再選択/追加送信なし、確定後は両lock解放とclose各1回、取消readはfalse、元sessionの同一性/内容不変を確認。別の模擬portへ明示再接続し、旧portへ遅着応答を投入後、新portのP0100だけを取得して既存JSON保存・復元まで確認。旧portへの追加送信なし・両port終了各1回を含むserial-integration全375項目合格。本体不具合は再現せず、617/配布ZIP/保存形式/実行権限は変更なし。既存OBD CI入口がserial-lifecycle経由で本検査を実行するため別jobは追加しない。実機のVCI製品名と接続方式は未確認であり、本結果は模擬通信に限定する。
+
 2026-10-01 3.13.617・配布検査のエラー出力分離: metadataがない人工folderで--registry-presence --no-pauseを実行すると、終了1でも案内文がstdoutへ出ることを再現。inspect-workstation-j2534.cmdのNode不足/metadata不足/整合失敗/不正引数とpause案内をstderrへ統一。正常JSONの形式と終了codeは維持。既存の不正引数・7種の欠落/改変・metadata両欠落検査に、機械読取modeのstdout空とstderr案内を追加し、package665/offline183合格。617ZIP別展開で851files/16929579bytes一致、HTTP200/版617/helper URL404/vehicleとsample false、manifest欠落時のstdout空/終了1を確認し原本復元。ZIP SHA256 7F561AFDBA426D63B58E9C4F89B6C96F5B284A490EE911A9B76BC9523AD585CE。実DLL/VCI/実車通信・保存形式変更なし。公開資材とGitHub全4jobはpush後確認。
 
 2026-10-01 3.13.616・配布検査cmdの余分な引数拒否: 別展開615で--validate-evidence-stdin --no-pause unexpectedが余分な引数を無視しvalidatorを実行することを再現。各既存分岐で引数上限と明示空文字を検査し、処理開始前に終了2で拒否する。19通りの余分/空引数を追加し、入力非表示・検査未開始・pauseなしを確認。package612/offline183合格。616ZIP別展開で851files/16929429bytes一致、HTTP200/版616/helper URL404/vehicleとsample false、再現入力の拒否を確認。ZIP SHA256 584F6A20172F8A7EC536780B56D64FC11C1F881426FEE501F9302E1E55870051。最初のOneDrive内615はmanifest読取中のfile_changedで停止したため、既存の別展開615で再現した。その読取時変化の原因は未確定。実DLL/VCI/実車通信・保存形式変更なし。前回f4aca164のGitHub全4job成功済み、今回の公開とCIはpush後確認。
