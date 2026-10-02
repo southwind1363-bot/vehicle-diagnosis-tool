@@ -1277,6 +1277,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.equal(failureFacts.summary.failedCount, 1, 'Interrupted readout must retain one failed attempt');
         assert.equal(failureFacts.summary.transportErrorCount, 1, 'Interrupted readout must retain transport failure');
         assert.equal(await page.locator('#obdSimpleResultBadge').innerText(), '一部取得');
+        const ecuCards = page.locator('#obdSimpleSystemGrid .obd-simple-system-item');
+        assert.equal(await ecuCards.count(), 2);
+        for (const card of await ecuCards.all()) {
+          assert.equal(await card.locator('.obd-simple-system-head span').innerText(), '応答取得');
+          assert.equal(await card.locator('.obd-simple-system-dtc').innerText(), 'DTC件数未記録',
+            'A recorded response must not invent an ECU-specific DTC count');
+        }
         const failureDownload = page.waitForEvent('download');
         await page.locator('#obdStageResultsView [data-obd-session-export]').click();
         const failureFile = path.join(output, 'synthetic-stream-failure.json');

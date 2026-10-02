@@ -75,4 +75,29 @@ check(JSON.stringify(context.buildObdEcuResponseDisplayLines(reopened.ecuRespons
 const details = extract("renderObdBridgeSessionDetails");
 check(details.includes("buildObdEcuResponseDisplayLines(session?.ecuResponseSummary || session?.ecu_response_summary)") && details.includes('sections.push(["ECU応答", ecuResponseLines])'), "Complete response display not wired");
 check(details.includes("item.textContent = line;"), "Response evidence must render as text");
+function simpleElement() {
+  return { children: [], dataset: {}, classList: { add() {}, remove() {} }, textContent: "", innerHTML: "",
+    append(...items) { this.children.push(...items); }, appendChild(item) { this.children.push(item); },
+    setAttribute() {}, addEventListener() {} };
+}
+const simple = vm.createContext({
+  document: { createElement: simpleElement },
+  obdSimpleSystemSummary: simpleElement(), obdSimpleSystemBadge: simpleElement(),
+  obdSimpleSystemGrid: simpleElement(), obdSimpleSystemNote: simpleElement(),
+  obdSimpleSystemFilterButtons: [], obdSimpleSystemFilters: simpleElement(), activeObdSimpleSystemFilter: "all",
+  applyObdSimpleSystemFilter() {}, openObdSimpleEcuDetail() {}
+});
+vm.runInContext(extract("renderObdSimpleSystemSummary"), simple);
+for (const [status, label] of [["ok", "応答取得"], ["reported", "応答取得"], ["responded", "応答取得"],
+  ["response", "応答取得"], ["negative_response", "負応答"], ["no_response", "無応答"],
+  ["unknown", "状態未確認"], ["constructor", "状態未確認"]]) {
+  const input = { ecuResponseSummary: { ecus: [{ address: "7E8", status, dtcCount: null }] } };
+  const original = JSON.stringify(input);
+  simple.obdSimpleSystemGrid.children = [];
+  simple.renderObdSimpleSystemSummary(input);
+  const [head, , dtc] = simple.obdSimpleSystemGrid.children[0].children;
+  check(head.children[1].textContent === label, `${status}: simple ECU state disagrees with recorded evidence`);
+  check(dtc.textContent === "DTC件数未記録" && JSON.stringify(input) === original,
+    `${status}: response state fabricated a DTC count or changed the saved evidence`);
+}
 console.log(`ECU response display checks: ${checks} / Errors: 0`);
