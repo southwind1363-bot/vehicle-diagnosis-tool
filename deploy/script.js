@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.617";
+const APP_VERSION = "3.13.618";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6218,6 +6218,12 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
     obdDevStatus.textContent = obdDevSession.lastDisconnectReason === "port_selection_cancelled"
       ? "VCI選択をキャンセルしました。車両への送信は行っていません。"
       : formatWebSerialConnectionFailure(obdDevSession.lastDisconnectReason, obdDevSession.adapterInitializationSummary);
+  } else if (primaryActionNeedsSerial && obdDevSession.connectionState === "disconnected"
+    && ["serial_response_too_large", "serial_read_failed", "serial_stream_closed", "device_disconnected",
+      "response_timeout", "serial_write_timeout", "transport_failed", "connection_failed",
+      "adapter_initialization_failed", "adapter_identification_failed"].includes(obdDevSession.lastDisconnectReason)) {
+    const failureStatus = buildWebSerialConnectionStatus();
+    obdDevStatus.textContent = [failureStatus.displayStatus, failureStatus.nextAction].filter(Boolean).join("。") + "。";
   } else if (!connected) {
     const requestedStatus = obdDevSession.bridgeEndpoint
       ? getRequestedInterfaceReadyStatus()

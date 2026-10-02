@@ -1238,6 +1238,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await connect.click();
       await page.waitForFunction(() => !obdSerialConnectPending && obdDevSession.connectionState === 'ready');
       assert.equal(await connect.innerText(), '基本読取を開始');
+      assert.doesNotMatch(await page.locator('#obdSimpleConnectStatus').innerText(), /Web Serial通信エラー/,
+        'A successful explicit reconnection must clear the earlier transport failure notice');
       await connect.click();
       if (readoutCase.failCommand) {
         await page.waitForFunction(() => window.__serialReadoutFixture.commands.includes('0101')
@@ -1258,7 +1260,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
         assert.equal(await page.locator('#obdSimpleResultPrimaryButton').isEnabled(), true, 'Confirmed close must allow a new connection');
         assert.doesNotMatch(await page.locator('#obdSimpleResultStatus').innerText(), /再接続を禁止/);
+        assert.match(await page.locator('#obdSimpleResultStatus').innerText(), /Web Serial通信エラー/,
+          'Transport failure must remain visible instead of being replaced with an idle connection hint');
+        await page.evaluate(() => renderObdDeveloperGate());
+        assert.match(await page.locator('#obdSimpleResultStatus').innerText(), /Web Serial通信エラー/,
+          'A repeated gate refresh must retain the transport failure notice');
         assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true, 'Settled cleanup must permit saving acquired evidence');
+        await page.locator('#obdSimpleResultStatus').scrollIntoViewIfNeeded();
         await page.screenshot({ path: path.join(output, 'synthetic-stream-failure.png') });
         const readFailureFacts = () => page.evaluate(() => ({
           codes: obdDevSession.lastSession.dtcSnapshot.codes,

@@ -638,7 +638,7 @@ function loadDeveloperGate(c) {
   c.localStorage = { getItem: () => null };
   c.OBD_DEV_TOKEN_KEY = "test-dev-token";
   c.obdDevUnlockButton = { disabled: false, textContent: "" };
-  load(c, ["renderObdMeasurementConditionSummary", "renderObdDeveloperPasswordState", "getObdRefreshStage"]);
+  load(c, ["renderObdMeasurementConditionSummary", "renderObdDeveloperPasswordState", "getObdRefreshStage", "buildWebSerialConnectionStatus"]);
   c.window = { ObdReadOnly: { getCapability: () => ({ secureContext: true, webSerialSupported: true }) } };
   c.getSelectedObdInterfaceLabel = () => "ELM327";
   c.resolveObdInterfaceId = () => "user-vci-elm327";
@@ -648,6 +648,24 @@ function loadDeveloperGate(c) {
   c.getObdAutoStage = () => "setup";
   for (const name of ["renderObdBridgePairingControls", "renderObdPreviewButtons", "renderObdWorkflowGuide", "renderObdDeveloperSessionSummary", "renderObdStageView"]) c[name] = () => {};
   vm.runInContext(gate, c);
+}
+
+for (const [reason, label] of [
+  ...["serial_response_too_large", "serial_read_failed", "serial_stream_closed", "device_disconnected",
+    "response_timeout", "serial_write_timeout", "transport_failed", "connection_failed"].map(reason => [reason, "Web Serial通信エラー"]),
+  ["adapter_initialization_failed", "Web Serialアダプター初期化を完了できません"],
+  ["adapter_identification_failed", "Web Serialアダプターを識別できません"]
+]) {
+  const { context: c, calls } = client();
+  loadDeveloperGate(c);
+  c.obdDevSession.lastDisconnectReason = reason;
+  const saved = JSON.stringify(c.obdDevSession);
+  c.renderObdDeveloperGate();
+  c.renderObdDeveloperGate();
+  check(c.obdDevStatus.textContent.includes(label) && c.obdDevStatus.textContent.includes("再接続"),
+    `${reason}: disconnected refresh erased failure or recovery guidance`);
+  check(JSON.stringify(c.obdDevSession) === saved && calls.select === 0 && calls.open === 0,
+    `${reason}: rendering a failure changed session evidence or started reconnection`);
 }
 
 for (const failWrite of [false, true]) {
