@@ -287,6 +287,16 @@ export function formatWorkstationPackageError(error) {
     && /^spawn(?:Sync)?(?: |$)/.test(error.syscall)) {
     return `外部プログラムの起動が拒否されました。コンパイラーの実行許可と端末の管理設定を確認してください。設定の自動変更・自動再実行はしません（${error.code}）。`;
   }
+  const operationLabels = {
+    copyfile: "ファイルのコピー", rename: "ファイルまたはフォルダーの配置",
+    open: "ファイルを開く操作", read: "ファイルの読込", write: "ファイルの書込",
+    mkdir: "フォルダーの作成", scandir: "フォルダー一覧の読込",
+    unlink: "一時ファイルの削除", rmdir: "一時フォルダーの削除"
+  };
+  if (["EPERM", "EACCES", "EBUSY"].includes(error?.code) && typeof error?.syscall === "string"
+    && Object.hasOwn(operationLabels, error.syscall)) {
+    return `${operationLabels[error.syscall]}を完了できませんでした。資材と出力先のアクセス設定、他のアプリや同期処理による使用状況を確認してください。原因の確定や設定変更・自動再実行はしていません（${error.code}）。`;
+  }
   const messages = {
     ENOSPC: "空き容量が不足しています。出力先と一時フォルダーの空き容量を確認してください（ENOSPC）。",
     EDQUOT: "保存容量の割当上限に達しました。出力先の使用量を確認してください（EDQUOT）。",

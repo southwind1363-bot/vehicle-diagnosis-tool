@@ -55,6 +55,24 @@ for (const code of ["ENOSPC", "EDQUOT", "EACCES", "EPERM", "EBUSY", "ENOENT", "E
   check(message.includes(code) && message.includes("確認"), `Missing actionable package failure: ${code}`);
   check(!message.includes("private"), "Package error leaked raw details");
 }
+for (const code of ["EPERM", "EACCES", "EBUSY"]) {
+  for (const [syscall, label] of [["copyfile", "コピー"], ["rename", "配置"], ["open", "開く操作"],
+    ["read", "読込"], ["write", "書込"], ["mkdir", "作成"], ["scandir", "一覧"], ["unlink", "一時ファイル"], ["rmdir", "一時フォルダー"]]) {
+    const failure = { code, syscall, path: "synthetic-private-source", dest: "synthetic-private-destination",
+      message: "synthetic-private-error", stdout: "synthetic-private-output", stderr: "synthetic-private-error" };
+    const original = JSON.stringify(failure);
+    const message = formatWorkstationPackageError(failure);
+    check(message.includes(label) && message.includes(code) && message.includes("自動再実行はしていません"),
+      `${code}/${syscall}: package failure did not identify its operation without an automatic retry`);
+    check(!message.includes("synthetic-private") && JSON.stringify(failure) === original,
+      `${code}/${syscall}: package guidance disclosed private details or changed the error`);
+  }
+  for (const syscall of ["rename synthetic-private-path", "constructor", "__proto__", {}, null]) {
+    const message = formatWorkstationPackageError({ code, syscall, message: "synthetic-private-error" });
+    check(message.includes(code) && !message.includes("synthetic-private") && !message.includes("原因の確定"),
+      `${code}: unknown syscall must retain generic private-safe guidance`);
+  }
+}
 for (const code of ["EPERM", "EACCES"]) {
   for (const syscall of ["spawnSync C:/synthetic-private/compiler.exe", "spawn C:/synthetic-private/compiler.exe"]) {
     const message = formatWorkstationPackageError({ code, syscall, message: "synthetic-private", stderr: "synthetic-private-output" });
@@ -320,6 +338,26 @@ try {
   await assert.rejects(() => runJ2534WorkstationPreflight([staticReady], -1, { createDescriptor: () => { throw new Error("must-not-run"); } }), /j2534_preflight_selection_invalid/);
   check(true, "Invalid J2534 selection reached descriptor issuance");
   const valid = fixture();
+  const denied = fixture();
+  const originalRename = fs.renameSync;
+  let deniedRenameCalls = 0;
+  let placementFailure;
+  try {
+    fs.renameSync = (from, to) => {
+      assert.equal(path.dirname(to), fs.realpathSync(denied.outputDirectory));
+      deniedRenameCalls += 1;
+      throw Object.assign(new Error("synthetic-private-placement"), { code: "EPERM", syscall: "rename", path: from, dest: to });
+    };
+    packageWorkstation(denied);
+  } catch (error) { placementFailure = error; }
+  finally { fs.renameSync = originalRename; }
+  check(deniedRenameCalls === 1 && placementFailure?.code === "EPERM",
+    "Placement denial was hidden, retried, or did not reach the publish operation");
+  const placementMessage = formatWorkstationPackageError(placementFailure);
+  check(placementMessage.includes("配置") && !placementMessage.includes("synthetic-private")
+    && !placementMessage.includes(denied.outputDirectory), "Placement failure guidance lost its operation or exposed a path");
+  check(fs.readdirSync(denied.outputDirectory).length === 0,
+    "Failed placement published a completed package or retained its owned staging/lock files");
   fs.writeFileSync(path.join(valid.sourceDirectory, ".env"), "private-fixture");
   fs.writeFileSync(path.join(valid.sourceDirectory, "saved-case.json"), "private-fixture");
   fs.mkdirSync(path.join(valid.sourceDirectory, "node_modules", "extraneous"));
