@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.619";
+const APP_VERSION = "3.13.620";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -13406,12 +13406,16 @@ function renderObdSimpleResultSummary(session = null) {
     term.className = "obd-simple-result-label";
     term.textContent = label;
     description.className = "obd-simple-result-value";
+    description.id = "obdSimpleResultValue-" + targetId;
     description.textContent = value;
     detailText.className = "obd-simple-result-detail";
+    detailText.id = "obdSimpleResultDetail-" + targetId;
     detailText.textContent = detail;
     detailText.hidden = !detail;
     status.className = "obd-simple-result-state is-" + state.tone;
+    status.id = "obdSimpleResultState-" + targetId;
     status.textContent = state.label;
+    item.setAttribute("aria-describedby", [description.id, status.id, detail ? detailText.id : ""].filter(Boolean).join(" "));
     arrow.className = "obd-simple-result-arrow";
     arrow.setAttribute("aria-hidden", "true");
     arrow.textContent = "›";

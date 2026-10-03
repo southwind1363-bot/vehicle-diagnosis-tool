@@ -555,6 +555,25 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const resultItems = page.locator('#obdSimpleResultGrid > button');
       const resultText = await resultItems.allTextContents();
       assert.equal(resultText.length, 8, 'All basic readout categories must remain available');
+      if (width === 1280) {
+        const expectedDescriptions = await resultItems.evaluateAll(items => items.map(item => ({
+          name: item.getAttribute('aria-label'),
+          description: ['.obd-simple-result-value', '.obd-simple-result-state', '.obd-simple-result-detail']
+            .map(selector => item.querySelector(selector))
+            .filter(node => node && !node.hidden && node.textContent)
+            .map(node => node.textContent.trim()).join(' ')
+        })));
+        const accessibility = await context.newCDPSession(page);
+        try {
+          const { nodes } = await accessibility.send('Accessibility.getFullAXTree');
+          for (const expected of expectedDescriptions) {
+            const button = nodes.find(node => !node.ignored && node.role?.value === 'button' && node.name?.value === expected.name);
+            assert.ok(button, `Missing accessible readout button: ${expected.name}`);
+            assert.equal(button.description?.value, expected.description,
+              `Readout button must expose its displayed count, state and detail: ${expected.name}`);
+          }
+        } finally { await accessibility.detach(); }
+      }
       for (const dark of [false, true]) {
         await page.evaluate(value => document.body.classList.toggle('dark', value), dark);
         const layout = await page.locator('#obdSimpleResultGrid').evaluate(node => ({
