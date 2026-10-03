@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.621";
+const APP_VERSION = "3.13.622";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -13372,7 +13372,9 @@ function renderObdSimpleResultSummary(session = null) {
     : isRecordedNumber(completionPercentValue)
       ? Math.max(0, Math.min(100, Math.round(Number(completionPercentValue))))
       : null;
-  const formatCount = (snapshot, count, unit) => snapshot ? String(count) + unit : "未取得";
+  const formatCount = (snapshot, count, unit, readoutId) => !snapshot
+    || (count === 0 && coverageItemById?.[readoutId]?.status === "missing")
+    ? "未取得" : String(count) + unit;
   const resolveReadoutState = (readoutId) => {
     if (obdDevSession.coreScanInProgress && obdDevSession.activeCoreReadoutId === readoutId) return { label: "読取中", tone: "reading" };
     const coverageItem = coverageItemById?.[readoutId] || null;
@@ -13382,13 +13384,13 @@ function renderObdSimpleResultSummary(session = null) {
     return { label: "状態未集計", tone: "unknown" };
   };
   const metrics = [
-    ["DTC", formatCount(dtcSnapshot, dtcCount, "件"), resolveReadoutState("dtc_snapshot"), "obdDetectedCodes", "obdImportStatus", dtcResultDetail],
-    ["フリーズフレーム", formatCount(freezeFrameSnapshot, freezeFrameCount, "項目"), resolveReadoutState("freeze_frame_snapshot"), "obdSessionDetailFreezeFrame", "obdReadoutDetails", freezeFrameResultDetail],
-    ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目"), resolveReadoutState("live_pid_snapshot"), "obdMonitorGrid", "obdMonitorStatus"],
-    ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目"), resolveReadoutState("readiness_snapshot"), "obdSessionDetailReadiness", "obdReadoutDetails", readinessResultDetail],
-    ["ECU情報", formatCount(ecuInfoSnapshot, ecuInfoCount, "項目"), resolveReadoutState("ecu_info_snapshot"), "obdSessionDetailEcuInfo", "obdReadoutDetails"],
-    ["対応PID", formatCount(supportedPidMatrix, supportedPidCount, "件"), resolveReadoutState("supported_pid_matrix"), "obdSessionDetailSupportedPid", "obdReadoutDetails"],
-    ["Mode06", formatCount(onboardMonitorSnapshot, onboardMonitorCount, "件"), resolveReadoutState("onboard_monitor_snapshot"), "obdSessionDetailMode06", "obdReadoutDetails"],
+    ["DTC", formatCount(dtcSnapshot, dtcCount, "件", "dtc_snapshot"), resolveReadoutState("dtc_snapshot"), "obdDetectedCodes", "obdImportStatus", dtcResultDetail],
+    ["フリーズフレーム", formatCount(freezeFrameSnapshot, freezeFrameCount, "項目", "freeze_frame_snapshot"), resolveReadoutState("freeze_frame_snapshot"), "obdSessionDetailFreezeFrame", "obdReadoutDetails", freezeFrameResultDetail],
+    ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目", "live_pid_snapshot"), resolveReadoutState("live_pid_snapshot"), "obdMonitorGrid", "obdMonitorStatus"],
+    ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目", "readiness_snapshot"), resolveReadoutState("readiness_snapshot"), "obdSessionDetailReadiness", "obdReadoutDetails", readinessResultDetail],
+    ["ECU情報", formatCount(ecuInfoSnapshot, ecuInfoCount, "項目", "ecu_info_snapshot"), resolveReadoutState("ecu_info_snapshot"), "obdSessionDetailEcuInfo", "obdReadoutDetails"],
+    ["対応PID", formatCount(supportedPidMatrix, supportedPidCount, "件", "supported_pid_matrix"), resolveReadoutState("supported_pid_matrix"), "obdSessionDetailSupportedPid", "obdReadoutDetails"],
+    ["Mode06", formatCount(onboardMonitorSnapshot, onboardMonitorCount, "件", "onboard_monitor_snapshot"), resolveReadoutState("onboard_monitor_snapshot"), "obdSessionDetailMode06", "obdReadoutDetails"],
     ["主要読取", capturedPercent === null ? "未集計" : String(capturedPercent) + "%", obdDevSession.coreScanInProgress
       ? { label: "読取中", tone: "reading" }
       : { label: capturedPercent === null ? "状態未集計" : capturedPercent === 100 ? "完了" : "未完了", tone: capturedPercent === 100 ? "captured" : "missing" }, "obdReadoutDetails", "obdReadoutDetails"]

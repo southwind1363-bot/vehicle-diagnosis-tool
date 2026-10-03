@@ -56,4 +56,23 @@ assert.equal(zero[4].value, "0項目");
 assert.equal(zero[4].state, "応答0件");
 assert.equal(display({})[4].value, "未取得");
 checks += 3;
+for (const [index, id, field, unit] of [
+  [0, "dtc_snapshot", "dtcs", "件"], [1, "freeze_frame_snapshot", "monitor_values", "項目"],
+  [2, "live_pid_snapshot", "monitor_values", "項目"], [3, "readiness_snapshot", "monitors", "項目"],
+  [4, "ecu_info_snapshot", "items", "項目"], [5, "supported_pid_matrix", "supported_pids", "件"],
+  [6, "onboard_monitor_snapshot", "tests", "件"]
+]) {
+  for (const status of ["missing", "empty", "captured", "unknown"]) {
+    for (const count of [0, 1]) {
+      const card = display({ [id]: { [field]: Array.from({ length: count }, () => ({})) },
+        readout_coverage: { item_by_id: { [id]: { status } } } })[index];
+      assert.equal(card.value, count === 0 && status === "missing" ? "未取得" : `${count}${unit}`,
+        `${id}: missing readout became zero, or existing entries were hidden`);
+      assert.equal(card.state, status === "missing" ? "未取得" : status === "empty"
+        ? index === 0 ? "コード0件" : "応答0件" : status === "captured" ? "取得済み" : "状態未集計",
+      "Count presentation changed the recorded coverage classification");
+      checks += 2;
+    }
+  }
+}
 console.log(`Simple result summary checks: ${checks} / Errors: 0`);

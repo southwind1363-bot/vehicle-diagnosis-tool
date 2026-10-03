@@ -555,6 +555,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const resultItems = page.locator('#obdSimpleResultGrid > button');
       const resultText = await resultItems.allTextContents();
       assert.equal(resultText.length, 8, 'All basic readout categories must remain available');
+      for (const item of await resultItems.all()) {
+        if (await item.locator('.obd-simple-result-state').innerText() === '未取得') {
+          assert.equal(await item.locator('.obd-simple-result-value').innerText(), '未取得',
+            'Unacquired empty fixture categories must not display a zero count');
+        }
+      }
       if (width === 1280) {
         const expectedDescriptions = await resultItems.evaluateAll(items => items.map(item => ({
           name: item.getAttribute('aria-label'),
@@ -1351,6 +1357,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         if (expectedCodes.length) return;
         const dtcResult = page.locator('#obdSimpleResultGrid > button').first();
         if (readoutCase.noDtcResponse) {
+          assert.equal(await dtcResult.locator('.obd-simple-result-value').innerText(), '未取得', 'NO DATA must not display zero codes');
           assert.equal(await dtcResult.locator('.obd-simple-result-state').innerText(), '未取得', 'NO DATA is not a zero-code report');
           assert.match(await page.locator('#obdSimpleResultNote').innerText(), /^DTC読取は未取得です。/);
           assert.doesNotMatch(await page.locator('#obdSimpleResultNote').innerText(), /コード0件/);
