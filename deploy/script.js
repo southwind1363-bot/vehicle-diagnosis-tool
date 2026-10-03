@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.620";
+const APP_VERSION = "3.13.621";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -13341,7 +13341,9 @@ function renderObdSimpleResultSummary(session = null) {
   const coverageItemById = coverage.itemById || coverage.item_by_id
     || Object.fromEntries(coverageItems.filter((item) => item?.id).map((item) => [item.id, item]));
   const countArray = (value) => Array.isArray(value) ? value.length : 0;
-  const countValue = (primary, fallback) => Number.isFinite(Number(primary)) ? Math.max(0, Number(primary)) : fallback;
+  const isRecordedNumber = (value) => (typeof value === "number" || (typeof value === "string" && value.trim() !== ""))
+    && Number.isFinite(Number(value));
+  const countValue = (primary, fallback) => isRecordedNumber(primary) ? Math.max(0, Number(primary)) : fallback;
   const dtcCount = countArray(dtcSnapshot?.dtcs || dtcSnapshot?.codes);
   const dtcStatusBreakdown = formatObdBridgeDtcStatusSummary(dtcSnapshot?.dtcs || dtcSnapshot?.codes || [])
     .replace(/^ 内訳: /, "")
@@ -13365,9 +13367,9 @@ function renderObdSimpleResultSummary(session = null) {
   const supportedPidCount = countValue(supportedPidMatrix?.supportedPidCount ?? supportedPidMatrix?.supported_pid_count, countArray(supportedPidMatrix?.supportedPids || supportedPidMatrix?.supported_pids));
   const capturedPercentValue = coverage.capturedPercent ?? coverage.captured_percent;
   const completionPercentValue = coreStatus.completionPercent ?? coreStatus.completion_percent;
-  const capturedPercent = Number.isFinite(Number(capturedPercentValue))
+  const capturedPercent = isRecordedNumber(capturedPercentValue)
     ? Math.max(0, Math.min(100, Math.round(Number(capturedPercentValue))))
-    : Number.isFinite(Number(completionPercentValue))
+    : isRecordedNumber(completionPercentValue)
       ? Math.max(0, Math.min(100, Math.round(Number(completionPercentValue))))
       : null;
   const formatCount = (snapshot, count, unit) => snapshot ? String(count) + unit : "未取得";

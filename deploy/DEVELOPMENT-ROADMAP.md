@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-04 3.13.621・基本結果の未記録数値表示: renderObdSimpleResultSummaryへsnake_caseのnull進捗を渡すとNumber(null)により「0%」になることを回帰試験で再現。件数/進捗の数値判定をnumberまたは空でない数値文字列に限定し、null/空白/真偽値/配列/非有限値を採用しない。件数は既存配列の件数へ、進捗は記録済みcompletionへフォールバックし、両方未記録なら「未集計」。実際の0と既存数値文字列・状態ラベル・元記録を維持。表示専用の変更で診断/保存/通信は変更なし。専用140項目を端末版検証へ登録し修正前失敗/修正後合格、offline183/workstation1369/package766とChromiumオフライン一巡が合格。390px画像Temp/obd-file-flow-1WX5DYを確認。621ZIP別展開で851files/16930779bytes一致、HTTP200/版621/helper404/vehicleとsample false。SHA256 EB25DC61FA435BC59750B4B458A85706E79A63377A19A9B6B6818946C8F98D2D。実車未検証、公開とCIはpush後確認。
+
 2026-10-04 3.13.620・基本読取結果の読み上げ説明: 通常画面の結果ボタンはaria-labelとtitleが項目名だけで、Chromiumのアクセシビリティ情報でも件数/取得状態/補足が説明に含まれないことを実ブラウザーで再現。表示中のvalue/state/detailへ固有IDを割り当てaria-describedbyで関連付け、空の補足は参照しない。既存ボタン名・詳細遷移・画面表示・診断判定・保存形式は維持。8項目のブラウザー説明が表示内容と一致する検証を追加し、修正前失敗/修正後合格を確認。offline183/workstation1369/package766、Chromiumのオフライン保存・復元・異常系一巡が合格。390px画像Temp/obd-file-flow-8EbYjsを目視確認。620ZIP別展開で851files/16930641bytes一致、HTTP200/版620/helper404/vehicleとsample falseを確認。SHA256 F75E7218095734EC1780A07894F26B87B0B8AD50CE049C919CC76B8359831ABD。実スクリーンリーダーでの音声確認・実車通信は未実施。公開とCIはpush後確認。
 
 2026-10-03 配布生成失敗後の明示再実行検証: 前回の4種の人工複合失敗に続けて同じ出力先で明示再実行。lock残存時はbusy、配置済みの場合はexistsで停止し、残存staging/lock/完成物の一覧と全ファイルSHA256が不変であることを確認。lock解放済みでstagingだけ残る場合は別stagingから再作成し、生成物の整合性検査に合格。旧staging内の目印ファイルを保持し、新配布物への混入と新lock/staging残存がないことを確認。package766項目合格。本体の不具合は再現せず検証のみ追加、619/既存ZIP/生成動作/診断/保存/実通信権限は変更なし。前回0ca68606のCI全4件成功・公開619のHTTP200/資材一致は確認済み。今回のCIと公開確認はpush後に実施。
