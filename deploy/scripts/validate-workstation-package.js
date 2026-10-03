@@ -415,6 +415,39 @@ try {
       && remaining.includes(".workstation-1.0.0.lock") === scenario.lock
       && remaining.includes("vehicle-diagnosis-tool-1.0.0") === !scenario.primary,
     "Cleanup outcome did not match the remaining staging, lock, and completed package");
+    // A new, explicit invocation must respect artifacts left by the failed one.
+    const snapshot = directory => fs.readdirSync(directory, { withFileTypes: true })
+      .sort((a, b) => a.name.localeCompare(b.name, "en"))
+      .map(entry => {
+        assert.ok(!entry.isSymbolicLink(), "Recovery fixture unexpectedly contains a link");
+        const target = path.join(directory, entry.name);
+        return [entry.name, entry.isDirectory() ? snapshot(target)
+          : createHash("sha256").update(fs.readFileSync(target)).digest("hex")];
+      });
+    if (scenario.lock) {
+      const before = snapshot(cleanupFixture.outputDirectory);
+      assert.throws(() => packageWorkstation(cleanupFixture), {
+        message: scenario.primary ? "workstation_package_busy" : "workstation_package_exists"
+      });
+      check(true, "Explicit retry ignored a retained lock or completed package");
+      check(JSON.stringify(snapshot(cleanupFixture.outputDirectory)) === JSON.stringify(before),
+        "Blocked retry modified retained staging, lock, or completed package contents");
+    } else {
+      const abandoned = path.join(cleanupFixture.outputDirectory,
+        remaining.find(name => name.startsWith(".workstation-staging-")));
+      fs.writeFileSync(path.join(abandoned, "incomplete-marker.txt"), "retain previous failed build");
+      const before = snapshot(abandoned);
+      const recovered = packageWorkstation(cleanupFixture);
+      const verified = verifyWorkstationPackage(recovered.directory);
+      check(verified.appVersion === "1.0.0" && verified.fileCount + 1 === recovered.fileCount,
+        "Explicit retry after released lock did not produce a verified package");
+      check(JSON.stringify(snapshot(abandoned)) === JSON.stringify(before)
+        && !fs.existsSync(path.join(recovered.directory, "incomplete-marker.txt")),
+        "Explicit retry removed or reused abandoned build contents");
+      check(JSON.stringify(fs.readdirSync(cleanupFixture.outputDirectory).sort())
+        === JSON.stringify([path.basename(abandoned), path.basename(recovered.directory)].sort()),
+      "Successful explicit retry retained its new lock or staging files");
+    }
   }
   fs.writeFileSync(path.join(valid.sourceDirectory, ".env"), "private-fixture");
   fs.writeFileSync(path.join(valid.sourceDirectory, "saved-case.json"), "private-fixture");
