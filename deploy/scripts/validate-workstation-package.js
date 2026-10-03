@@ -358,6 +358,64 @@ try {
     && !placementMessage.includes(denied.outputDirectory), "Placement failure guidance lost its operation or exposed a path");
   check(fs.readdirSync(denied.outputDirectory).length === 0,
     "Failed placement published a completed package or retained its owned staging/lock files");
+  for (const scenario of [
+    { primary: true, staging: true, lock: false },
+    { primary: true, staging: false, lock: true },
+    { primary: true, staging: true, lock: true },
+    { primary: false, staging: false, lock: true }
+  ]) {
+    const cleanupFixture = fixture();
+    const originalCopy = fs.copyFileSync;
+    const originalRemove = fs.rmSync;
+    const originalUnlink = fs.unlinkSync;
+    const primaryError = Object.assign(new Error("synthetic-private-copy"), { code: "EPERM", syscall: "copyfile" });
+    let failure;
+    let copyFailures = 0;
+    let lockAttempts = 0;
+    try {
+      fs.copyFileSync = (...args) => {
+        if (!scenario.primary) return originalCopy(...args);
+        assert.ok(path.resolve(args[1]).startsWith(fs.realpathSync(cleanupFixture.outputDirectory) + path.sep));
+        copyFailures += 1;
+        throw primaryError;
+      };
+      fs.rmSync = (target, options) => {
+        if (!scenario.staging) return originalRemove(target, options);
+        assert.equal(path.dirname(target), fs.realpathSync(cleanupFixture.outputDirectory));
+        assert.ok(path.basename(target).startsWith(".workstation-staging-"));
+        throw Object.assign(new Error("synthetic-private-staging"), { code: "EBUSY", syscall: "rmdir", path: target });
+      };
+      fs.unlinkSync = target => {
+        assert.equal(path.dirname(target), fs.realpathSync(cleanupFixture.outputDirectory));
+        assert.equal(path.basename(target), ".workstation-1.0.0.lock");
+        lockAttempts += 1;
+        if (!scenario.lock) return originalUnlink(target);
+        throw Object.assign(new Error("synthetic-private-lock"), { code: "EACCES", syscall: "unlink", path: target });
+      };
+      packageWorkstation(cleanupFixture);
+    } catch (error) { failure = error; }
+    finally {
+      fs.copyFileSync = originalCopy;
+      fs.rmSync = originalRemove;
+      fs.unlinkSync = originalUnlink;
+    }
+    check(failure?.message === "workstation_package_cleanup_failed" && lockAttempts === 1
+      && copyFailures === Number(scenario.primary), "Cleanup failure was lost, skipped, or automatically retried");
+    check(failure?.cause === (scenario.primary ? primaryError : undefined), "Cleanup failure replaced the original creation error");
+    const message = formatWorkstationPackageError(failure);
+    check(message.includes("作成途中のフォルダーの削除が未完了") === scenario.staging
+      && message.includes("作成用ロックの削除が未完了") === scenario.lock
+      && message.includes("ファイルのコピー") === scenario.primary
+      && message.includes("配布フォルダーの配置は完了") === !scenario.primary,
+    "Cleanup guidance misreported the creation or cleanup outcome");
+    check(!message.includes("synthetic-private") && !message.includes(cleanupFixture.outputDirectory),
+      "Combined cleanup guidance exposed raw error details");
+    const remaining = fs.readdirSync(cleanupFixture.outputDirectory);
+    check(remaining.some(name => name.startsWith(".workstation-staging-")) === scenario.staging
+      && remaining.includes(".workstation-1.0.0.lock") === scenario.lock
+      && remaining.includes("vehicle-diagnosis-tool-1.0.0") === !scenario.primary,
+    "Cleanup outcome did not match the remaining staging, lock, and completed package");
+  }
   fs.writeFileSync(path.join(valid.sourceDirectory, ".env"), "private-fixture");
   fs.writeFileSync(path.join(valid.sourceDirectory, "saved-case.json"), "private-fixture");
   fs.mkdirSync(path.join(valid.sourceDirectory, "node_modules", "extraneous"));

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-03 配布生成と後片付けの複合失敗: staging削除やlock削除の例外が元の生成例外を隠すfinally構造を修正。元の例外をcauseに保持し、staging/lockの後片付けを独立して試み、固定日本語の案内で各失敗を併記する。配置完了後のlock削除失敗は配布物が存在することを明示し、CLIは終了1を維持する。所有先・リンク・lock identityの検査は維持し、自動再試行・上書き・未加工パス表示なし。人工copy失敗とstaging/lock削除失敗の3組合せ、配置成功後lock失敗の計4経路で原因保持/各1回実行/案内/残存物を検証し、package757項目合格。本体619・既存ZIP・診断/保存/実通信権限は変更なし。実環境EPERMの原因解明ではない。公開とGitHub CIはpush後確認。
+
 2026-10-03 配布生成EPERMの操作別案内: 618で発生したEPERMを調べるため、既存619ZIPを上書きせず既定出力先へ一度だけ生成。今回は成功し、原因は再現・確定できなかった。formatWorkstationPackageErrorへEPERM/EACCES/EBUSYの既知syscall別案内を追加し、コピー/配置/open/read/write/mkdir/scandir/unlink/rmdirを固定日本語で区別する。未知syscall・追加文字付き・prototype名は一般案内へ戻し、path/dest/内部出力を表示せず、原因断定・設定変更・自動再試行なし。完成版配置に人工rename EPERMを注入し、単発失敗/配置案内/パス非表示/完成物なし/所有stagingとlock後片付けを確認。package737項目合格。これは案内改善と人工障害検証であり、実環境EPERMの解消証明ではない。本体619・既存ZIP・検査条件・実通信権限は変更なし。公開とGitHub CIはpush後確認。
 
 2026-10-03 3.13.619・ECU一覧の応答取得表示: 保存済み模擬stream-failure記録を確認し、7E8/7E9のresponse statusはokだが通常ECU一覧の表示辞書にok/reported/responded/responseがなく「状態未確認」になることを再現。詳細画面と同じ「応答取得」へ対応し、未知statusは辞書自身のkeyだけを参照して未確認を維持。ECU応答記録のdtcCountはnullのため、別DTC一覧の件数を推測結合せず未記録表示を維持する。診断・保存形式・通信処理は変更なし。8状態の表示/元記録非変更を追加しECU表示116、workstation1369、offline183、package665合格。実ブラウザーでも2ECUの応答取得と件数未記録を照合し、保存・復元・通信失敗・再接続の全工程合格。390px画像Temp/obd-file-flow-IhlWJtを目視確認。前回EPERMの再試行はせず一時folderへ生成、619ZIP別展開で851files/16930348bytes一致、HTTP200/版619/helper URL404/vehicleとsample false。ZIP SHA256 C8FF6363BAE96334476AB9EE85E759BC4E2D0AD2D1F1D68B6920A7A83692AD0C。実VCI/実車未検証、公開とCIはpush後確認。

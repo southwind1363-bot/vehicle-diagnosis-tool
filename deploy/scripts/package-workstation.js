@@ -8,6 +8,13 @@ import { validateWorkstationAssets } from "./workstation-assets.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
 
 const deployDirectory = fileURLToPath(new URL("../", import.meta.url));
+class PackageCleanupError extends Error {
+  constructor(cause, published, failures) {
+    super("workstation_package_cleanup_failed", { cause });
+    this.published = published;
+    this.failures = failures;
+  }
+}
 const RUNTIME_FILES = ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/inspect-j2534-registry-presence.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-dtc-selection-handoff.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"];
 
 // Required by the bridge's non-executing private metadata API, not a native worker.
@@ -163,6 +170,7 @@ export function packageWorkstation(options = {}) {
   catch (error) { if (error.code === "EEXIST") throw new Error("workstation_package_busy"); throw error; }
   let staging;
   let published = false;
+  let creationFailure;
   let fileCount = 0;
   const integrityFiles = [];
   const recordFile = (relative) => {
@@ -263,24 +271,45 @@ export function packageWorkstation(options = {}) {
     fs.renameSync(staging, destination);
     published = true;
     return { directory: destination, ...info };
+  } catch (error) {
+    creationFailure = error;
+    throw error;
   } finally {
+    const cleanupFailures = [];
     try {
       if (!published && staging) {
         rejectLinks(staging);
         if (path.dirname(fs.realpathSync(staging)) !== outputRoot || !path.basename(staging).startsWith(".workstation-staging-")) throw new Error("workstation_package_cleanup_invalid");
         fs.rmSync(staging, { recursive: true, force: true });
       }
-    } finally {
+    } catch (error) {
+      cleanupFailures.push({ stage: "staging", error });
+    }
+    try {
       const owned = fs.fstatSync(lockDescriptor);
       fs.closeSync(lockDescriptor);
       const current = fs.lstatSync(lockPath);
       if (current.isSymbolicLink() || current.dev !== owned.dev || current.ino !== owned.ino) throw new Error("workstation_package_cleanup_invalid");
       fs.unlinkSync(lockPath);
+    } catch (error) {
+      cleanupFailures.push({ stage: "lock", error });
     }
+    if (cleanupFailures.length) throw new PackageCleanupError(creationFailure, published, cleanupFailures);
   }
 }
 
 export function formatWorkstationPackageError(error) {
+  if (error instanceof PackageCleanupError) {
+    const creation = error.published
+      ? "配布フォルダーの配置は完了しましたが、後片付けが未完了です。既存の配布物を確認し、上書きや自動再作成はしません。"
+      : `作成処理の失敗: ${formatSinglePackageError(error.cause)}`;
+    return [creation, ...error.failures.map(failure =>
+      `${failure.stage === "staging" ? "作成途中のフォルダー" : "作成用ロック"}の削除が未完了です。${formatSinglePackageError(failure.error)}`)].join("\n");
+  }
+  return formatSinglePackageError(error);
+}
+
+function formatSinglePackageError(error) {
   // Permission codes also describe process-launch failures. Use only the
   // operation prefix for classification; never print its embedded path.
   if (["EPERM", "EACCES"].includes(error?.code) && typeof error?.syscall === "string"
@@ -330,7 +359,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.log(`オフライン移行用フォルダー: ${result.directory}`);
     console.log(`版: ${result.appVersion} / 依存ライブラリ: ${result.dependencyCount} / Node.js 22以降とnpmの事前導入が必要です（24 LTS推奨）。`);
   } catch (error) {
-    console.error(`移行用フォルダーを作成できません: ${formatWorkstationPackageError(error)}`);
+    console.error(`移行用フォルダーの作成処理を正常終了できません: ${formatWorkstationPackageError(error)}`);
     process.exitCode = 1;
   }
 }
