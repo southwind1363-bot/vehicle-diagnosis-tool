@@ -75,4 +75,27 @@ for (const [index, id, field, unit] of [
     }
   }
 }
-console.log(`Simple result summary checks: ${checks} / Errors: 0`);
+for (const name of ["readCoreSessionAliasValue", "readCoreSessionAliasArray", "formatCoreSessionStatusSummary"]) {
+  const fn = source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))?.[0];
+  assert.ok(fn, `Missing ${name}`);
+  vm.runInContext(fn, context);
+}
+for (const value of [null, undefined, "", "  ", false, true, [], [0], {}, NaN, Infinity, 0, "0", 50, "50", 100]) {
+  for (const snake of [false, true]) {
+    const status = { status: "collecting_readouts", [snake ? "completion_percent" : "completionPercent"]: value,
+      [snake ? "empty_readout_ids" : "emptyReadoutIds"]: ["dtc_snapshot"],
+      [snake ? "remaining_readout_ids" : "remainingReadoutIds"]: ["live_pid_snapshot"] };
+    const original = structuredClone(status);
+    const text = context.formatCoreSessionStatusSummary(status);
+    const summary = display({ coreSessionStatus: status })[7].value;
+    assert.equal(text, (summary === "未集計" ? "" : `${summary} / `) + "コア読取を継続 / 空応答1件 / 残り1項目",
+      "Detailed progress disagreed with the simple card or lost readout status");
+    assert.deepEqual(status, original, "Detailed summary modified recorded progress");
+    checks += 2;
+  }
+}
+assert.equal(context.formatCoreSessionStatusSummary({ completion_percent: null }, "未集計"), "未集計");
+assert.equal(context.formatCoreSessionStatusSummary({ completionPercent: 100, status: "analysis_ready", emptyReadoutIds: ["dtc_snapshot"], readyForAnalysis: true }),
+  "100% / コア読取完了 / 空応答1件", "Empty readout was promoted to analysis readiness");
+checks += 2;
+console.log(`Simple and detailed result summary checks: ${checks} / Errors: 0`);
