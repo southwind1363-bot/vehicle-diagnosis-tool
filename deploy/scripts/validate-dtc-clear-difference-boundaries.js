@@ -234,4 +234,54 @@ sharedInput.beforeReadout.receipts[3].transcript = "NO DATA\r>";
 for (const [index, name] of views.entries()) check(JSON.stringify(sharedHandle[name](sharedInput.context)) === savedViews[index], "Readiness views changed each other or reread inputs");
 sharedHandle.dispose();
 for (const name of views) check(sharedHandle[name](sharedInput.context).reason === "evidence_disposed", "Shared readiness view outlived disposal");
+// Pairing reports remains fixture-only; neither a reset nor completion proves repair.
+for (const ignitionBit of [0, 8]) for (const [beforeBits, beforeState] of [[0, "not_supported"], [1, "complete"], [0x10, "indeterminate"], [0x11, "incomplete"]]) {
+  for (const [postBits, postState] of [[0, "not_supported"], [1, "complete"], [0x10, "indeterminate"], [0x11, "incomplete"]]) {
+    const value = fixture();
+    value.beforeReadout.receipts[3].transcript = frames("7E8", [0x41, 1, 0, beforeBits | ignitionBit, 1, 0]) + ">";
+    value.postReadout.receipts[3].transcript = frames("7E8", [0x41, 1, 0, postBits | ignitionBit, 1, 1]) + ">";
+    const handle = createDtcClearDtcEvidencePairFixture(value).handle;
+    const report = handle.inspectMonitorStatePairs(value.context).summary;
+    const row = report.sources.find(source => source.group === "base").monitors[0];
+    const withheld = [beforeState, postState].includes("indeterminate");
+    assert.deepEqual(row, { monitorId: "misfire", beforeState, postState,
+      pairingState: withheld ? "withheld" : "paired", reason: withheld ? "state_indeterminate" : null,
+      stateChanged: withheld ? null : beforeState !== postState }); checks++;
+    const catalyst = report.sources.find(source => source.group === "noncontinuous").monitors[0];
+    check(catalyst.beforeState === "complete" && catalyst.postState === "incomplete" && catalyst.stateChanged === true,
+      "Noncontinuous transition mixed base or post evidence");
+    check(report.fixtureMonitorStatePairsAvailable && ["readinessEvidenceAvailable", "comparisonAvailable", "clearSucceededInferred",
+      "readoutCoverageComplete", "sameVehicleVerified", "clearBoundaryVerified", "realTransportProofAvailable", "executionEnabled",
+      "vehicleCommandEnabled", "wouldTransmit", "canExecute"].every(key => report[key] === false), "State pairs authorized real comparison or execution");
+    handle.dispose();
+  }
+}
+const pairedMonitors = fixture(["7E8", "7E9"]);
+const manyPairs = fixture(ids), manyPairsHandle = createDtcClearDtcEvidencePairFixture(manyPairs).handle;
+const manyPairSources = manyPairsHandle.inspectMonitorStatePairs(manyPairs.context).summary.sources;
+check(manyPairSources.length === 64 && ["base", "noncontinuous"].every(group =>
+  manyPairSources.filter(row => row.group === group).map(row => row.sourceId).join() === ids.join()),
+  "32-source monitor pairing merged ECU reports or omitted a group");
+manyPairsHandle.dispose();
+pairedMonitors.beforeReadout.receipts[3].transcript = frames("7E9", [0x41, 1, 0, 7, 1, 0]) + frames("7E8", [0x41, 1, 0, 7, 1, 0]) + ">";
+pairedMonitors.postReadout.receipts[3].transcript = frames("7E8", [0x41, 1, 0, 15, 1, 0]) + frames("7E9", [0x41, 1, 0, 7, 0x10, 0]) + ">";
+const pairedHandle = createDtcClearDtcEvidencePairFixture(pairedMonitors).handle;
+const pairs = pairedHandle.inspectMonitorStatePairs(pairedMonitors.context).summary;
+check(pairs.sources.length === 4 && pairs.sources.filter(row => row.sourceId === "7E8")
+  .every(row => row.monitors.every(m => m.pairingState === "withheld" && m.reason === "ignition_type_changed" && m.stateChanged === null)),
+"Changed ignition basis was treated as comparable or crossed ECU boundaries");
+const changedBasis = pairs.sources.find(row => row.sourceId === "7E8" && row.group === "noncontinuous");
+check(changedBasis.monitors.some(m => m.monitorId === "catalyst" && m.postState === null)
+  && changedBasis.monitors.some(m => m.monitorId === "nmhc_catalyst" && m.beforeState === null), "Unshared monitor identities were merged or lost");
+check(pairs.sources.find(row => row.sourceId === "7E9" && row.group === "noncontinuous").monitors
+  .every(m => m.reason === "state_indeterminate" && m.stateChanged === null), "Unmapped-bit reports became state transitions");
+check(Object.isFrozen(pairs.sources[0].monitors[0]) && !/frames|payload|transcript|Token/.test(JSON.stringify(pairs)), "Pairs exposed mutable or raw evidence");
+pairedMonitors.beforeReadout.receipts[3].transcript = "NO DATA\r>";
+check(JSON.stringify(pairedHandle.inspectMonitorStatePairs(pairedMonitors.context).summary) === JSON.stringify(pairs), "Pairing reread caller input");
+for (const key of ["scopeToken", "connectionToken", "targetToken"]) check(pairedHandle.inspectMonitorStatePairs({ ...pairedMonitors.context, [key]: {} }).summary === null,
+  "Foreign context acquired state pairs");
+pairedHandle.dispose(); check(pairedHandle.inspectMonitorStatePairs(pairedMonitors.context).reason === "evidence_disposed", "Disposed pairs remained available");
+const stalePairs = fixture(), stalePairsHandle = createDtcClearDtcEvidencePairFixture(stalePairs).handle;
+stalePairs.scope.invalidate(stalePairs.context);
+check(stalePairsHandle.inspectMonitorStatePairs(stalePairs.context).summary === null, "Invalidated scope retained state pairs");
 console.log(`DTC clear difference boundary checks: ${checks} / Errors: 0`);

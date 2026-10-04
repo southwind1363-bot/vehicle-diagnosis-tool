@@ -1,5 +1,17 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 2026-10-05: 試験用monitor前後状態の対応付け
+
+Node専用pair handleへ `inspectMonitorStatePairs(context)` を追加した。同じfactoryが固定コピーから抽出済みの基本/非連続monitorだけを入力とし、外部のsummaryを受け取らない。sourceId、group、monitorIdで前後を分け、beforeState/postStateを返す。状態の改善・悪化やreadiness全体の完了は計算しない。
+
+点火方式の報告値が違う場合はignition_type_changed、片側にないmonitorはmonitor_not_shared、どちらかの状態がindeterminateならstate_indeterminateとしてpairingStateをwithheldにし、stateChangedはnullにする。この順で保留理由を選ぶ。保留時も前後の報告状態を残し、片側に存在しないmonitorはnullとする。同じ方式・同じmonitorで既存状態が確定している場合だけpairedとし、stateChangedは状態文字列の相違を示す。not_supportedとcompleteを同一視しない。これらは模擬報告の対応付け方針であり、実車の比較可能性の判定ではない。
+
+取得時のscope/context再確認、失効、dispose、返却値の深いfreezeを維持する。追加のraw解析・生応答保持・token公開・永続化はしない。fixtureMonitorStatePairsAvailableだけをtrueにし、readinessEvidenceAvailable、comparisonAvailable、clearSucceededInferred、実車同一性/網羅性/送信/実行フラグはfalseを維持する。通常画面・ブラウザーAPI・配布物・実transportへは未接続。
+
+点火方式2種類×4状態の前後全組合せ、非連続monitorのcomplete→incomplete、方式変更時の項目差、未定義bit、複数ECUと32-source、入力変更、不変性、foreign context、失効とdisposeを検証。境界7379、scope48、scoped-before126、scoped-post164、sequence492、before-evidence51、post-evidence50、before receipt205が合格。既存OBD検証からの呼出経路でも関連試験の合格を確認。アプリ3.13.623・保存形式・実車送信は変更なし。
+
+次段階は、実車の比較条件へ昇格させず、模擬前後状態をどう提示するかの設計。消去成功・故障解消や車両送信許可の根拠には使用しない。
+
 ## 2026-09-07 / 3.13.519後続: readiness抽出の共通解析
 
 一括生成のsequence検証後、0101の固定コピーを前後各1回だけ再解析し、MIL/件数・基本monitor・非連続monitorの3抽出へ同じframesを渡すよう整理した。抽出段階のreadiness再解析は6回から2回になる。sequence自身の意味検査は省略しない。公開する派生report、保留条件、寿命管理は変更しない。

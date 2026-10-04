@@ -153,6 +153,29 @@ function copyEvidenceInput(value) {
   return Object.freeze({ ...before, receipts: Object.freeze(receipts) });
 }
 
+function pairMonitorStates(beforeReports, postReports, group) {
+  const postBySource = new Map(postReports.map(report => [report.sourceId, report]));
+  if (beforeReports.length !== postBySource.size) throw new Error("fixture_pair_source_mismatch");
+  return beforeReports.map(before => {
+    const post = postBySource.get(before.sourceId);
+    if (!post) throw new Error("fixture_pair_source_mismatch");
+    const beforeById = new Map(before.monitors.map(row => [row.monitorId, row]));
+    const postById = new Map(post.monitors.map(row => [row.monitorId, row]));
+    const ids = [...new Set([...beforeById.keys(), ...postById.keys()])];
+    return { sourceId: before.sourceId, group,
+      beforeIgnitionTypeReported: before.ignitionTypeReported, postIgnitionTypeReported: post.ignitionTypeReported,
+      monitors: ids.map(monitorId => {
+        const first = beforeById.get(monitorId), last = postById.get(monitorId);
+        const reason = before.ignitionTypeReported !== post.ignitionTypeReported ? "ignition_type_changed"
+          : !first || !last ? "monitor_not_shared"
+            : first.state === "indeterminate" || last.state === "indeterminate" ? "state_indeterminate" : null;
+        return { monitorId, beforeState: first?.state ?? null, postState: last?.state ?? null,
+          pairingState: reason ? "withheld" : "paired", reason,
+          stateChanged: reason ? null : first.state !== last.state };
+      }) };
+  });
+}
+
 function dtcEvidenceHandle(scope, dtcEvidence, paired = false) {
   let retained = freeze(dtcEvidence);
   return Object.freeze({
@@ -202,6 +225,15 @@ function dtcEvidenceHandle(scope, dtcEvidence, paired = false) {
       return freeze({ ok: true, reason: null, summary: { ...boundary,
         beforeReports: retained.beforeBaseMonitors, postReports: retained.postBaseMonitors,
         fixtureBaseMonitorReportsAvailable: true, noncontinuousMonitorsInterpreted: false, readinessEvidenceAvailable: false } });
+    }, inspectMonitorStatePairs(context) {
+      const current = inspectDtcClearReadoutFixtureScope(scope, context);
+      if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });
+      if (retained === null) return freeze({ ok: false, reason: "evidence_disposed", summary: null });
+      const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_monitor_state_pairs", null);
+      const sources = [...pairMonitorStates(retained.beforeBaseMonitors, retained.postBaseMonitors, "base"),
+        ...pairMonitorStates(retained.beforeNoncontinuous, retained.postNoncontinuous, "noncontinuous")];
+      return freeze({ ok: true, reason: null, summary: { ...boundary, sources,
+        fixtureMonitorStatePairsAvailable: true, readinessEvidenceAvailable: false } });
     }, inspectNoncontinuousMonitorReports(context) {
       const current = inspectDtcClearReadoutFixtureScope(scope, context);
       if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });

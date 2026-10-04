@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-05 R2試験用monitor前後状態の対応付け: Node専用pair handleにinspectMonitorStatePairsを追加。検証済みの派生状態をECU/group/monitor別に並べ、同じ点火方式・同じmonitorかつ状態確定時だけ状態文字列の相違を示す。方式変更、片側なし、indeterminateは保留し、消去成功/実車比較/送信等のflagはfalseを維持。通常UI・保存・実transportには未接続。境界7379、scope48、scoped-before126、scoped-post164、sequence492、before-evidence51、post-evidence50合格。詳細はR2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md冒頭。本体3.13.623/配布ZIPは変更なし。CIと公開資材の不変性はpush後確認。
+
 2026-10-05 3.13.623・詳細進捗の未記録表示: 通常カードで修正済みの未記録数値変換がformatCoreSessionStatusSummaryに残り、snake_caseのnullを通常画面は未集計、詳細要約は0%とする食い違いを回帰試験で再現。詳細要約も有限numberまたは空でない数値文字列だけを進捗として採用する。空応答/残り項目/準備状態/実際の0%を維持し、診断・保存形式・通信は変更しない。camel/snakeの16種類の入力で通常表示との一致と元記録不変を追加し、要約406項目合格。offline183/workstation1369/package766とChromiumオフライン保存・復元・異常系一巡合格（Temp/obd-file-flow-ZuLqsB）。623ZIP別展開で851files/16931221bytes一致、HTTP200/版623/helper404/vehicleとsample false。SHA256 C093A917C46DB829E0113D511A78EFB19F135A6FC1F77DADE24E9F74593EF20E。実車未検証、公開とCIはpush後確認。
 
 2026-10-04 3.13.622・未取得カードのゼロ件数表示: coverageがmissingでも空snapshotの存在だけで件数欄が「0件/0項目」になることを表示試験で再現。7種類の基本結果カードで、snapshotなし、または既存coverageがmissingかつ件数0の場合は「未取得」と表示する。取得済み0件、正の件数、取得状態の分類、診断/保存/通信は維持。missing/empty/captured/unknownと0/1件の組合せを追加し表示308項目合格。ブラウザーでは初期未取得6項目と模擬DTC NO DATAの件数欄を確認し、取得済み0件との区別を保存・復元後も検証。offline183/workstation1369/package766とChromiumオフライン一巡合格、390px画像Temp/obd-file-flow-T1LTNOを目視確認。622ZIP別展開で851files/16931028bytes一致、HTTP200/版622/helper404/vehicleとsample false。SHA256 690D6A9A8127C870CB9366998F6E89D50798B5B2FCB17769616FCEC290ED830F。実車未検証、公開とCIはpush後確認。
