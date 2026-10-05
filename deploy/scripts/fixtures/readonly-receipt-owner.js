@@ -1,9 +1,11 @@
 // Non-communicating development model. Caller declarations are never real transport evidence.
+import { createReceiptRawValidation } from "./readonly-receipt-raw-validation.js";
 const commands = ["03", "07", "0A", "0101"];
 const profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
 const keys = ["command", "profile", "startedAt", "completedAt", "completion", "transcript"];
 
-export function createReadOnlyReceiptOwner() {
+export function createReadOnlyReceiptOwner(api) {
+  const validateRaw = api === undefined ? null : createReceiptRawValidation(api);
   const registry = new WeakMap();
   let current = null;
   const reject = reason => Object.freeze({ ok: false, reason, summary: null });
@@ -13,6 +15,7 @@ export function createReadOnlyReceiptOwner() {
     status, reason, provenance: "simulated_only", receiptCount: record.receipts.length,
     receiptStructureComplete: status === "finished",
     profileEvidence: "caller_declared_only", payloadSemanticsVerified: false,
+    rawTranscriptValidation: record.rawValidation || null,
     realTransportProofAvailable: false, sameVehicleVerified: false, clearBoundaryVerified: false,
     readoutCoverageComplete: false, comparisonAvailable: false, clearSucceededInferred: false,
     executionEnabled: false, vehicleCommandEnabled: false, wouldTransmit: false, canExecute: false
@@ -76,12 +79,23 @@ export function createReadOnlyReceiptOwner() {
       if (record.phase !== "collecting") return reject("attempt_ended");
       if (completion !== "complete") return terminate(record, "rejected", "attempt_incomplete");
       if (record.receipts.length !== commands.length) return terminate(record, "rejected", "missing_receipt");
+      if (validateRaw) {
+        record.phase = "validating";
+        try {
+          const validation = validateRaw(Object.freeze([...record.receipts]));
+          if (find(ticket) !== record) return reject("unknown_or_expired_ticket");
+          record.rawValidation = validation;
+        } catch {
+          if (find(ticket) !== record) return reject("unknown_or_expired_ticket");
+          return terminate(record, "rejected", "raw_validation_failed");
+        }
+      }
       return terminate(record, "finished", null);
     },
     inspect(ticket) {
       const record = find(ticket);
       if (!record) return reject("unknown_or_expired_ticket");
-      return Object.freeze({ ok: true, reason: null, summary: record.summary || snapshot(record, "collecting", null) });
+      return Object.freeze({ ok: true, reason: null, summary: record.summary || snapshot(record, record.phase, null) });
     },
     invalidate
   });

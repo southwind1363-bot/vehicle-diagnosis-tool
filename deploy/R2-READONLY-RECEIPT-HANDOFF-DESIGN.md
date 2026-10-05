@@ -1,5 +1,16 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: raw文法検査の接続
+
+管理元に信頼済み開発用runtimeを指定した場合、finish直前の所有receiptだけを既存parseElmReadOnlyRawTranscriptへ渡す。任意の表示summaryからrawを復元せず、prompt/改行/時刻を補正しない。API省略時は従来の構造検査のみ。関数descriptorを生成時に保持するが、これはruntimeの真正性の証明ではない。
+
+rawTranscriptValidationにはparsed/rejected、command別のcompletion・prompt有無・frame数・エラーcode・NO DATA観測だけを凍結して残す。raw、payload、source IDを返さない。receiptStructureCompleteとfinishのokは構造成立だけを示し、文法がrejectedでも構造成立とは両立する。parsedでもpayloadSemanticsVerifiedや実車・比較・実行flagはfalse。正常なprefixだけではDTC/readinessの意味を検証したことにならない。
+
+処理中はvalidatingとし二重終了を拒否。検査例外は固定理由で拒否し、処理中の新世代・失効は検査結果を破棄する。終了後にraw参照を解放する既存動作を維持。81項目で正常、NO DATA、prompt欠落、bare LF、NO DATA混在、未完了frame、例外、再入を確認し、既存107項目と境界試験も合格。
+
+次は一取得内のDTC/readiness意味検証の契約。実消去境界や固定日時を追加して既存の前後比較へ見せかけない。通常UI/transport/保存への接続は未実施。
+
+
 ## 2026-10-06: 非通信モデルの実装範囲
 
 `scripts/fixtures/readonly-receipt-owner.js`を追加。管理元ごとの私有WeakMapと現在ticketの参照一致で一試行を認識する。beginは旧試行を失効し、appendは4 commandの順序、宣言profile、非負の整数時刻順序、complete、transcript長1～32768を確認する。時刻は試験入力の数値であり実取得時刻の証明ではない。profileもcaller_declared_onlyで、通信設定を観測したとは主張しない。
