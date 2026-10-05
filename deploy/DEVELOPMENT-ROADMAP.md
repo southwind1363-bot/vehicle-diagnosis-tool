@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-05 R2操作できる模擬見本: preview-monitor-review-interactive.jsを追加。共通化した状態機械とDOM部品を固定文章sessionで結合し、表示・更新・待機中閉鎖・再表示を操作可能にした。閉鎖はdisposeとinvalidateを両方実行、400ms待機は模擬で通信なし。CSPはSHA256一致の埋込scriptだけを許可。既存Node寿命/receipt検証とオフラインChromium操作検証で確認。通常UI/実証拠のブラウザー所有権は未実装、本体3.13.623・ZIP・保存・診断・実車通信は変更なし。
+
 2026-10-05 R2模擬通知のDOM表示: 独立したmonitor-preview-viewを追加。状態通知を受けて本文を同期消去し、固定模擬readyだけtextContentで表示。disposeで所有sectionと通知登録を外し、他の記録は保持する。Chromiumの人工通知で更新/失効/未知状態、HTML非実行、実行flag不正、閉鎖後通知、再表示を検証。390px/HTTP要求0/page error 0。Nodeモデルとのブラウザー内結合と通常UI配線は未実装。本体3.13.623・ZIP・保存・診断・実車通信は変更なし。
 
 2026-10-05 R2模擬表示の同期通知: monitor-preview-reviewへsubscribe/解除を追加。失効・更新でtext:nullを同期通知し、通知中の閉鎖では古いreadyを後続へ配らない。通知中のreadは拒否、同期例外は該当登録を解除し記録破棄/失効後にunavailableを通知する。通知順・解除・再入・取得前失効・ready時例外を検証。通常DOM/実車接続は未実装、本体3.13.623・ZIP・保存・診断・実車通信は変更なし。

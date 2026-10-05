@@ -1,0 +1,61 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
+const { spawnSync } = require('node:child_process');
+
+module.exports = async function validateInteractiveMonitor(context, output, expected) {
+  const { createInteractiveMonitorPreview } = await import('./preview-monitor-review-interactive.js');
+  const file = path.join(output, 'interactive.html');
+  fs.writeFileSync(file, createInteractiveMonitorPreview(), 'utf8');
+  const invalid = spawnSync(process.execPath, [path.join(__dirname, 'preview-monitor-review-interactive.js'), 'private.json'], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(invalid.status, 2); assert.equal(invalid.stdout, ''); assert(!invalid.stderr.includes('private.json'));
+  const page = await context.newPage();
+  const errors = [], external = [];
+  page.on('pageerror', error => errors.push(String(error)));
+  page.on('request', request => { if (/^https?:/.test(request.url())) external.push(request.url()); });
+  try {
+    await page.clock.install({ time: new Date('2026-10-05T00:00:00Z') });
+    await page.clock.pauseAt(new Date('2026-10-05T00:00:01Z'));
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(pathToFileURL(file).href);
+    const show = page.getByRole('button', { name: '模擬記録を表示', exact: true });
+    const close = page.getByRole('button', { name: '表示を閉じる', exact: true });
+    assert(await close.isDisabled());
+    await show.click();
+    assert(await show.isDisabled());
+    assert.equal(await page.locator('#review pre').textContent(), '');
+    await close.click();
+    assert.equal(await page.locator('#review').textContent(), '');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'show');
+    await page.clock.runFor(500);
+    assert.equal(await page.locator('#review').textContent(), '', 'Closed acquisition returned to the DOM');
+    await show.click();
+    await page.clock.runFor(500);
+    assert.equal(await page.locator('pre').textContent(), expected);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: path.join(output, '390-interactive-ready.png'), fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: path.join(output, '1280-interactive-dark.png') });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.emulateMedia({ colorScheme: 'light' });
+    // Refresh clears immediately; reopening while old work is pending retains only the new result.
+    await show.click();
+    assert.equal(await page.locator('pre').textContent(), '');
+    await close.click();
+    await show.click();
+    await page.clock.runFor(500);
+    assert.equal(await page.locator('pre').textContent(), expected);
+    assert.equal(await page.locator('#review section').count(), 1);
+    await close.focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#review').textContent(), '');
+    await page.screenshot({ path: path.join(output, '390-interactive-closed.png') });
+    await page.evaluate(() => { const script = document.createElement('script'); script.textContent = 'window.unapprovedScript = true'; document.body.appendChild(script); });
+    assert.equal(await page.evaluate(() => window.unapprovedScript), undefined, 'Non-hashed script executed');
+    assert.deepEqual(errors, []); assert.deepEqual(external, []);
+    console.log('Interactive monitor preview: display, refresh, close while pending, reopen, focus and CSP passed');
+  } finally { await page.close(); }
+};

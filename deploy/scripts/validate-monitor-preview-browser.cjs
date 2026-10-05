@@ -45,6 +45,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     });
     assert.equal(await page.evaluate(() => window.monitorPreviewUnexpectedExecution), undefined, 'Inline script allowed');
     await require('./validate-monitor-preview-view.cjs')(context, output, text);
+    await require('./validate-monitor-interactive-browser.cjs')(context, output, text);
     console.log(JSON.stringify({ output, viewports: 2, themes: 2, rows: expectedRows.length,
       offline: true, externalRequests: external.length, inlineScriptBlocked: true }));
   } finally {
