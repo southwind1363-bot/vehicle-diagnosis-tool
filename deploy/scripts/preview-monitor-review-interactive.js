@@ -13,10 +13,16 @@ export function createInteractiveMonitorPreview() {
 const createReview = ${createSimulatedReviewController.toString()};
 const attachView = ${attachMonitorPreviewView.toString()};
 const fixedText = ${sample};
+const scenario = document.querySelector('#scenario');
 const review = createReview(() => {
   let active = true;
   return Object.freeze({ inspect: () => Object.freeze({ ok: active, text: active ? fixedText : null }), dispose() { active = false; } });
-}, () => new Promise(resolve => setTimeout(resolve, 400)));
+}, () => {
+  const fail = scenario.value !== 'normal';
+  return new Promise((resolve, reject) => setTimeout(() => {
+    if (fail) reject(new Error('simulated_preview_failure')); else resolve();
+  }, 400));
+});
 const root = document.querySelector('#review');
 const show = document.querySelector('#show');
 const close = document.querySelector('#close');
@@ -36,6 +42,10 @@ const hide = () => {
   closed.textContent = '模擬記録の表示を閉じました。';
 };
 close.addEventListener('click', () => { hide(); show.focus(); });
+scenario.addEventListener('change', () => {
+  hide();
+  closed.textContent = '模擬条件を変更しました。「模擬記録を表示」で確認してください。';
+});
 window.addEventListener('pagehide', hide);
 `.replace(/\r\n?/g, "\n");
   const hash = createHash("sha256").update(script).digest("base64");
@@ -48,11 +58,14 @@ window.addEventListener('pagehide', hide);
 *{box-sizing:border-box}body{margin:0;line-height:1.8}main{max-width:960px;margin:auto;padding:24px 16px}
 h1{font-size:1.65rem}h2{font-size:1.25rem}.notice,section{padding:16px;border:1px solid #71849a;border-radius:12px;margin:20px 0}
 .controls{display:flex;flex-wrap:wrap;gap:12px}button{font:inherit;padding:12px 20px;min-height:48px;border-radius:8px;border:1px solid #8abfe8;background:#254968;color:#fff}button:disabled{opacity:.55}button:focus-visible{outline:3px solid #e8bc67;outline-offset:3px}
+select{font:inherit;max-width:100%;min-height:48px;padding:8px;border-radius:8px}label{display:block;margin-bottom:8px}
 @media(prefers-color-scheme:light){:root{background:#f4f7fa;color:#172431}}
 </style></head><body><main>
 <h1>模擬記録の表示と閉鎖</h1>
 <p class="notice">開発用・固定サンプルです。実車の読取結果ではありません。表示待ちは模擬動作で、車両通信は行いません。</p>
 <p>「模擬記録を表示」で固定の前後状態を確認できます。表示待ちの途中でも閉じられます。</p>
+<label for="scenario">模擬条件</label><select id="scenario" aria-describedby="scenario-help"><option value="normal">記録を表示できる場合</option><option value="failure">確認が失敗する場合</option></select>
+<p id="scenario-help">条件を変えると表示を閉じます。失敗時も自動で再試行しません。</p>
 <div class="controls"><button id="show" type="button">模擬記録を表示</button><button id="close" type="button" disabled>表示を閉じる</button></div>
 <p id="closed" role="status" aria-live="polite"></p><div id="review"></div>
 <noscript>この操作見本にはJavaScriptが必要です。静的HTML見本では操作なしで内容を確認できます。</noscript>

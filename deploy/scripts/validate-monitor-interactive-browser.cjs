@@ -53,9 +53,39 @@ module.exports = async function validateInteractiveMonitor(context, output, expe
     await page.keyboard.press('Enter');
     assert.equal(await page.locator('#review').textContent(), '');
     await page.screenshot({ path: path.join(output, '390-interactive-closed.png') });
+    const scenario = page.getByLabel('模擬条件', { exact: true });
+    await scenario.selectOption('failure');
+    await show.click();
+    await page.clock.runFor(500);
+    assert.equal(await page.locator('#review [role="status"]').innerText(), '前後記録を確認できません');
+    assert.equal(await page.locator('pre').textContent(), '');
+    assert(await show.isEnabled());
+    const failureText = await page.locator('#review').innerText();
+    await page.clock.runFor(2000);
+    assert.equal(await page.locator('#review').innerText(), failureText, 'Failure retried without explicit input');
+    assert(!failureText.includes('simulated_preview_failure'));
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: path.join(output, '390-interactive-failure.png') });
+    // A failed old attempt must not clear a new success after changing the scenario.
+    await show.click();
+    await scenario.selectOption('normal');
+    assert.equal(await page.locator('#review').textContent(), '');
+    await show.click();
+    await page.clock.runFor(500);
+    assert.equal(await page.locator('pre').textContent(), expected);
+    // A successful old attempt must not restore content under a new failure scenario.
+    await show.click();
+    await scenario.selectOption('failure');
+    assert.equal(await page.locator('#review').textContent(), '');
+    await page.clock.runFor(500);
+    assert.equal(await page.locator('#review').textContent(), '');
+    await show.click();
+    await page.clock.runFor(500);
+    assert.equal(await page.locator('pre').textContent(), '');
+    assert.equal(await page.locator('#review [role="status"]').innerText(), '前後記録を確認できません');
     await page.evaluate(() => { const script = document.createElement('script'); script.textContent = 'window.unapprovedScript = true'; document.body.appendChild(script); });
     assert.equal(await page.evaluate(() => window.unapprovedScript), undefined, 'Non-hashed script executed');
     assert.deepEqual(errors, []); assert.deepEqual(external, []);
-    console.log('Interactive monitor preview: display, refresh, close while pending, reopen, focus and CSP passed');
+    console.log('Interactive monitor preview: display, failure, scenario change while pending, explicit recovery, focus and CSP passed');
   } finally { await page.close(); }
 };
