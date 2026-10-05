@@ -1,5 +1,13 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 2026-10-05: 固定模擬プレビューの実行入口
+
+リポジトリ直下で `node deploy/scripts/preview-dtc-clear-monitor-pairs.js` を実行すると、前節の日本語テキストを固定サンプルで確認できる。7E8は状態変化、7E9は点火方式変更による保留、7EAは状態不明による保留、7EBは状態不変を示す。各ECUの基本・非連続monitorを分離する。これはNode専用の開発用出力で、通常画面への追加や実車記録の取込ではない。
+
+スクリプト内の定数からreceiptを生成し、既存scope/sequence/pair検査を通して所有handleからテキストを取得する。模擬clearの7ECはreadinessの4 ECUとは別であり、同一車両や消去成功の根拠にしない。finallyでhandleを破棄しscopeを失効させる。CLI引数は空文字を含めて拒否し、終了2・stdout空・固定stderr案内を返す。入力されたパスや引数を読み取り・表示しない。
+
+8区分・4例の日本語状態・模擬限定表示・反復結果一致・CLI正常と不正引数を16項目で検証し、before-readout receipt検証経由で既存OBD CIへ登録した。境界7484と関連scope/sequence/evidence/receipt検証は合格。本体3.13.623、ZIP、保存形式、実車通信は変更なし。次の通常画面への接続は別途設計対象とする。
+
 ## 2026-10-05: 模擬monitor状態の日本語確認テキスト
 
 Node専用pair handleに `inspectMonitorStatePairText(context)` を追加した。既存の前後状態取得を内部closureへまとめ、両APIで同じscope/context・dispose検査を行う。テキスト生成は所有する証拠から取得し、callerのsummaryや差し替えたthis.inspectMonitorStatePairsを参照しない。失効・別context・dispose後はok:false/text:nullで取得を拒否する。

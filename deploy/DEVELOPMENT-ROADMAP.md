@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-05 R2固定模擬プレビュー: リポジトリ直下で `node deploy/scripts/preview-dtc-clear-monitor-pairs.js` を実行し、4 ECUの状態変化・点火方式変更・状態不明・状態不変を日本語で確認できる。固定receiptだけを生成し、引数や実車記録の入力は拒否、取得後はhandle破棄とscope失効を行う。8区分の出力・反復一致・CLI正常/不正引数の16項目を既存OBD検証へ登録。境界7484と関連receipt検証合格。本体3.13.623・ZIP・通常UI・保存形式・実車通信は変更なし。CIと公開資材はpush後確認。
+
 2026-10-05 R2模擬monitorの日本語確認: Node専用pair handleへinspectMonitorStatePairTextを追加し、所有済み前後状態をECU/group別に表示する。完了/未完了/非対応/状態不明/報告なしと保留理由を区別し、模擬限定・実行無効・整備書確認・転記の権限利用禁止を明示。両APIのscope/contextとdispose検査を共通化し、外部summary・偽のthisの取得器を使用しない。境界7484およびscope/前後証拠/sequence/receipt検証合格。詳細はR2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md。本体3.13.623・ZIP・保存形式・通常UI・実車通信は変更なし。CIと公開資材はpush後確認。
 
 2026-10-05 R2試験用monitor前後状態の対応付け: Node専用pair handleにinspectMonitorStatePairsを追加。検証済みの派生状態をECU/group/monitor別に並べ、同じ点火方式・同じmonitorかつ状態確定時だけ状態文字列の相違を示す。方式変更、片側なし、indeterminateは保留し、消去成功/実車比較/送信等のflagはfalseを維持。通常UI・保存・実transportには未接続。境界7379、scope48、scoped-before126、scoped-post164、sequence492、before-evidence51、post-evidence50合格。詳細はR2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md冒頭。本体3.13.623/配布ZIPは変更なし。CIと公開資材の不変性はpush後確認。
