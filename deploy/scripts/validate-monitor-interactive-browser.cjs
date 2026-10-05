@@ -4,7 +4,15 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { spawnSync } = require('node:child_process');
 
-module.exports = async function validateInteractiveMonitor(context, output, expected) {
+module.exports = async function validateInteractiveMonitor(context, output) {
+  const vm = require('node:vm');
+  const { createDtcClearBrowserPreviewSession } = await import('./fixtures/dtc-clear-browser-preview-session.js');
+  const runtime = vm.createContext({ window: {}, navigator: {} });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../obd-readonly.js'), 'utf8'), runtime);
+  const sample = createDtcClearBrowserPreviewSession(runtime.window.ObdReadOnly);
+  let expected;
+  try { assert(sample.inspect().ok); expected = sample.inspect().text; }
+  finally { sample.dispose(); }
   const { createInteractiveMonitorPreview } = await import('./preview-monitor-review-interactive.js');
   const file = path.join(output, 'interactive.html');
   fs.writeFileSync(file, createInteractiveMonitorPreview(), 'utf8');
@@ -91,9 +99,29 @@ module.exports = async function validateInteractiveMonitor(context, output, expe
     await page.clock.runFor(500);
     assert.equal(await page.locator('pre').textContent(), '');
     assert.equal(await page.locator('#review [role="status"]').innerText(), '前後記録を確認できません');
+    // The pagehide listener closes ready/pending owners, including a simulated persisted page.
+    await scenario.selectOption('normal');
+    for (const pending of [false, true]) {
+      await show.click();
+      if (!pending) await page.clock.runFor(500);
+      await page.evaluate(persisted => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted })), pending);
+      assert.equal(await page.locator('#review').textContent(), '');
+      assert(await close.isDisabled());
+      await page.clock.runFor(500);
+      assert.equal(await page.locator('#review').textContent(), '', 'pagehide restored stale evidence');
+    }
+    await show.click(); await page.clock.runFor(500);
+    assert.equal(await page.locator('pre').textContent(), expected);
+    assert.equal(await page.evaluate(() => typeof window.ObdReadOnly), 'undefined', 'Runtime escaped private fixture owner');
     await page.evaluate(() => { const script = document.createElement('script'); script.textContent = 'window.unapprovedScript = true'; document.body.appendChild(script); });
     assert.equal(await page.evaluate(() => window.unapprovedScript), undefined, 'Non-hashed script executed');
+    await page.goto('about:blank');
+    await page.goBack();
+    assert.equal(await page.locator('#review').textContent(), '', 'History return restored old evidence');
+    assert(await close.isDisabled());
+    await show.click(); await page.clock.runFor(500);
+    assert.equal(await page.locator('pre').textContent(), expected, 'Explicit read after history return failed');
     assert.deepEqual(errors, []); assert.deepEqual(external, []);
-    console.log('Interactive monitor preview: display, failure, scenario change while pending, explicit recovery, focus and CSP passed');
+    console.log('Interactive receipt preview: browser-derived output, close/pagehide, late results, failure, recovery, focus and CSP passed');
   } finally { await page.close(); }
 };

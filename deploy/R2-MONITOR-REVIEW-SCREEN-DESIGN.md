@@ -1,5 +1,11 @@
 # R2 monitor前後記録の確認画面案
 
+2026-10-06更新: 操作見本も固定raw receiptをページ内で検証するsessionへ切替済み。固定2 ECUの本文をNode側と照合し、ボタン閉鎖・pagehide・履歴復帰時の破棄と明示再取得を確認した。以下の固定文章sessionに関する記述は旧実装の履歴。静的HTMLは従来の4 ECUのまま。通常UI/実transportは未接続。
+
+生成器は4つのローカルmoduleを固定manifestで組み込み、import/export宣言の変更やscript終端文字を検出すると生成を拒否する。runtimeには私有window/navigatorを渡し、pageのAPIや所有者を公開しない。単一script全体をCSPのSHA256で許可する。任意moduleを取り込む汎用bundlerではない。
+
+pagehide試験はready/pendingの人工イベント（persisted false/true）と、about:blankへの実移動・履歴復帰を検証する。実BFCacheの採用は保証しない。
+
 2026-10-06追記: 固定raw receiptからブラウザー内でhandleを作るsessionとcontroller/DOMの結合試験を実装。Nodeとの全文一致、更新・失効・閉鎖・遅着拒否・明示回復を43 assertionで確認した。以下の操作HTMLは引き続き固定文章sessionを使い、新所有者へのボタン/pagehide配線は次工程。通常UI/実車取得の所有者は未実装。
 
 次工程は [ブラウザー内取得記録の所有権設計](R2-BROWSER-EVIDENCE-OWNERSHIP-DESIGN.md)。固定文章の操作見本から、ページ内で検証・所有する固定模擬receiptへ進む条件を定義する。設計段階であり、通常UI/実車接続は引き続き未実装。

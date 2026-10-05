@@ -4,7 +4,7 @@
 
 `dtc-clear-browser-preview-session.js`は共通の固定sampleからhandleを生成し、scope/contextを隠してinspect/disposeだけを公開する。sessionのclosureはraw receiptを保持しない。disposeはhandle破棄とscope失効を行う。信頼済み開発用runtimeだけを受け取り、任意の外部記録を受理するAPIではない。
 
-`validate-dtc-clear-browser-owner.cjs`でページ内session→共通controller→DOMを結合。43 assertionでNodeと本文一致、更新時の同期消去、重複取得拒否、失効/閉鎖後のscope拒否、遅着成功、再取得後の旧失敗、現行失敗時の非表示、明示回復、反復閉鎖を確認した。外部通信はなく、実行flagはfalse。次はこの所有者を独立した操作見本へ配線し、ボタン・pagehide経由の閉鎖を確認する。通常UI/実transportへの接続は別工程。
+`validate-dtc-clear-browser-owner.cjs`でページ内session→共通controller→DOMを結合。43 assertionでNodeと本文一致、更新時の同期消去、重複取得拒否、失効/閉鎖後のscope拒否、遅着成功、再取得後の旧失敗、現行失敗時の非表示、明示回復、反復閉鎖を確認した。外部通信はなく、実行flagはfalse。この所有者を独立操作見本へ配線済み。ボタン閉鎖、ready/pendingのpagehide、実ナビゲーション後の履歴復帰で旧本文なし・明示再取得を確認した。persisted=trueのpagehideは人工イベントであり、実BFCache採用の証明ではない。通常UI/実transportへの接続は別工程。
 
 ## 2026-10-06: 固定receiptのNode/Chromium照合
 

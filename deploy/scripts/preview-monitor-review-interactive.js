@@ -1,23 +1,18 @@
-// Generates a standalone, offline developer demo using fixed text, never vehicle input.
+// Generates a standalone offline developer demo validating fixed simulated receipts in the page.
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { createMonitorPairPreview } from "./preview-dtc-clear-monitor-pairs.js";
+import { createMonitorPreviewBrowserSource } from "./fixtures/monitor-preview-browser-source.js";
 import { createSimulatedReviewController } from "./fixtures/monitor-preview-controller.js";
 import { attachMonitorPreviewView } from "./fixtures/monitor-preview-view.js";
 
 export function createInteractiveMonitorPreview() {
-  const sample = JSON.stringify(createMonitorPairPreview()).replace(/</g, "\\u003c");
-  // Both functions are self-contained local modules; no imports execute in the generated browser page.
-  const script = `"use strict";
+  const script = `(() => { "use strict";
+${createMonitorPreviewBrowserSource()}
 const createReview = ${createSimulatedReviewController.toString()};
 const attachView = ${attachMonitorPreviewView.toString()};
-const fixedText = ${sample};
 const scenario = document.querySelector('#scenario');
-const review = createReview(() => {
-  let active = true;
-  return Object.freeze({ inspect: () => Object.freeze({ ok: active, text: active ? fixedText : null }), dispose() { active = false; } });
-}, () => {
+const review = createReview(() => createDtcClearBrowserPreviewSession(fixtureApi), () => {
   const fail = scenario.value !== 'normal';
   return new Promise((resolve, reject) => setTimeout(() => {
     if (fail) reject(new Error('simulated_preview_failure')); else resolve();
@@ -48,6 +43,7 @@ scenario.addEventListener('change', () => {
   closed.textContent = '模擬条件を変更しました。「模擬記録を表示」で確認してください。';
 });
 window.addEventListener('pagehide', hide);
+})();
 `.replace(/\r\n?/g, "\n");
   const hash = createHash("sha256").update(script).digest("base64");
   return `<!doctype html>
