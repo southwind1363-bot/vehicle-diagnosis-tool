@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-05 R2模擬表示の寿命: Node専用monitor-preview-reviewを追加。更新開始/失効で旧textを同期消去、重複取得拒否、所有sessionの破棄とscope失効、ticket参照による遅着成功/失敗拒否を実装。固定fixtureだけを取得しschedulerの返却データは使わない。破棄後取得拒否・例外秘匿・新結果確定後の旧失敗も試験。境界7484と関連receipt検証、既存HTMLの4表示/45行/非通信検証合格。ブラウザー通知/DOM接続は未実装。本体3.13.623・ZIP・保存・診断・実車通信は変更なし。
+
 2026-10-05 R2固定HTMLの継続検証: validate-monitor-preview-browser.cjsを既存Chromium CIへ登録。オフラインで8見出し・45行・取得元表示一致、390/1280px×明暗、横はみ出しなし、外部要求0、page error 0を確認。inline scriptを追加してCSPが実行を拒否することも確認し、4画像をCI artifactへ保存する。ローカル合格、CIはpush後確認。本体3.13.623・ZIP・保存・診断・実車通信は変更なし。
 
 2026-10-05 R2固定HTML見本: `node deploy/scripts/preview-monitor-pair-html.js` で非通信・入力なしの独立HTMLを出力。固定模擬の全45行を8区分に分け、取得元と保留理由を保持。Chromiumの390/1280px×明暗2テーマをオフラインで確認し、元出力一致・横はみ出しなし・外部要求0・page error 0。引数は拒否。動的失効/通常UI/実車接続は未実装。本体3.13.623・ZIP・保存・診断・実車通信は変更なし。

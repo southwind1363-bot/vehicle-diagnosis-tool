@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createDtcClearReadoutFixtureScope } from "./fixtures/dtc-clear-readout-scope.js";
 import { createDtcClearFixtureReceiveWindow, createDtcClearDtcEvidencePairFixture } from "./fixtures/dtc-clear-scoped-before-readout.js";
 
-export function createMonitorPairPreview() {
+export function createMonitorPairPreviewSession() {
   const intents = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_readiness"];
   const commands = ["03", "07", "0A", "0101"], services = [0x43, 0x47, 0x4A];
   const profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
@@ -26,6 +26,7 @@ export function createMonitorPairPreview() {
       transcript: ids.map((id, sourceIndex) => frame(id, index === 3
         ? [0x41, 1, 0, ...states[sourceIndex]] : [services[index], 0])).join("") + ">" })) });
   let handle;
+  const dispose = () => { handle?.dispose(); scope.invalidate(context); };
   try {
     const clear = createDtcClearFixtureReceiveWindow({ expectedSourceIds: ["7EC"], connectionToken });
     clear.append(clear.attemptToken, connectionToken, { sourceId: "7EC", payload: [0x44] });
@@ -35,13 +36,27 @@ export function createMonitorPairPreview() {
       postReadout: readout(9, after) });
     handle = created.handle;
     if (!created.ok || !handle) throw new Error("fixture_preview_unavailable");
-    const inspected = handle.inspectMonitorStatePairText(context);
-    if (!inspected.ok) throw new Error("fixture_preview_unavailable");
-    return "固定サンプル: 7E8=状態変化 / 7E9=点火方式変更 / 7EA=状態不明 / 7EB=状態不変\n" + inspected.text;
-  } finally {
-    handle?.dispose();
-    scope.invalidate(context);
+    return Object.freeze({
+      inspect() {
+        const inspected = handle.inspectMonitorStatePairText(context);
+        if (!inspected.ok) return Object.freeze({ ok: false, text: null });
+        return Object.freeze({ ok: true, text: "固定サンプル: 7E8=状態変化 / 7E9=点火方式変更 / 7EA=状態不明 / 7EB=状態不変\n" + inspected.text });
+      },
+      dispose
+    });
+  } catch (error) {
+    dispose();
+    throw error;
   }
+}
+
+export function createMonitorPairPreview() {
+  const session = createMonitorPairPreviewSession();
+  try {
+    const inspected = session.inspect();
+    if (!inspected.ok) throw new Error("fixture_preview_unavailable");
+    return inspected.text;
+  } finally { session.dispose(); }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
