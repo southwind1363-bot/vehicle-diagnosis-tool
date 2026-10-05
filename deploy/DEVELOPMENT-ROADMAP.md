@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-06 R2 Node/browser検査対応表: R2-BROWSER-EVIDENCE-PORT-MAP.mdにscope/receipt/sequence/派生値/破棄の所在と拒否条件を整理。runtime依存4 API、同runtimeのfollow-up-plan参照、文字列32768 code unit/256行/128 CAN行・payload/4096不変性予算をソース確認。次はfs/vm初期化と検証本体の分離で、ブラウザー移植は未実施。文書のみ、本体3.13.623・保存・診断・実車通信は変更なし。
+
 2026-10-06 R2次工程の所有権設計: R2-BROWSER-EVIDENCE-OWNERSHIP-DESIGN.mdを追加。固定文章の見本とreceipt検証を区別し、Node/browser検査対応表→固定模擬receiptのページ内所有者→controller/DOM結合の順序を定義。任意factoryや保存JSONを証拠として受理せず、二回のread-only取得から消去境界を推定しない。設計のみで通常UI/保存形式/診断/実車通信は変更なし。前回6467946cはCI全4件成功・公開3.13.623資材一致確認済み。
 
 2026-10-06 R2操作見本の待機中フォーカス: 表示開始時のnative disabledで操作位置が外れる不具合をChromiumで再現。aria-disabledとclick入口のreading拒否へ変更し、待機中のフォーカスを保持。Enter開始・Enter/Space連打・Tabから閉鎖・失敗後の位置保持を追加し修正前失敗/修正後合格。既存の正常/失敗/条件変更/再表示/CSP/オフライン検証も合格。本体3.13.623・ZIP・通常画面・実車通信は変更なし。
