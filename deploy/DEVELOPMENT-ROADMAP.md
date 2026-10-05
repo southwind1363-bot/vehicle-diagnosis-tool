@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-05 R2前後記録の画面設計: R2-MONITOR-REVIEW-SCREEN-DESIGN.mdに取得元、4例/8区分、保留理由、390px表示、将来の失効通知と遅着結果拒否を定義。次は独立した固定HTML見本であり、Node専用fixtureを通常アプリへ直接importしない。静的表示/動的所有権/実車接続の受入条件を分離した。設計のみで画面は未実装、本体3.13.623・ZIP・保存・診断・実車通信は変更なし。前回20021864のCI全4件と公開資材一致は確認済み。
+
 2026-10-05 R2固定模擬プレビュー: リポジトリ直下で `node deploy/scripts/preview-dtc-clear-monitor-pairs.js` を実行し、4 ECUの状態変化・点火方式変更・状態不明・状態不変を日本語で確認できる。固定receiptだけを生成し、引数や実車記録の入力は拒否、取得後はhandle破棄とscope失効を行う。8区分の出力・反復一致・CLI正常/不正引数の16項目を既存OBD検証へ登録。境界7484と関連receipt検証合格。本体3.13.623・ZIP・通常UI・保存形式・実車通信は変更なし。CIと公開資材はpush後確認。
 
 2026-10-05 R2模擬monitorの日本語確認: Node専用pair handleへinspectMonitorStatePairTextを追加し、所有済み前後状態をECU/group別に表示する。完了/未完了/非対応/状態不明/報告なしと保留理由を区別し、模擬限定・実行無効・整備書確認・転記の権限利用禁止を明示。両APIのscope/contextとdispose検査を共通化し、外部summary・偽のthisの取得器を使用しない。境界7484およびscope/前後証拠/sequence/receipt検証合格。詳細はR2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md。本体3.13.623・ZIP・保存形式・通常UI・実車通信は変更なし。CIと公開資材はpush後確認。
