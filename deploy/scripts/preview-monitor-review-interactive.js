@@ -28,8 +28,9 @@ const show = document.querySelector('#show');
 const close = document.querySelector('#close');
 const closed = document.querySelector('#closed');
 let view = null;
-review.subscribe(state => { show.disabled = state.status === 'reading'; });
+review.subscribe(state => { show.setAttribute('aria-disabled', String(state.status === 'reading')); });
 show.addEventListener('click', () => {
+  if (review.inspect().status === 'reading') return;
   closed.textContent = '';
   if (!view) view = attachView(root, review);
   close.disabled = false;
@@ -57,7 +58,7 @@ window.addEventListener('pagehide', hide);
 :root{color-scheme:dark light;font-family:system-ui,sans-serif;background:#101821;color:#eef3f8}
 *{box-sizing:border-box}body{margin:0;line-height:1.8}main{max-width:960px;margin:auto;padding:24px 16px}
 h1{font-size:1.65rem}h2{font-size:1.25rem}.notice,section{padding:16px;border:1px solid #71849a;border-radius:12px;margin:20px 0}
-.controls{display:flex;flex-wrap:wrap;gap:12px}button{font:inherit;padding:12px 20px;min-height:48px;border-radius:8px;border:1px solid #8abfe8;background:#254968;color:#fff}button:disabled{opacity:.55}button:focus-visible{outline:3px solid #e8bc67;outline-offset:3px}
+.controls{display:flex;flex-wrap:wrap;gap:12px}button{font:inherit;padding:12px 20px;min-height:48px;border-radius:8px;border:1px solid #8abfe8;background:#254968;color:#fff}button:disabled,button[aria-disabled="true"]{opacity:.55}button:focus-visible{outline:3px solid #e8bc67;outline-offset:3px}
 select{font:inherit;max-width:100%;min-height:48px;padding:8px;border-radius:8px}label{display:block;margin-bottom:8px}
 @media(prefers-color-scheme:light){:root{background:#f4f7fa;color:#172431}}
 </style></head><body><main>

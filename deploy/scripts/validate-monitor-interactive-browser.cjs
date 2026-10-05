@@ -22,10 +22,17 @@ module.exports = async function validateInteractiveMonitor(context, output, expe
     const show = page.getByRole('button', { name: '模擬記録を表示', exact: true });
     const close = page.getByRole('button', { name: '表示を閉じる', exact: true });
     assert(await close.isDisabled());
-    await show.click();
+    await show.focus();
+    await page.keyboard.press('Enter');
     assert(await show.isDisabled());
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'show', 'Waiting must retain the initiating keyboard position');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Space');
+    assert.equal(await page.locator('#review section').count(), 1);
     assert.equal(await page.locator('#review pre').textContent(), '');
-    await close.click();
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'close');
+    await page.keyboard.press('Enter');
     assert.equal(await page.locator('#review').textContent(), '');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'show');
     await page.clock.runFor(500);
@@ -60,6 +67,7 @@ module.exports = async function validateInteractiveMonitor(context, output, expe
     assert.equal(await page.locator('#review [role="status"]').innerText(), '前後記録を確認できません');
     assert.equal(await page.locator('pre').textContent(), '');
     assert(await show.isEnabled());
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'show', 'Failure must retain the initiating keyboard position');
     const failureText = await page.locator('#review').innerText();
     await page.clock.runFor(2000);
     assert.equal(await page.locator('#review').innerText(), failureText, 'Failure retried without explicit input');
