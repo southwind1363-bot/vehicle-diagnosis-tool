@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-06 R2通常read-only受渡し契約: Web Serialのraw境界・初期化設定・記録合成・失効経路をソース確認し、R2-READONLY-RECEIPT-HANDOFF-DESIGN.mdへ整理。prompt除去/改行変換、S0と固定fixture S1の差、未観測ECU scope、通信断時にrevisionを維持する経路を特定。次は非通信の私有所有者モデル。通常UIへは未接続、実消去境界を二回の読取から推定しない。文書のみ、本体3.13.623・ZIP・診断・保存・許可リストは変更なし。
+
 2026-10-06 R2固定receipt操作見本: 操作HTMLを固定文章sessionからページ内のraw receipt検証sessionへ切替。固定4 moduleを閉じたmanifestで組み込み、runtimeは専用window/navigator、内部所有者はIIFE内に保持。2 ECU本文のNode一致、表示/更新/閉鎖/失敗/回復/フォーカス/CSP、pagehideと履歴復帰時の旧表示破棄をChromiumで確認。外部要求0、既存14ケース・43 assertion・境界7484も合格。通常UI/実transportは未接続、本体3.13.623・ZIP・保存・診断は変更なし。
 
 2026-10-06 R2ブラウザー内の固定receipt所有者: 固定raw receiptから検証handleを生成するsessionを追加し、共通controller/DOMへ接続。更新・失効・閉鎖時の破棄、遅着成功/失敗の拒否、新sessionでの明示回復をChromiumの43 assertionで確認。Node/browser14ケース一致と既存境界7484等も合格。開発用の結合試験で通常UI/実transportは未接続。本体3.13.623・ZIP・保存・診断は変更なし。
