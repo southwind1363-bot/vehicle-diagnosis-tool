@@ -66,4 +66,73 @@ const throwing = createMonitorPreviewReview(() => { throw new Error("private"); 
 assert.equal(await throwing.read(), false);
 assert.equal(throwing.inspect().status, "unavailable");
 throwing.invalidate();
-console.log("Monitor preview lifecycle: disposal, busy, refresh, invalidation, late success/failure and scheduler isolation passed");
+// Notifications remove stale presentation synchronously, without polling inspect().
+const observed = createMonitorPreviewReview();
+let displayed = null;
+const states = [];
+const stop = observed.subscribe(value => { displayed = value.text; states.push(value.status); });
+assert.equal(await observed.read(), true);
+assert.equal(displayed, expected);
+observed.invalidate();
+assert.equal(displayed, null);
+assert.deepEqual(states, ["reading", "ready", "invalidated"]);
+stop(); stop();
+await observed.read();
+assert.equal(states.length, 3, "Unsubscribed views must not receive later results");
+observed.invalidate();
+
+// An earlier observer can close the view before a later observer receives ready.
+const reentrant = createMonitorPreviewReview();
+const laterStates = [];
+let nestedRead;
+reentrant.subscribe(value => {
+  if (value.status === "ready") { reentrant.invalidate(); nestedRead = reentrant.read(); }
+});
+reentrant.subscribe(value => laterStates.push(value.status));
+assert.equal(await reentrant.read(), false);
+assert.equal(await nestedRead, false, "Observer callbacks must not start recursive acquisitions");
+assert.deepEqual(laterStates, ["reading", "invalidated"]);
+
+let scheduled = 0;
+const closedOnStart = createMonitorPreviewReview(() => { scheduled++; });
+closedOnStart.subscribe(value => { if (value.status === "reading") closedOnStart.invalidate(); });
+assert.equal(await closedOnStart.read(), false);
+assert.equal(scheduled, 0, "Closed view must not acquire after reading notification");
+
+const broken = createMonitorPreviewReview();
+const survivingStates = [];
+broken.subscribe(() => { throw new Error("private observer detail"); });
+broken.subscribe(value => survivingStates.push(value.status));
+assert.equal(await broken.read(), false);
+assert.deepEqual(survivingStates, ["unavailable"]);
+assert.equal(broken.inspect().text, null);
+assert(!JSON.stringify(broken.inspect()).includes("private observer"));
+assert.equal(await broken.read(), true, "Failed observer must be removed");
+broken.invalidate();
+
+const independent = createMonitorPreviewReview();
+let received = 0;
+const listener = () => { received++; };
+const stopFirst = independent.subscribe(listener);
+const stopSecond = independent.subscribe(listener);
+stopFirst();
+independent.invalidate();
+assert.equal(received, 1);
+stopSecond();
+const removal = createMonitorPreviewReview();
+let removedCalls = 0;
+let removeLater;
+removal.subscribe(() => removeLater());
+removeLater = removal.subscribe(() => { removedCalls++; });
+await removal.read();
+assert.equal(removedCalls, 0, "Observer removed during delivery must not receive a queued snapshot");
+removal.invalidate();
+const failedReady = createMonitorPreviewReview();
+let lastText;
+failedReady.subscribe(value => { if (value.status === "ready") throw new Error("private-render-failure"); });
+failedReady.subscribe(value => { lastText = value.text; });
+assert.equal(await failedReady.read(), false);
+assert.equal(lastText, null);
+assert.equal(failedReady.inspect().status, "unavailable");
+failedReady.invalidate();
+console.log("Monitor preview lifecycle: ownership, late completions, synchronous notification, unsubscribe and observer failure passed");

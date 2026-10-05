@@ -9,20 +9,54 @@ export function createMonitorPreviewReview(waitForPresentation = () => Promise.r
     wouldTransmit: false, canExecute: false });
   let current = state("empty");
   const release = () => { owned?.dispose(); owned = null; };
+  const listeners = new Set();
+  let notifying = false;
+  const publish = next => {
+    current = next;
+    if (notifying) return;
+    notifying = true;
+    try {
+      let delivered;
+      do {
+        delivered = current;
+        for (const listener of [...listeners]) {
+          if (current !== delivered) break;
+          if (!listeners.has(listener)) continue;
+          try { listener(delivered); }
+          catch {
+            listeners.delete(listener);
+            ticket = null;
+            release();
+            current = state("unavailable");
+          }
+        }
+      } while (current !== delivered);
+    } finally { notifying = false; }
+  };
   return Object.freeze({
     inspect() { return current; },
+    // Synchronous observers only. Read the initial snapshot with inspect().
+    subscribe(listener) {
+      if (typeof listener !== "function") throw new TypeError("invalid_preview_listener");
+      // Separate subscriptions remain independent even for the same callback.
+      const subscription = value => listener(value);
+      listeners.add(subscription);
+      return () => listeners.delete(subscription);
+    },
     invalidate() {
+      if (current.status === "invalidated") return current;
       ticket = null;
       release();
-      current = state("invalidated");
+      publish(state("invalidated"));
       return current;
     },
     async read() {
-      if (current.status === "reading") return false;
+      if (notifying || current.status === "reading") return false;
       release();
       const attempt = {};
       ticket = attempt;
-      current = state("reading");
+      publish(state("reading"));
+      if (ticket !== attempt) return false;
       try {
         owned = createMonitorPairPreviewSession();
         // The scheduler's return value is never interpreted as evidence or display data.
@@ -30,12 +64,12 @@ export function createMonitorPreviewReview(waitForPresentation = () => Promise.r
         if (ticket !== attempt) return false;
         const inspected = owned.inspect();
         if (!inspected.ok) throw new Error("preview_unavailable");
-        current = state("ready", inspected.text);
-        return true;
+        publish(state("ready", inspected.text));
+        return ticket === attempt;
       } catch {
         if (ticket !== attempt) return false;
         release();
-        current = state("unavailable");
+        publish(state("unavailable"));
         return false;
       }
     }
