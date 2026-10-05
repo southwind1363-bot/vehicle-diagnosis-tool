@@ -1,5 +1,16 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 非通信モデルの実装範囲
+
+`scripts/fixtures/readonly-receipt-owner.js`を追加。管理元ごとの私有WeakMapと現在ticketの参照一致で一試行を認識する。beginは旧試行を失効し、appendは4 commandの順序、宣言profile、非負の整数時刻順序、complete、transcript長1～32768を確認する。時刻は試験入力の数値であり実取得時刻の証明ではない。profileもcaller_declared_onlyで、通信設定を観測したとは主張しない。
+
+finishは四つの構造がそろった場合だけreceiptStructureCompleteを返す。NO DATAや任意文字列も意味解析せず、payloadSemanticsVerified・網羅性・実車・比較・消去・実行関連flagはすべてfalse。返却summaryにrawやticketを含めない。finished/rejected/失効で内部配列のraw参照を解放するが、caller側の文字列やJSメモリの物理消去を保証するものではない。
+
+同じ形/JSON複製/別所有者/旧世代、遅着、二重終了、欠落/重複/順序/時刻/profile/上限、例外、accessor非実行、反射操作中の世代変更を107項目で確認。既存receipt検証とCIから実行する。受信入力を扱うAPIは開発用モデルだけであり、実取得元の認証境界ではない。
+
+次はこのモデルと固定のraw意味検証の受渡しを設計・検証する。現在のsummaryを検証済みpayloadや表示readyとして使用しない。通常UI、transport、DOM通知、保存への配線は未実装。
+
+
 2026-10-06。ソース確認に基づく設計。通常UIへの接続、取得器の変更、保存形式の変更、実車試験は未実施。
 
 ## 今回の判断
