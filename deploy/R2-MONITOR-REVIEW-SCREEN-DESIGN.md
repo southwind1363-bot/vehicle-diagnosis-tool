@@ -1,6 +1,14 @@
 # R2 monitor前後記録の確認画面案
 
-2026-10-05。状態: 固定HTML見本は実装・表示確認済み。Node専用の模擬表示寿命モデルを追加。ブラウザーの失効通知と通常画面への接続は未実装。実車向け比較画面の公開条件を満たしたものではない。
+2026-10-05。状態: 固定HTML見本、Node専用の模擬表示寿命モデル、独立DOM表示部品を実装。DOMは人工通知で検証済み。Nodeモデルとのブラウザー内結合・通常画面への接続は未実装。実車向け比較画面の公開条件を満たしたものではない。
+
+## 独立したDOM表示部品
+
+`scripts/fixtures/monitor-preview-view.js` の`attachMonitorPreviewView(container, review)`は初期snapshotと同期通知を表示する。常時表示の模擬案内、短い日本語status、本文を分け、statusにはrole=status/aria-live=polite、取得中はaria-busyを設定する。更新通知では最初に本文を消去し、模擬provenanceと全実行flag false、ready、文字列textを満たす場合だけtextContentで本文を描画する。この表示条件は証拠の真正性や実行許可を保証する検査ではない。
+
+`dispose()`はこの部品の本文とsectionだけを消去し、通知登録を解除する。以後の通知は無視し、他の診断記録は触らない。部品は共有モデルを勝手に失効させないため、所有者は画面閉鎖時に部品のdisposeとモデルのinvalidateを両方実行する必要がある。通常画面の閉鎖/ロックイベントへの配線は未実装。
+
+既存Chromium CIにDOM試験を追加。実ブラウザー内の人工通知元を使い、readyの全文一致、更新/失効/不明/未知状態の同期消去、HTML文字列の非実行、false以外の実行flag拒否、二重dispose、再表示、他の記録の保持を確認。390pxで横はみ出しなし、HTTP要求0、page error 0。通知元は試験専用であり、Node所有handleとDOMの一体動作を検証したという意味ではない。固定HTMLのCSP・4表示の試験も維持する。
 
 ## 模擬表示の寿命モデル
 
