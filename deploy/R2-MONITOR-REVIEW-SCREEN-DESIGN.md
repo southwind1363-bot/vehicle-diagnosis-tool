@@ -4,6 +4,8 @@
 
 ## 固定見本の確認結果
 
+継続検証は `node deploy/scripts/validate-monitor-preview-browser.cjs`。既存CIのChromium環境を共用し、ネットワーク停止状態で見出し・全行・取得元表示の一致、390/1280px×明暗、横はみ出し、外部要求、page errorを確認する。さらに動的に追加したinline scriptがCSPで実行を拒否されることを確認する。失敗時もブラウザーを終了し、4枚の模擬画像を既存CI artifactへ保存する。実車通信の試験ではない。
+
 `node deploy/scripts/preview-monitor-pair-html.js` をリポジトリ直下で実行するとUTF-8のHTMLをstdoutへ出力する。引数は拒否し終了2、stdout空、固定stderr案内とする。生成物は外部資材・script・入力欄を持たず、CSPでも外部資材とスクリプトを許可しない。固定出力の全45行をエスケープして8区分に表示し、前後の文言と保留理由を変更しない。
 
 Playwright/Chromiumで390px・1280px×明暗2テーマの計4表示をオフライン確認。全45行が元出力と一致し、横はみ出しなし、外部要求0、page error 0。390px暗色の画像も確認した。成果物は一時フォルダーに生成し、通常メニュー・配布ZIPへ追加していない。動的失効処理や実車適合の検証ではない。

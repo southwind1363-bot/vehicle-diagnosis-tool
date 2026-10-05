@@ -129,6 +129,13 @@ jobs:
           PLAYWRIGHT_CHANNEL: chromium
           TMPDIR: ${{ runner.temp }}
 
+      - name: Validate fixed monitor preview offline
+        run: node scripts/validate-monitor-preview-browser.cjs
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/scanner-browser/node_modules/playwright
+          PLAYWRIGHT_CHANNEL: chromium
+          TMPDIR: ${{ runner.temp }}
+
       - name: Preserve synthetic test screenshots and runtime versions
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -137,5 +144,6 @@ jobs:
           path: |
             ${{ runner.temp }}/obd-file-flow-*/*.png
             ${{ runner.temp }}/obd-file-flow-*/browser-runtime.json
+            ${{ runner.temp }}/monitor-preview-*/*.png
           if-no-files-found: warn
           retention-days: 7
