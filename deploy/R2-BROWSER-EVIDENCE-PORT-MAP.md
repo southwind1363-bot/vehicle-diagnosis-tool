@@ -1,8 +1,16 @@
 # R2 固定模擬receipt検証のNode/browser対応表
 
-2026-10-06。ソース確認済みの移植計画。ブラウザー側のreceipt所有者は未実装。下表の「維持する検査」は現在のNode/共通runtimeの動作であり、ブラウザー移植が完了したという意味ではない。
+## 2026-10-06: 固定receiptのNode/Chromium照合
 
-初期化分離は実装済み。検証本体を [共通fixture core](scripts/fixtures/dtc-clear-scoped-readout-core.js) の`createDtcClearFixtureValidators(api)`へ移し、Node harnessはfs/vm初期化と7 APIの再公開だけを行う。4依存APIはown data propertyの関数を初期化時に保持する。この構造検査はruntimeの真正性や同一由来を証明しない。検査本体は依存名・インデント・注釈以外が旧版と一致することを機械照合し、既存scope/sequence/派生値/receipt検証とHTML操作検証に合格した。ブラウザー結合は未実施。
+`scripts/fixtures/dtc-clear-browser-cases.js`の同じ14ケースをNode VMとChromiumページ内で独立して生成・評価し、返却値全体を照合した。正常では2 ECUの前後状態・日本語出力・dispose/失効後の拒否が一致し、実車/比較/実行関連10フラグはfalse。負例はNO DATA、範囲外source、readiness矛盾、receipt欠落、対象参照不一致、複製scope、複製follow-up-plan、scope失効、attempt再利用、時刻逆転、可変snapshot、32769文字、accessorの13種類。accessorの実行も拒否する。
+
+ブラウザーは同一ページ内のruntimeとES moduleを使い、文字列表示を受け取るだけでなくraw receiptからhandleを生成する。各環境のtokenはその環境で作り、比較対象として移送しない。試験は既存Chromium CIから呼び、資材は明示したローカルファイルの許可リストからリクエストを差し替えて供給する。実サーバーや外部ネットワーク、車両APIを使わない。
+
+14ケースは代表的な一致確認であり、Node境界試験全件のブラウザー移植完了ではない。通常画面・実transportへの接続や、実証拠を受け取る所有者は未実装。次は代表ケースの追加だけを繰り返さず、このページ内handleと既存controller/DOMを結び、失効時の表示消去を一体で確認する。
+
+2026-10-06。ソース確認済みの移植計画。通常画面用のreceipt所有者は未実装。下表の「維持する検査」は現在のNode/共通runtimeの動作であり、ブラウザー移植が完了したという意味ではない。
+
+初期化分離は実装済み。検証本体を [共通fixture core](scripts/fixtures/dtc-clear-scoped-readout-core.js) の`createDtcClearFixtureValidators(api)`へ移し、Node harnessはfs/vm初期化と7 APIの再公開だけを行う。4依存APIはown data propertyの関数を初期化時に保持する。この構造検査はruntimeの真正性や同一由来を証明しない。検査本体は依存名・インデント・注釈以外が旧版と一致することを機械照合し、既存scope/sequence/派生値/receipt検証とHTML操作検証に合格した。試験用ページ内の結合は上記14ケースで確認済み。通常画面には未接続。
 
 ## 実行環境の境界
 

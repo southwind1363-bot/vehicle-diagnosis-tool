@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-06 R2固定receiptのNode/browser照合: 同一の14ケースをNode VMとChromium内で個別生成し、検査結果全体を照合。正常の2 ECU/日本語出力/破棄/失効と、NO DATA・矛盾・欠落・偽造scope・plan複製・順序・上限等の13負例が一致。ブラウザーでもrawからhandleを生成し、外部通信なし・実行関連flag falseを確認。既存Chromium CIへ登録。代表ケースの一致であり全境界移植完了ではない。通常UI/実transport未接続、本体3.13.623・ZIP・保存・診断は変更なし。
+
 2026-10-06 R2検査本体の初期化分離: dtc-clear-scoped-readout-core.jsに検証本体を移し、既存Node harnessは隔離VM初期化と7 API再公開を維持。4依存APIを初期化時に保持し、fs/vmを共通coreから除去。検査本文が依存名等の変更を除いて旧版と同一であることを機械照合。境界7484と関連scope/sequence/receipt、静的/操作HTMLブラウザー検証合格。ブラウザー所有者は未接続、本体3.13.623・ZIP・保存・診断・実車通信は変更なし。
 
 2026-10-06 R2 Node/browser検査対応表: R2-BROWSER-EVIDENCE-PORT-MAP.mdにscope/receipt/sequence/派生値/破棄の所在と拒否条件を整理。runtime依存4 API、同runtimeのfollow-up-plan参照、文字列32768 code unit/256行/128 CAN行・payload/4096不変性予算をソース確認。次はfs/vm初期化と検証本体の分離で、ブラウザー移植は未実施。文書のみ、本体3.13.623・保存・診断・実車通信は変更なし。
