@@ -1,5 +1,17 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 2026-10-05: 模擬monitor状態の日本語確認テキスト
+
+Node専用pair handleに `inspectMonitorStatePairText(context)` を追加した。既存の前後状態取得を内部closureへまとめ、両APIで同じscope/context・dispose検査を行う。テキスト生成は所有する証拠から取得し、callerのsummaryや差し替えたthis.inspectMonitorStatePairsを参照しない。失効・別context・dispose後はok:false/text:nullで取得を拒否する。
+
+ECUと基本/非連続monitorを見出しで分離し、報告された点火方式、monitor ID、前後状態、状態の相違または保留理由を表示する。complete/incomplete/not_supported/indeterminate/nullをそれぞれ完了/未完了/非対応/状態不明/報告なしとして区別する。方式変更・片側なし・不明状態は既存の理由を日本語化するだけで再判定しない。状態の一致・変化を消去成功や故障解消へ読み替えない。
+
+冒頭には模擬記録であること、出力時点の記録であり転記を権限に使えないこと、実車適合未確認、送信/実行無効、実車判断には整備書確認が必要であることを示す。取得済みの文字列は失効後に回収できないため、将来の比較・実行入力として受理しない。テキスト生成自体はファイル保存・通常画面表示・ブラウザーAPI・車両操作を行わない。既存の構造化summaryと安全flagは変更なし。
+
+点火方式2種類×4状態の前後全組合せ、日本語状態と保留理由、片側だけにあるmonitor、32 ECUの全64グループ表示、出力量、入力変更、foreign context、dispose/失効、偽のthis経由のsummary差替え拒否を検証。境界7484、scope48、scoped-before126、scoped-post164、sequence492、before-evidence51、post-evidence50、before receipt205が合格。アプリ3.13.623・配布ZIP・保存形式は変更なし。
+
+次段階は、この開発用表示を実車向け画面へ直接流用せず、比較条件・取得元・記録の寿命を利用者へ示す画面設計。現時点のテキスト出力を実車機能の完成とは扱わない。
+
 ## 2026-10-05: 試験用monitor前後状態の対応付け
 
 Node専用pair handleへ `inspectMonitorStatePairs(context)` を追加した。同じfactoryが固定コピーから抽出済みの基本/非連続monitorだけを入力とし、外部のsummaryを受け取らない。sourceId、group、monitorIdで前後を分け、beforeState/postStateを返す。状態の改善・悪化やreadiness全体の完了は計算しない。

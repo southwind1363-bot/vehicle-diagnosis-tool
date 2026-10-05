@@ -253,7 +253,15 @@ for (const ignitionBit of [0, 8]) for (const [beforeBits, beforeState] of [[0, "
     check(report.fixtureMonitorStatePairsAvailable && ["readinessEvidenceAvailable", "comparisonAvailable", "clearSucceededInferred",
       "readoutCoverageComplete", "sameVehicleVerified", "clearBoundaryVerified", "realTransportProofAvailable", "executionEnabled",
       "vehicleCommandEnabled", "wouldTransmit", "canExecute"].every(key => report[key] === false), "State pairs authorized real comparison or execution");
+    const presentation = handle.inspectMonitorStatePairText(value.context);
+    const labels = { not_supported: "非対応", complete: "完了", incomplete: "未完了", indeterminate: "状態不明" };
+    check(presentation.ok && presentation.text.includes(`misfire: 前 ${labels[beforeState]} → 後 ${labels[postState]} / ${withheld
+      ? "対応付け保留: 前後いずれかの状態が不明" : beforeState !== postState ? "報告状態が変化" : "報告状態は同じ"}`),
+    "Japanese presentation changed monitor states or lost withholding reasons");
+    check(presentation.text.includes("実車の読取結果ではありません") && presentation.text.includes("消去成功・故障解消の証明ではありません")
+      && presentation.text.includes("実行・車両送信は無効") && presentation.text.includes("整備書確認"), "Presentation hid fixture-only boundaries");
     handle.dispose();
+    check(handle.inspectMonitorStatePairText(value.context).text === null, "Text retained disposed evidence");
   }
 }
 const pairedMonitors = fixture(["7E8", "7E9"]);
@@ -262,11 +270,22 @@ const manyPairSources = manyPairsHandle.inspectMonitorStatePairs(manyPairs.conte
 check(manyPairSources.length === 64 && ["base", "noncontinuous"].every(group =>
   manyPairSources.filter(row => row.group === group).map(row => row.sourceId).join() === ids.join()),
   "32-source monitor pairing merged ECU reports or omitted a group");
+const manyPairText = manyPairsHandle.inspectMonitorStatePairText(manyPairs.context).text;
+check(manyPairText.split("\n").filter(line => line.startsWith("[")).length === 64
+  && ids.every(id => manyPairText.includes(`[${id}] 基本monitor`) && manyPairText.includes(`[${id}] 非連続monitor`))
+  && manyPairText.includes("出力時点の模擬記録") && manyPairText.length < 131072,
+"Presentation omitted an ECU/group, exceeded its bounded fixture size, or implied live authority");
 manyPairsHandle.dispose();
 pairedMonitors.beforeReadout.receipts[3].transcript = frames("7E9", [0x41, 1, 0, 7, 1, 0]) + frames("7E8", [0x41, 1, 0, 7, 1, 0]) + ">";
 pairedMonitors.postReadout.receipts[3].transcript = frames("7E8", [0x41, 1, 0, 15, 1, 0]) + frames("7E9", [0x41, 1, 0, 7, 0x10, 0]) + ">";
 const pairedHandle = createDtcClearDtcEvidencePairFixture(pairedMonitors).handle;
 const pairs = pairedHandle.inspectMonitorStatePairs(pairedMonitors.context).summary;
+const pairText = pairedHandle.inspectMonitorStatePairText(pairedMonitors.context);
+check(pairText.text.includes("点火方式（報告）: 火花点火 → 圧縮着火")
+  && pairText.text.includes("catalyst: 前 完了 → 後 報告なし / 対応付け保留: 点火方式の報告が異なる")
+  && pairText.text.includes("nmhc_catalyst: 前 報告なし → 後 完了 / 対応付け保留: 点火方式の報告が異なる"),
+"Text merged ignition-specific monitor names or replaced absent reports with completion");
+check(Object.isFrozen(pairText) && !/frames|payload|transcript|Token/.test(pairText.text), "Text exposed raw evidence or a mutable result");
 check(pairs.sources.length === 4 && pairs.sources.filter(row => row.sourceId === "7E8")
   .every(row => row.monitors.every(m => m.pairingState === "withheld" && m.reason === "ignition_type_changed" && m.stateChanged === null)),
 "Changed ignition basis was treated as comparable or crossed ECU boundaries");
@@ -278,10 +297,17 @@ check(pairs.sources.find(row => row.sourceId === "7E9" && row.group === "noncont
 check(Object.isFrozen(pairs.sources[0].monitors[0]) && !/frames|payload|transcript|Token/.test(JSON.stringify(pairs)), "Pairs exposed mutable or raw evidence");
 pairedMonitors.beforeReadout.receipts[3].transcript = "NO DATA\r>";
 check(JSON.stringify(pairedHandle.inspectMonitorStatePairs(pairedMonitors.context).summary) === JSON.stringify(pairs), "Pairing reread caller input");
+check(pairedHandle.inspectMonitorStatePairText(pairedMonitors.context).text === pairText.text, "Text reread mutated input");
 for (const key of ["scopeToken", "connectionToken", "targetToken"]) check(pairedHandle.inspectMonitorStatePairs({ ...pairedMonitors.context, [key]: {} }).summary === null,
   "Foreign context acquired state pairs");
+for (const key of ["scopeToken", "connectionToken", "targetToken"]) check(pairedHandle.inspectMonitorStatePairText({ ...pairedMonitors.context, [key]: {} }).text === null,
+  "Foreign context acquired presentation text");
+const detachedText = pairedHandle.inspectMonitorStatePairText;
+check(detachedText.call({ inspectMonitorStatePairs: () => { throw new Error("forged-summary-used"); } }, pairedMonitors.context).text === pairText.text,
+  "Presentation trusted a caller-supplied inspector");
 pairedHandle.dispose(); check(pairedHandle.inspectMonitorStatePairs(pairedMonitors.context).reason === "evidence_disposed", "Disposed pairs remained available");
 const stalePairs = fixture(), stalePairsHandle = createDtcClearDtcEvidencePairFixture(stalePairs).handle;
 stalePairs.scope.invalidate(stalePairs.context);
 check(stalePairsHandle.inspectMonitorStatePairs(stalePairs.context).summary === null, "Invalidated scope retained state pairs");
+check(stalePairsHandle.inspectMonitorStatePairText(stalePairs.context).text === null, "Invalidated scope retained presentation text");
 console.log(`DTC clear difference boundary checks: ${checks} / Errors: 0`);

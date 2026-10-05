@@ -178,6 +178,16 @@ function pairMonitorStates(beforeReports, postReports, group) {
 
 function dtcEvidenceHandle(scope, dtcEvidence, paired = false) {
   let retained = freeze(dtcEvidence);
+  const inspectMonitorStatePairs = context => {
+    const current = inspectDtcClearReadoutFixtureScope(scope, context);
+    if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });
+    if (retained === null) return freeze({ ok: false, reason: "evidence_disposed", summary: null });
+    const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_monitor_state_pairs", null);
+    const sources = [...pairMonitorStates(retained.beforeBaseMonitors, retained.postBaseMonitors, "base"),
+      ...pairMonitorStates(retained.beforeNoncontinuous, retained.postNoncontinuous, "noncontinuous")];
+    return freeze({ ok: true, reason: null, summary: { ...boundary, sources,
+      fixtureMonitorStatePairsAvailable: true, readinessEvidenceAvailable: false } });
+  };
   return Object.freeze({
     inspect(context) {
       const current = inspectDtcClearReadoutFixtureScope(scope, context);
@@ -226,14 +236,29 @@ function dtcEvidenceHandle(scope, dtcEvidence, paired = false) {
         beforeReports: retained.beforeBaseMonitors, postReports: retained.postBaseMonitors,
         fixtureBaseMonitorReportsAvailable: true, noncontinuousMonitorsInterpreted: false, readinessEvidenceAvailable: false } });
     }, inspectMonitorStatePairs(context) {
-      const current = inspectDtcClearReadoutFixtureScope(scope, context);
-      if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });
-      if (retained === null) return freeze({ ok: false, reason: "evidence_disposed", summary: null });
-      const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_monitor_state_pairs", null);
-      const sources = [...pairMonitorStates(retained.beforeBaseMonitors, retained.postBaseMonitors, "base"),
-        ...pairMonitorStates(retained.beforeNoncontinuous, retained.postNoncontinuous, "noncontinuous")];
-      return freeze({ ok: true, reason: null, summary: { ...boundary, sources,
-        fixtureMonitorStatePairsAvailable: true, readinessEvidenceAvailable: false } });
+      return inspectMonitorStatePairs(context);
+    }, inspectMonitorStatePairText(context) {
+      const inspected = inspectMonitorStatePairs(context);
+      if (!inspected.ok) return freeze({ ok: false, reason: inspected.reason, text: null });
+      const states = { complete: "完了", incomplete: "未完了", not_supported: "非対応", indeterminate: "状態不明" };
+      const reasons = { ignition_type_changed: "点火方式の報告が異なる", monitor_not_shared: "片側に監視項目の報告がない",
+        state_indeterminate: "前後いずれかの状態が不明" };
+      const ignition = { spark: "火花点火", compression: "圧縮着火" };
+      const label = state => state === null ? "報告なし" : Object.hasOwn(states, state) ? states[state] : "状態不明";
+      const lines = ["模擬の前後記録（実車の読取結果ではありません）",
+        "出力時点の模擬記録です。保存・転記した文章を比較権限や実行許可には使用できません。",
+        "状態の相違は消去成功・故障解消の証明ではありません。実車適合は未確認です。",
+        "実行・車両送信は無効です。実車の整備判断には対象車両の整備書確認が必要です。"];
+      for (const source of inspected.summary.sources) {
+        lines.push(`[${source.sourceId}] ${source.group === "base" ? "基本monitor" : "非連続monitor"} / 点火方式（報告）: ${ignition[source.beforeIgnitionTypeReported]} → ${ignition[source.postIgnitionTypeReported]}`);
+        for (const row of source.monitors) {
+          const disposition = row.pairingState === "withheld"
+            ? `対応付け保留: ${Object.hasOwn(reasons, row.reason) ? reasons[row.reason] : "理由未確認"}`
+            : row.stateChanged ? "報告状態が変化" : "報告状態は同じ";
+          lines.push(`  ${row.monitorId}: 前 ${label(row.beforeState)} → 後 ${label(row.postState)} / ${disposition}`);
+        }
+      }
+      return freeze({ ok: true, reason: null, text: lines.join("\n") });
     }, inspectNoncontinuousMonitorReports(context) {
       const current = inspectDtcClearReadoutFixtureScope(scope, context);
       if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-05 R2模擬monitorの日本語確認: Node専用pair handleへinspectMonitorStatePairTextを追加し、所有済み前後状態をECU/group別に表示する。完了/未完了/非対応/状態不明/報告なしと保留理由を区別し、模擬限定・実行無効・整備書確認・転記の権限利用禁止を明示。両APIのscope/contextとdispose検査を共通化し、外部summary・偽のthisの取得器を使用しない。境界7484およびscope/前後証拠/sequence/receipt検証合格。詳細はR2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md。本体3.13.623・ZIP・保存形式・通常UI・実車通信は変更なし。CIと公開資材はpush後確認。
+
 2026-10-05 R2試験用monitor前後状態の対応付け: Node専用pair handleにinspectMonitorStatePairsを追加。検証済みの派生状態をECU/group/monitor別に並べ、同じ点火方式・同じmonitorかつ状態確定時だけ状態文字列の相違を示す。方式変更、片側なし、indeterminateは保留し、消去成功/実車比較/送信等のflagはfalseを維持。通常UI・保存・実transportには未接続。境界7379、scope48、scoped-before126、scoped-post164、sequence492、before-evidence51、post-evidence50合格。詳細はR2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md冒頭。本体3.13.623/配布ZIPは変更なし。CIと公開資材の不変性はpush後確認。
 
 2026-10-05 3.13.623・詳細進捗の未記録表示: 通常カードで修正済みの未記録数値変換がformatCoreSessionStatusSummaryに残り、snake_caseのnullを通常画面は未集計、詳細要約は0%とする食い違いを回帰試験で再現。詳細要約も有限numberまたは空でない数値文字列だけを進捗として採用する。空応答/残り項目/準備状態/実際の0%を維持し、診断・保存形式・通信は変更しない。camel/snakeの16種類の入力で通常表示との一致と元記録不変を追加し、要約406項目合格。offline183/workstation1369/package766とChromiumオフライン保存・復元・異常系一巡合格（Temp/obd-file-flow-ZuLqsB）。623ZIP別展開で851files/16931221bytes一致、HTTP200/版623/helper404/vehicleとsample false。SHA256 C093A917C46DB829E0113D511A78EFB19F135A6FC1F77DADE24E9F74593EF20E。実車未検証、公開とCIはpush後確認。
