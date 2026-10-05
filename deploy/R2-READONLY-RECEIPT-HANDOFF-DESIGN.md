@@ -1,5 +1,7 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+次工程の詳細: [一取得内のDTC/readiness意味観測契約](R2-SINGLE-READOUT-SEMANTICS-DESIGN.md)。既存observerを共通化し、仮の日時や接続参照を加えずrawから観測する設計を整理した。実装は未着手。
+
 ## 2026-10-06: raw文法検査の接続
 
 管理元に信頼済み開発用runtimeを指定した場合、finish直前の所有receiptだけを既存parseElmReadOnlyRawTranscriptへ渡す。任意の表示summaryからrawを復元せず、prompt/改行/時刻を補正しない。API省略時は従来の構造検査のみ。関数descriptorを生成時に保持するが、これはruntimeの真正性の証明ではない。
