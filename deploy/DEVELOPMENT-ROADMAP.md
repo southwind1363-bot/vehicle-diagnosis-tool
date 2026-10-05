@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-06 R2検査本体の初期化分離: dtc-clear-scoped-readout-core.jsに検証本体を移し、既存Node harnessは隔離VM初期化と7 API再公開を維持。4依存APIを初期化時に保持し、fs/vmを共通coreから除去。検査本文が依存名等の変更を除いて旧版と同一であることを機械照合。境界7484と関連scope/sequence/receipt、静的/操作HTMLブラウザー検証合格。ブラウザー所有者は未接続、本体3.13.623・ZIP・保存・診断・実車通信は変更なし。
+
 2026-10-06 R2 Node/browser検査対応表: R2-BROWSER-EVIDENCE-PORT-MAP.mdにscope/receipt/sequence/派生値/破棄の所在と拒否条件を整理。runtime依存4 API、同runtimeのfollow-up-plan参照、文字列32768 code unit/256行/128 CAN行・payload/4096不変性予算をソース確認。次はfs/vm初期化と検証本体の分離で、ブラウザー移植は未実施。文書のみ、本体3.13.623・保存・診断・実車通信は変更なし。
 
 2026-10-06 R2次工程の所有権設計: R2-BROWSER-EVIDENCE-OWNERSHIP-DESIGN.mdを追加。固定文章の見本とreceipt検証を区別し、Node/browser検査対応表→固定模擬receiptのページ内所有者→controller/DOM結合の順序を定義。任意factoryや保存JSONを証拠として受理せず、二回のread-only取得から消去境界を推定しない。設計のみで通常UI/保存形式/診断/実車通信は変更なし。前回6467946cはCI全4件成功・公開3.13.623資材一致確認済み。

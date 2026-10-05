@@ -2,6 +2,8 @@
 
 2026-10-06。ソース確認済みの移植計画。ブラウザー側のreceipt所有者は未実装。下表の「維持する検査」は現在のNode/共通runtimeの動作であり、ブラウザー移植が完了したという意味ではない。
 
+初期化分離は実装済み。検証本体を [共通fixture core](scripts/fixtures/dtc-clear-scoped-readout-core.js) の`createDtcClearFixtureValidators(api)`へ移し、Node harnessはfs/vm初期化と7 APIの再公開だけを行う。4依存APIはown data propertyの関数を初期化時に保持する。この構造検査はruntimeの真正性や同一由来を証明しない。検査本体は依存名・インデント・注釈以外が旧版と一致することを機械照合し、既存scope/sequence/派生値/receipt検証とHTML操作検証に合格した。ブラウザー結合は未実施。
+
 ## 実行環境の境界
 
 [Node harness](scripts/fixtures/dtc-clear-scoped-before-readout.js) のfs/vmは `obd-readonly.js` を隔離VMへ読み込むために使用される。検査が呼ぶruntime APIは次の4個。ブラウザー版では、固定模擬ページで一度だけ初期化した同一のruntimeを使う。通常画面やbridgeの送信経路を接続しない。
@@ -19,17 +21,17 @@ post評価は `postOperationReadOnlyFollowupPlan` の参照同一性を確認し
 | --- | --- | --- | --- |
 | scope発行 | [scope module](scripts/fixtures/dtc-clear-readout-scope.js) `createDtcClearReadoutFixtureScope` | 固定profile、simulated、4 intentの順序、source集合、参照token | Node依存なし。ページ内モジュールとして使用し、scope snapshotと拒否理由を照合 |
 | scope認識 | 同module `inspectDtcClearReadoutFixtureScope` | WeakSet登録、scope/connection/target参照、失効 | 形だけのobject、別moduleのscope、別contextを拒否。文字列IDへ置換しない |
-| 入力コピー | [harness](scripts/fixtures/dtc-clear-scoped-before-readout.js) `record` / `copyEvidenceInput` | 正確なown key、data descriptor、4要素の密配列、callerデータを変更しないコピー | 共通化候補。accessor、余分なkey、欠落を同じ分類で拒否 |
+| 入力コピー | [共通core](scripts/fixtures/dtc-clear-scoped-readout-core.js) `record` / `copyEvidenceInput` | 正確なown key、data descriptor、4要素の密配列、callerデータを変更しないコピー | 共通化候補。accessor、余分なkey、欠落を同じ分類で拒否 |
 | raw解析 | [runtime](obd-readonly.js) `parseElmReadOnlyRawTranscript` | 固定profile/command/completion、prompt、CAN/ISO-TP構造、payloadと上限 | 既存APIを利用。正規化済みsummaryや通常の寛容なdecoderで代用しない |
 | receipt観測 | runtime `parseGenericObdDtcClearReadoutReceipts` / `observeGenericObdDtcClearReadoutReceipts` | ordinal/intent/command、時刻、readinessの正確な長さと同source矛盾、DTC件数とpayload | public before/post評価経由で使う。内部関数を新たに公開しない |
-| 前読取 | harness `evaluateDtcClearScopedBeforeReadoutFixture` | 開始前/評価後のscope確認、connection参照、順序、期待sourceの不足と範囲外 | 不足やNO DATAを取得済み空DTCへ昇格させない。state/reason/readoutsを照合 |
+| 前読取 | 共通core `evaluateDtcClearScopedBeforeReadoutFixture` | 開始前/評価後のscope確認、connection参照、順序、期待sourceの不足と範囲外 | 不足やNO DATAを取得済み空DTCへ昇格させない。state/reason/readoutsを照合 |
 | 模擬clear受信 | runtime `createGenericObdDtcClearReceiveWindow` | attempt/connection参照、容量、terminal、poisoned状態、非送信 | ブラウザー内で固定の人工frameから生成。車両へ消去要求を送らない |
-| 後読取 | harness `evaluateDtcClearScopedPostReadoutFixture` | terminal/evaluationの整合、distinct attempt、source範囲、scope再確認 | clear snapshotと評価を同じruntimeで生成。理由の対応を維持 |
-| 前後順序 | harness `evaluateDtcClearReadoutSequenceFixture` | before/clear/postの3 attemptが別参照、canonical ISO、境界の非減少、前後scope充足 | 同時刻を勝手に禁止せず現行の順序規則を維持。実消去境界の証明にはしない |
-| clear snapshot不変性 | harness `assertImmutableClearSnapshot` | 内部まで凍結、data descriptor、訪問/プロパティ予算、root attemptTokenの内容は非参照 | 表面だけのfreezeやJSONコピーで代替しない。超過/可変/descriptor不正を区別 |
-| 派生値生成 | harness `createDtcClearDtcEvidencePairFixture` | コピー→sequence検証→DTC/readiness派生値→scope再確認 | 検証通過前に表示用値を返さない。rawを所有handleへ残さない |
-| monitor対応付け | harness `pairMonitorStates` / `inspectMonitorStatePairs` | ECU/group/monitor別、点火方式変更/片側欠落/不明を保留 | 順序を含む派生値一致を確認。改善/悪化や消去成功を追加判定しない |
-| 出力と破棄 | harness `dtcEvidenceHandle` / `inspectMonitorStatePairText` | 取得時scope確認、dispose後拒否、派生値freeze、日本語理由 | controller/DOMへ渡す前に検査。生token/rawをsnapshotへ公開しない |
+| 後読取 | 共通core `evaluateDtcClearScopedPostReadoutFixture` | terminal/evaluationの整合、distinct attempt、source範囲、scope再確認 | clear snapshotと評価を同じruntimeで生成。理由の対応を維持 |
+| 前後順序 | 共通core `evaluateDtcClearReadoutSequenceFixture` | before/clear/postの3 attemptが別参照、canonical ISO、境界の非減少、前後scope充足 | 同時刻を勝手に禁止せず現行の順序規則を維持。実消去境界の証明にはしない |
+| clear snapshot不変性 | 共通core `assertImmutableClearSnapshot` | 内部まで凍結、data descriptor、訪問/プロパティ予算、root attemptTokenの内容は非参照 | 表面だけのfreezeやJSONコピーで代替しない。超過/可変/descriptor不正を区別 |
+| 派生値生成 | 共通core `createDtcClearDtcEvidencePairFixture` | コピー→sequence検証→DTC/readiness派生値→scope再確認 | 検証通過前に表示用値を返さない。rawを所有handleへ残さない |
+| monitor対応付け | 共通core `pairMonitorStates` / `inspectMonitorStatePairs` | ECU/group/monitor別、点火方式変更/片側欠落/不明を保留 | 順序を含む派生値一致を確認。改善/悪化や消去成功を追加判定しない |
+| 出力と破棄 | 共通core `dtcEvidenceHandle` / `inspectMonitorStatePairText` | 取得時scope確認、dispose後拒否、派生値freeze、日本語理由 | controller/DOMへ渡す前に検査。生token/rawをsnapshotへ公開しない |
 
 ## 数値上限と数え方
 
@@ -51,6 +53,6 @@ post評価は `postOperationReadOnlyFollowupPlan` の参照同一性を確認し
 
 [scope試験](scripts/validate-dtc-clear-fixture-scope.js)、[前読取](scripts/validate-dtc-clear-scoped-before-readout.js)、[後読取](scripts/validate-dtc-clear-scoped-post-readout.js)、[sequence](scripts/validate-dtc-clear-readout-sequence.js)、[境界/派生値](scripts/validate-dtc-clear-difference-boundaries.js)が移植時の照合元になる。正常だけでなく、不正descriptor・範囲外source・矛盾・終端状態・破棄/失効を対応させる。TypeError/RangeErrorとstate/reason返却を混同しない。
 
-次のコード変更はNode harnessのfs/vm初期化と検証本体を分けることに限定する。4 APIを同じruntimeから受け取る内部factoryを設け、Node側は現在の隔離VMを渡して全関連試験が変わらないことを確認する。その次に独立した固定模擬ページで同じ検証本体を使い、Node/browser差分を照合する。factoryを通常画面の外部入力APIとして公開しない。
+Node harnessのfs/vm初期化と検証本体の分離は完了した。次に独立した固定模擬ページで同じ検証本体を使い、Node/browser差分を照合する。factoryを通常画面の外部入力APIとして公開しない。
 
 参考: [取得記録所有権設計](R2-BROWSER-EVIDENCE-OWNERSHIP-DESIGN.md)。実transport、実車同一性、網羅性、消去成功、実行/送信のflagは引き続きfalse。本表は実装完了や実車適合の証拠ではない。
