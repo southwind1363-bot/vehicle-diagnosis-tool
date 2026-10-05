@@ -1,31 +1,9 @@
 // Shared Node/browser test cases. All input is fixed simulated raw receipt data.
-import { createDtcClearReadoutFixtureScope } from "./dtc-clear-readout-scope.js";
+import { createDtcClearBrowserFixtureInput } from "./dtc-clear-browser-sample.js";
 import { createDtcClearFixtureValidators } from "./dtc-clear-scoped-readout-core.js";
 
 export function runDtcClearBrowserCases(api) {
   const validators = createDtcClearFixtureValidators(api);
-  const build = () => {
-    const profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
-    const intents = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_readiness"];
-    const commands = ["03", "07", "0A", "0101"];
-    const connectionToken = {}, targetToken = {};
-    const scope = createDtcClearReadoutFixtureScope({ provenance: "simulated", profile, connectionToken, targetToken,
-      byIntent: intents.map(intent => ({ intent, sourceIds: ["7E8", "7E9"] })) });
-    const context = { scopeToken: scope.scopeToken, connectionToken, targetToken };
-    const stamp = second => `2026-10-06T00:00:${String(second).padStart(2, "0")}.000Z`;
-    const readout = (start, changed) => ({ provenance: "simulated", attemptToken: {}, connectionToken,
-      startedAt: stamp(start), completedAt: stamp(start + 5),
-      receipts: intents.map((intent, index) => ({ ordinal: index + 1, intent, command: commands[index], profile,
-        startedAt: stamp(start + index), completedAt: stamp(start + index + 1), completion: "complete",
-        transcript: ["7E8", "7E9"].map(source => index === 3
-          ? `${source} 06 41 01 00 ${changed && source === "7E8" ? "17 01 01" : "07 01 00"} AA\r`
-          : `${source} 02 ${["43", "47", "4A"][index]} 00 AA AA AA AA AA\r`).join("") + ">" })) });
-    const clear = validators.createDtcClearFixtureReceiveWindow({ expectedSourceIds: ["7EC"], connectionToken });
-    clear.append(clear.attemptToken, connectionToken, { sourceId: "7EC", payload: [0x44] });
-    return { scope, context, beforeReadout: readout(1, false), clearStartedAt: stamp(7), clearCompletedAt: stamp(8),
-      clearWindowSnapshot: clear.finish(clear.attemptToken, connectionToken, "complete").snapshot,
-      postReadout: readout(9, true) };
-  };
   const mutations = {
     normal() {},
     no_data(input) { input.beforeReadout.receipts[0].transcript = "NO DATA\r>"; },
@@ -53,7 +31,7 @@ export function runDtcClearBrowserCases(api) {
     receipt_accessor(input) { Object.defineProperty(input.beforeReadout.receipts[0], "transcript", { get() { throw new Error("accessor_must_not_execute"); } }); }
   };
   return Object.entries(mutations).map(([name, mutate]) => {
-    const input = build(), ownerContext = input.context;
+    const input = createDtcClearBrowserFixtureInput(validators), ownerContext = input.context;
     let handle;
     try {
       mutate(input);

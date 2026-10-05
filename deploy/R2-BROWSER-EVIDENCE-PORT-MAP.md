@@ -1,12 +1,18 @@
 # R2 固定模擬receipt検証のNode/browser対応表
 
+## 2026-10-06: 固定receipt所有者と表示の結合
+
+`dtc-clear-browser-preview-session.js`は共通の固定sampleからhandleを生成し、scope/contextを隠してinspect/disposeだけを公開する。sessionのclosureはraw receiptを保持しない。disposeはhandle破棄とscope失効を行う。信頼済み開発用runtimeだけを受け取り、任意の外部記録を受理するAPIではない。
+
+`validate-dtc-clear-browser-owner.cjs`でページ内session→共通controller→DOMを結合。43 assertionでNodeと本文一致、更新時の同期消去、重複取得拒否、失効/閉鎖後のscope拒否、遅着成功、再取得後の旧失敗、現行失敗時の非表示、明示回復、反復閉鎖を確認した。外部通信はなく、実行flagはfalse。次はこの所有者を独立した操作見本へ配線し、ボタン・pagehide経由の閉鎖を確認する。通常UI/実transportへの接続は別工程。
+
 ## 2026-10-06: 固定receiptのNode/Chromium照合
 
 `scripts/fixtures/dtc-clear-browser-cases.js`の同じ14ケースをNode VMとChromiumページ内で独立して生成・評価し、返却値全体を照合した。正常では2 ECUの前後状態・日本語出力・dispose/失効後の拒否が一致し、実車/比較/実行関連10フラグはfalse。負例はNO DATA、範囲外source、readiness矛盾、receipt欠落、対象参照不一致、複製scope、複製follow-up-plan、scope失効、attempt再利用、時刻逆転、可変snapshot、32769文字、accessorの13種類。accessorの実行も拒否する。
 
 ブラウザーは同一ページ内のruntimeとES moduleを使い、文字列表示を受け取るだけでなくraw receiptからhandleを生成する。各環境のtokenはその環境で作り、比較対象として移送しない。試験は既存Chromium CIから呼び、資材は明示したローカルファイルの許可リストからリクエストを差し替えて供給する。実サーバーや外部ネットワーク、車両APIを使わない。
 
-14ケースは代表的な一致確認であり、Node境界試験全件のブラウザー移植完了ではない。通常画面・実transportへの接続や、実証拠を受け取る所有者は未実装。次は代表ケースの追加だけを繰り返さず、このページ内handleと既存controller/DOMを結び、失効時の表示消去を一体で確認する。
+14ケースは代表的な一致確認であり、Node境界試験全件のブラウザー移植完了ではない。通常画面・実transportへの接続や、実証拠を受け取る所有者は未実装。ページ内handleとcontroller/DOMの結合は冒頭の固定模擬試験で確認済み。
 
 2026-10-06。ソース確認済みの移植計画。通常画面用のreceipt所有者は未実装。下表の「維持する検査」は現在のNode/共通runtimeの動作であり、ブラウザー移植が完了したという意味ではない。
 
@@ -61,6 +67,6 @@ post評価は `postOperationReadOnlyFollowupPlan` の参照同一性を確認し
 
 [scope試験](scripts/validate-dtc-clear-fixture-scope.js)、[前読取](scripts/validate-dtc-clear-scoped-before-readout.js)、[後読取](scripts/validate-dtc-clear-scoped-post-readout.js)、[sequence](scripts/validate-dtc-clear-readout-sequence.js)、[境界/派生値](scripts/validate-dtc-clear-difference-boundaries.js)が移植時の照合元になる。正常だけでなく、不正descriptor・範囲外source・矛盾・終端状態・破棄/失効を対応させる。TypeError/RangeErrorとstate/reason返却を混同しない。
 
-Node harnessのfs/vm初期化と検証本体の分離は完了した。次に独立した固定模擬ページで同じ検証本体を使い、Node/browser差分を照合する。factoryを通常画面の外部入力APIとして公開しない。
+Node harnessのfs/vm初期化と検証本体の分離は完了した。独立した固定模擬ページで同じ検証本体を使ったNode/browser差分照合とcontroller/DOM結合も上記範囲で完了した。factoryを通常画面の外部入力APIとして公開しない。
 
 参考: [取得記録所有権設計](R2-BROWSER-EVIDENCE-OWNERSHIP-DESIGN.md)。実transport、実車同一性、網羅性、消去成功、実行/送信のflagは引き続きfalse。本表は実装完了や実車適合の証拠ではない。
