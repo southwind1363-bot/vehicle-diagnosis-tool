@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+2026-10-06 非実行の設定準備器: ATCAF1/ATD0/ATCEAの固定順序と単一OKだけを記録する所有者を追加。失敗時は次commandを返さず受理済み一覧を破棄し、遅着・旧ticket・任意commandを拒否。189項目で検証し、通常許可リストが候補列と04を拒否することも確認。profile=null・実行不可を維持し本体への接続は未実装。本体3.13.628・ZIPは変更なし。
+
+2026-10-06 取得記録の設定成立条件を具体化: ELM327公式v2.3資料を再確認し、CAF1/D0/CEAの候補列・PP29によるDLC既定値・protocol確認の時点を設計へ記録。次の作業は既定無効の非実行設定準備器。設定変更失敗後に自動再送/読取継続/復元保証をしない条件と、本体capture接続前の受入条件をR2-READONLY-SETTINGS-ENABLEMENT.mdへまとめた。本体3.13.628・送信許可・ZIPは変更なし。
+
 2026-10-06 取得記録と設定世代の結合: receipt sessionのcontextへsettingsTicketを必須追加。port/reader/writer・revisionが同じでも、再初期化・設定失効で旧取得を拒否する。試験providerは本体settings ownerのinspectが有効な時だけticketを渡す。モデル243項目、実関数結合209項目で収集中/完了後の再初期化・pagehide・reset・owner失効・protocol再照会を確認。profileは未確認のまま、production captureは未接続。本体3.13.628・ZIP・保存形式に変更なし。
 
 2026-10-06 取得記録の実関数結合検証: 共通の模擬serial harnessで本体send/read/完了待機とreceipt sessionを試験側だけ接続。同一接続の4command、S0/S1・1/7/全体byte分割、rawと表示正規化の分離、NO DATA/不正文法、timeout/過大応答/切断/参照交換/revision変更/lockを142項目で確認。既存設定hook80項目も共通harnessへ移行し合格。本体3.13.628・ZIP・通常画面は変更なし。実機profile/時刻/取得hookは未実装。
