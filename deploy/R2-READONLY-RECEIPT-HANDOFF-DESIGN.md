@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 同一接続での設定変更による取得失効
+
+port/reader/writerとserial revisionだけでは、同一接続上の再初期化を検出できない。非通信receipt sessionのcontextへsettingsTicketを必須追加し、参照変更・欠落・不正型で旧captureを失効する。これは呼出側の設定所有者が発行する世代参照であり、設定内容やprofileの真正性を証明しない。
+
+実関数結合試験は本体初期化を模擬byteで通してから取得を開始し、settings ownerのinspectが有効な場合だけそのticketをproviderへ渡す。参照が残ったままownerのみ失効したケースもnullとして拒否する。収集中/完了後の再初期化・pagehide・接続情報reset・owner失効・protocol再照会を、port/reader/writer/revisionが変わっていないことと併せて確認。新初期化後は新しいモデル取得を開始できるが、設定観測のprofileはnullのまま。
+
+モデル243項目と結合209項目で検証。S0/S1は人工入力への宣言profileであり、初期化応答から確定したものではない。設定失効の本体captureへの同期配線は未実装で、productionへの接続許可を追加しない。本体3.13.628・通常表示・保存形式・配布ZIPは変更なし。
+
 ## 2026-10-06: 接続寿命付き取得記録と実送受信関数の結合試験
 
 設定hook試験の模擬writer/reader・隔離VMをserial-runtime-harnessへ抽出し、同じ本体関数を二つの試験で使用する。新しい試験はdecoderの戻り文字列を試験側でだけreceipt sessionへ渡し、同一port/reader/writerのまま03/07/0A/0101を送受信する。本体にcapture hookを設置したものではなく、profile・時刻は明示的な試験値。

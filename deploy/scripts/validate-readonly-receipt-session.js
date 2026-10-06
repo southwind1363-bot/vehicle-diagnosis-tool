@@ -6,7 +6,7 @@ const runtime = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), runtime);
 const api = runtime.window.ObdReadOnly;
 const profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
-const context = () => ({ port: {}, reader: {}, writer: {}, revision: 1, connected: true, unlocked: true });
+const context = () => ({ port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true });
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks++; };
 function fill(session, ticket) {
@@ -28,7 +28,7 @@ for (const selected of [profile, profile.replace("s1", "s0")]) {
   check(session.inspect(ticket).summary === null, "finished observations expire on disconnect");
 }
 for (const method of ["startCommand", "append", "endCommand", "finish", "inspect"]) {
-  for (const key of ["port", "reader", "writer", "revision", "connected", "unlocked"]) {
+  for (const key of ["port", "reader", "writer", "settingsTicket", "revision", "connected", "unlocked"]) {
     const state = context(), original = { ...state }, session = createReadOnlyReceiptSession(() => state, api, profile);
     const ticket = session.begin().ticket;
     let command;
@@ -69,7 +69,8 @@ for (const method of ["startCommand", "append", "endCommand", "finish", "inspect
   const ticket = session.begin().ticket;
   returned = Object.defineProperty({ ...state }, "reader", { get() { getterCalls++; return state.reader; } });
   check(!session.inspect(ticket).ok && getterCalls === 0, "context getter is not executed");
-  for (const bad of [null, [], {}, { ...state, connected: 1 }, { ...state, revision: NaN }, { ...state, port: null }]) {
+  for (const bad of [null, [], {}, { ...state, connected: 1 }, { ...state, revision: NaN }, { ...state, port: null },
+    { ...state, settingsTicket: null }, { ...state, settingsTicket: undefined }, { ...state, settingsTicket: "declared" }]) {
     returned = bad; check(!session.begin().ok, "invalid context refuses begin");
   }
 }

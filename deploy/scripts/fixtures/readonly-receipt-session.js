@@ -5,7 +5,7 @@ export function createReadOnlyReceiptSession(readContext, api, profile) {
   if (typeof readContext !== "function") throw new TypeError("invalid_receipt_context_provider");
   if (typeof profile !== "string") throw new TypeError("explicit_receipt_profile_required");
   const capture = createReadOnlyReceiptCapture(api, profile);
-  const fields = ["port", "reader", "writer", "revision", "connected", "unlocked"];
+  const fields = ["port", "reader", "writer", "settingsTicket", "revision", "connected", "unlocked"];
   let current = null, generation = 0;
   const reject = reason => Object.freeze({ ok: false, reason, ticket: null, summary: null });
   const invalidate = () => { generation++; current = null; capture.invalidate(); };
@@ -18,7 +18,7 @@ export function createReadOnlyReceiptSession(readContext, api, profile) {
         if (!descriptor || !Object.hasOwn(descriptor, "value")) return null;
         copy[key] = descriptor.value;
       }
-      if ([copy.port, copy.reader, copy.writer].some(value => !value || typeof value !== "object")
+      if ([copy.port, copy.reader, copy.writer, copy.settingsTicket].some(value => !value || typeof value !== "object")
         || !Number.isSafeInteger(copy.revision) || copy.revision < 0 || copy.connected !== true || copy.unlocked !== true) return null;
       return copy;
     } catch { return null; }
