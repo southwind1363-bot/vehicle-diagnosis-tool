@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.626";
+const APP_VERSION = "3.13.627";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -812,6 +812,15 @@ const obdDevSession = {
   bridgeVciList: null,
   adapterIdentity: null,
   adapterInitializationSummary: null,
+  settingsObservation: {
+    owner: createReadOnlySettingsSession(() => ({
+      port: obdDevSession.port, reader: obdDevSession.reader, writer: obdDevSession.writer,
+      revision: obdSerialRevision,
+      connected: obdDevSession.readLoopActive === true && !obdSerialDisconnectOperation,
+      unlocked: isCurrentObdSerialOperation(obdSerialRevision)
+    })),
+    ticket: null
+  },
   lastSession: null,
   previewMode: null,
   requestedInterfaceId: null,
@@ -1197,7 +1206,11 @@ obdOperationJournalViewer?.addEventListener("toggle", () => {
   if (!obdOperationJournalViewer.open) clearObdOperationJournalViewer();
   else renderObdOperationJournalViewer();
 });
-window.addEventListener("pagehide", () => { clearObdOperationJournalComparison(); });
+window.addEventListener("pagehide", () => {
+  obdDevSession.settingsObservation?.owner.invalidate();
+  if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
+  clearObdOperationJournalComparison();
+});
 obdAccessPasswordInput.addEventListener("keydown", (event) => {
   handleObdUnlockKeydown(event, obdAccessUnlockButton);
 });
@@ -7507,6 +7520,8 @@ if (!continueObdSerialOperation(revision)) return;
 }
 
 function resetWebSerialConnectionAttemptMetadata() {
+  obdDevSession.settingsObservation?.owner.invalidate();
+  if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
   obdDevSession.lastDisconnectReason = null;
   obdDevSession.disconnectedAt = null;
   obdDevSession.connectedAt = null;
@@ -7552,6 +7567,8 @@ function handleObdSerialDisconnect(event) {
 }
 
 async function disconnectObdDeveloperVci(options = {}) {
+  obdDevSession.settingsObservation?.owner.invalidate();
+  if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
   const reason = typeof options?.reason === "string" ? options.reason : "operator_disconnect";
   obdDtcClearTargetBindingController.invalidate("transport_connection_not_current");
   // Transport loss retains the original attempt's failure evidence; explicit cancellation invalidates it.
@@ -7646,6 +7663,131 @@ async function disconnectObdDeveloperVci(options = {}) {
   return operation.promise;
 }
 
+// Passive observations of normalized command responses. No settings writes or persistence.
+function createReadOnlySettingsObservation() {
+  const steps = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
+  let current = null;
+  const result = (ok, reason = null) => Object.freeze({ ok, reason });
+  const matches = ticket => current !== null && current.ticket === ticket;
+  const invalidate = () => { current = null; };
+  const fail = reason => {
+    current.phase = "rejected"; current.reason = reason;
+    current.acknowledged = []; current.protocol = null;
+    return result(false, reason);
+  };
+  return Object.freeze({
+    begin() {
+      invalidate();
+      current = { ticket: Object.freeze({}), phase: "initializing", count: 0, acknowledged: [], protocol: null };
+      return current.ticket;
+    },
+    recordInitialization(ticket, command, response) {
+      if (!matches(ticket)) return result(false, "unknown_or_expired_settings_attempt");
+      if (current.phase !== "initializing") return result(false, "settings_attempt_ended");
+      if (command !== steps[current.count]) return fail("settings_command_order_mismatch");
+      if (typeof response !== "string" || !response.length || response.length > 12000) return fail("settings_response_invalid");
+      // A reset banner is not proof of defaults, identity, or successful hardware reset.
+      if (command !== "ATZ") {
+        // The first echo-off command may still echo. No broad search for an OK substring.
+        if (response !== "OK" && !(command === "ATE0" && response === "ATE0\nOK")) return fail("settings_acknowledgement_unavailable");
+        current.acknowledged.push(command);
+      }
+      current.count++;
+      if (current.count === steps.length) current.phase = "awaiting_protocol";
+      return result(true);
+    },
+    recordProtocol(ticket, response) {
+      if (!matches(ticket)) return result(false, "unknown_or_expired_settings_attempt");
+      if (current.phase !== "awaiting_protocol") return result(false, "settings_protocol_out_of_order");
+      // Only one exact normalized ATDPN result; it is an adapter report, not verified bus configuration.
+      if (typeof response !== "string" || !/^(?:A?[0-9A-C])$/.test(response)) return fail("settings_protocol_unavailable");
+      current.protocol = response;
+      current.phase = "observed";
+      return result(true);
+    },
+    inspect(ticket) {
+      if (!matches(ticket)) return Object.freeze({ ok: false, reason: "unknown_or_expired_settings_attempt", summary: null });
+      if (current.phase === "rejected") return Object.freeze({ ok: false, reason: current.reason, summary: null });
+      const protocol11bitReported = ["6", "8", "A6", "A8"].includes(current.protocol);
+      const missing = ["can_auto_format", "dlc_display", "can_addressing"];
+      if (current.count !== steps.length) missing.unshift("initialization_incomplete");
+      if (!protocol11bitReported) missing.push(current.protocol === null ? "protocol_not_observed" : "supported_11bit_protocol_not_reported");
+      const summary = Object.freeze({ phase: current.phase, provenance: "unverified_input",
+        acknowledgedCommands: Object.freeze([...current.acknowledged]),
+        protocolNumberReported: current.protocol, protocol11bitReported,
+        spacesOffAcknowledged: current.acknowledged.includes("ATS0"),
+        missingSettings: Object.freeze(missing), profile: null, profileVerified: false,
+        evidence: "command_responses_only", rawRetained: false,
+        realTransportProofAvailable: false, executionEnabled: false, vehicleCommandEnabled: false,
+        wouldTransmit: false, canExecute: false });
+      return Object.freeze({ ok: true, reason: null, summary });
+    },
+    invalidate
+  });
+}
+
+// Connection lifetime guard. The context provider does not establish hardware provenance.
+
+function createReadOnlySettingsSession(readContext) {
+  if (typeof readContext !== "function") throw new TypeError("invalid_settings_context_provider");
+  const fields = ["port", "reader", "writer", "revision", "connected", "unlocked"];
+  let current = null, generation = 0;
+  const reject = reason => Object.freeze({ ok: false, reason, ticket: null, summary: null });
+  const invalidate = () => {
+    generation++;
+    if (current) current.owner.invalidate();
+    current = null;
+  };
+  const snapshot = () => {
+    try {
+      const input = readContext();
+      if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+      const copy = {};
+      for (const key of fields) {
+        const descriptor = Object.getOwnPropertyDescriptor(input, key);
+        if (!descriptor || !Object.hasOwn(descriptor, "value")) return null;
+        copy[key] = descriptor.value;
+      }
+      if ([copy.port, copy.reader, copy.writer].some(value => !value || typeof value !== "object")
+        || !Number.isSafeInteger(copy.revision) || copy.revision < 0 || copy.connected !== true || copy.unlocked !== true) return null;
+      return Object.freeze(copy);
+    } catch { return null; }
+  };
+  const withCurrent = (ticket, action) => {
+    const record = current;
+    if (!record || record.ticket !== ticket) return reject("unknown_or_expired_settings_session");
+    const observed = snapshot();
+    // The provider or descriptor traps may synchronously begin/invalidate another session.
+    if (current !== record) return reject("unknown_or_expired_settings_session");
+    if (!observed || fields.some(key => observed[key] !== record.context[key])) {
+      invalidate();
+      return reject("settings_context_changed");
+    }
+    return action(record);
+  };
+  return Object.freeze({
+    begin() {
+      invalidate();
+      const started = generation, context = snapshot();
+      if (generation !== started) return reject("settings_context_changed");
+      if (!context) return reject("settings_context_unavailable");
+      const owner = createReadOnlySettingsObservation(), ticket = Object.freeze({});
+      current = { ticket, context, owner, observationTicket: owner.begin() };
+      return Object.freeze({ ok: true, reason: null, ticket });
+    },
+    recordInitialization(ticket, command, response) {
+      return withCurrent(ticket, record => record.owner.recordInitialization(record.observationTicket, command, response));
+    },
+    recordProtocol(ticket, response) {
+      return withCurrent(ticket, record => record.owner.recordProtocol(record.observationTicket, response));
+    },
+    inspect(ticket) {
+      return withCurrent(ticket, record => record.owner.inspect(record.observationTicket));
+    },
+    invalidate
+  });
+}
+
 function isCurrentObdSerialOperation(revision) {
   const simpleReadoutAccess = obdAccessUnlocked && typeof obdUiMode === "string" && obdUiMode === "simple";
   return revision === obdSerialRevision && obdAccessUnlocked && (obdDevModeUnlocked || simpleReadoutAccess);
@@ -7666,6 +7808,9 @@ function throwIfObdSerialOperationCancelled(revision) {
 
 async function initializeElmDeveloperAdapter() {
   const revision = obdSerialRevision;
+  const settings = obdDevSession.settingsObservation;
+  const settingsTicket = settings?.owner.begin().ticket || null;
+  if (settings) settings.ticket = settingsTicket;
   const initSteps = [
     { command: "ATZ", step: "adapter_reset" },
     { command: "ATE0", step: "disable_echo" },
@@ -7682,7 +7827,9 @@ async function initializeElmDeveloperAdapter() {
     try {
       response = await sendElmDeveloperCommand(command, timeoutMs);
       throwIfObdSerialOperationCancelled(revision);
+      settings?.owner.recordInitialization(settingsTicket, command, response);
     } catch (error) {
+      if (settings && settings.ticket === settingsTicket) { settings.owner.invalidate(); settings.ticket = null; }
       if (!continueObdSerialOperation(revision)) throw error;
       obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
         status: "failed",
@@ -7696,6 +7843,7 @@ async function initializeElmDeveloperAdapter() {
     }
     const outcome = classifyWebSerialCommandResponse(command, response);
     if (outcome.commandStatus !== "completed") {
+      if (settings && settings.ticket === settingsTicket) { settings.owner.invalidate(); settings.ticket = null; }
       obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
         status: "failed",
         baudRate: obdDevSession.adapterInitializationSummary?.baudRate,
@@ -7785,6 +7933,12 @@ async function captureObdDeveloperProtocolAfterStoredDtc() {
   if (!continueObdSerialOperation(revision)) return false;
   if (obdDevSession.pendingCommandOperation || obdSerialDisconnectOperation) return false;
   if (!obdDevSession.writer || !obdDevSession.reader || obdDevSession.readInProgress) return false;
+  const settings = obdDevSession.settingsObservation;
+  // A later protocol query must not keep the previous report as current evidence.
+  if (settings?.ticket && settings.owner.inspect(settings.ticket).summary?.phase === "observed") {
+    settings.owner.invalidate(); settings.ticket = null;
+  }
+  const settingsTicket = settings?.ticket || null;
   const commands = ["ATDP", "ATDPN"];
   const commandResponses = [];
   obdDevSession.readInProgress = true;
@@ -7794,11 +7948,13 @@ async function captureObdDeveloperProtocolAfterStoredDtc() {
     for (const command of commands) {
       const response = await sendElmDeveloperCommand(command, 2500);
       throwIfObdSerialOperationCancelled(revision);
+      if (command === "ATDPN") settings?.owner.recordProtocol(settingsTicket, response);
       if (classifyWebSerialCommandResponse(command, response).commandStatus === "completed") {
         commandResponses.push({ command, response });
       }
     }
   } catch (error) {
+    if (settings && settings.ticket === settingsTicket) { settings.owner.invalidate(); settings.ticket = null; }
     if (!continueObdSerialOperation(revision)) return false;
     const message = error?.message || String(error);
     if (message.startsWith("elm_transport_write_timeout:")) return false;

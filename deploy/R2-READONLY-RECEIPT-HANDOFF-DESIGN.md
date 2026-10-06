@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 本体の既存受信経路へ設定観測を接続
+
+二つの観測factoryをscript.jsへ移し、開発用moduleは本体の純粋関数を隔離VMで読み込む試験adapterへ変更した。通常obdDevSession内の非保存領域にowner/ticketを持ち、初期化開始で新ticket、既存commandの正規化済み応答を記録する。provenanceはunverified_inputで、実車検証済みとは扱わない。送信command・timeout・分類・ログ処理は従来のまま。
+
+既存ATDPN応答を現在のticketへ記録。二回目のprotocol確認では以前の観測を送信前に失効し、設定証拠の再利用には再初期化を必要とする。失敗/接続情報reset/切断開始/pagehideでも失効し、transport cleanupを待たない。遅い初期化/ATDPN応答は新ticketへ書き込めない。
+
+本体の実context providerと初期化/protocol/切断/reset/pagehide関数を模擬応答で動かす29項目を追加。停止しないcancel、revision不変の通信断、失敗、再照会、遅着を検証。既存314/233項目も同一本体factoryを使う。通常画面への表示・receipt captureへの許可連携・実機試験はまだ行っていない。CAF/DLC/アドレス方式が不明のためprofileはnullのままで、これだけではraw記録の設定を確定しない。
+
 ## 2026-10-06: 設定観測の接続寿命モデル
 
 `readonly-settings-session.js`は設定観測所有者を私有session ticketに結び付ける。生成時に指定する信頼済みcontext providerはport/reader/writerの参照、非負整数revision、connected/unlockedの真偽を返す。beginと記録/inspectの際にown data descriptorだけを読む。contextのwrapper objectが同じである必要はないが、内部の接続参照と値は開始時と一致しなければならない。

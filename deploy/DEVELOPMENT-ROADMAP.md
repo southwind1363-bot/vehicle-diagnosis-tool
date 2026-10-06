@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+3.13.627配布ZIP: 別フォルダーへの展開で851ファイル/16941949 bytesの一致を確認。SHA256: D0D3C553085520C7790508EC960DDED8796E20BC20D3550051992BCADFA41BF0。
+
+2026-10-06 R2設定観測の本体接続: 検証済みowner/sessionをscript.jsへ移し、既存初期化応答・ATDPNへ接続。切断開始/接続情報reset/pagehideで同期失効し、再初期化の遅着は旧ticketとして拒否。protocol再照会では前回観測を破棄し、再初期化まで設定証拠を再利用しない。既存314/233項目は本体実装を直接読み、追加29項目で実関数と実context providerを模擬応答で検証。追加command・保存schema・通常表示・車両操作の変更なし。CAF/DLC/アドレス方式は未観測のためprofile=null。本体/キャッシュ3.13.627。
+
 2026-10-06 R2設定観測の接続寿命モデル: readonly-settings-sessionを追加。信頼済みcontext providerからport/reader/writer参照・revision・接続/解除状態を毎回確認し、変化時に観測所有者を失効。旧ticket・getter・例外・provider/descriptor再入を拒否し、新試行を古い処理で破棄しない。233項目で検証しserial CIへ登録。実接続hook/通常UI/保存は未接続、profile未確定を維持。本体3.13.626・ZIP・送信許可は変更なし。
 
 2026-10-06 R2設定応答の開発用所有者: 現行6初期化commandの順序と厳密なOK応答、初期化後の単一ATDPN報告を私有ticketへ記録。ATZのbannerから既定値を推定せず、CAN自動整形/DLC表示/アドレス方式が不明なのでprofileは常にnull。314項目で曖昧応答・順序違反・不明protocol・旧参照・失効を確認し、実初期化関数を模擬応答で動かして成功後もprofile未確定となることを検証。production hook/追加送信/保存は未実装。本体3.13.626・ZIPは変更なし。
