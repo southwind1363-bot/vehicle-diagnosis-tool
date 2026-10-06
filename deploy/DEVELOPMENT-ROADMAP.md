@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-06 設定準備器の接続寿命: 非実行preparation sessionを追加し、port/reader/writer・settingsTicket・revision・接続/解除状態へ結合。変更後の人工OK・旧ticket・再入を238項目で検証。本体の切断/再初期化/pagehideも模擬transportで確認し、候補設定commandは送信なし。通常workflowの世代発行/同期失効/追加設定送信は未実装。本体3.13.628・ZIP・保存形式は変更なし。
+
 2026-10-06 非実行の設定準備器: ATCAF1/ATD0/ATCEAの固定順序と単一OKだけを記録する所有者を追加。失敗時は次commandを返さず受理済み一覧を破棄し、遅着・旧ticket・任意commandを拒否。189項目で検証し、通常許可リストが候補列と04を拒否することも確認。profile=null・実行不可を維持し本体への接続は未実装。本体3.13.628・ZIPは変更なし。
 
 2026-10-06 取得記録の設定成立条件を具体化: ELM327公式v2.3資料を再確認し、CAF1/D0/CEAの候補列・PP29によるDLC既定値・protocol確認の時点を設計へ記録。次の作業は既定無効の非実行設定準備器。設定変更失敗後に自動再送/読取継続/復元保証をしない条件と、本体capture接続前の受入条件をR2-READONLY-SETTINGS-ENABLEMENT.mdへまとめた。本体3.13.628・送信許可・ZIPは変更なし。

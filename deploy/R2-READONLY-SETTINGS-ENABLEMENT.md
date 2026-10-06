@@ -50,6 +50,10 @@ PDF本文を確認。PP29表のスクリーンショット取得は失敗した�
 
 ## 非実行準備器の実装記録
 
+2026-10-06追記: readonly-settings-preparation-sessionで準備器をport/reader/writer、settingsTicket、revision、connected/unlockedへ結合した。begin/record/inspectでown data descriptorからcontextを確認し、変化・例外・不正値では結果を失効。旧ticketはproviderを呼ばず拒否し、provider内の再入が新しい準備を壊さない。
+
+238項目で全段階のcontext変更・getter非実行・復活拒否・再入を確認。本体初期化/切断/再初期化/pagehideを模擬transportで動かし、設定所有者が無効になった後の人工OKも拒否する。候補3commandは送信していない。このwrapperはイベントを購読せず、実接続では呼出側の同期invalidateが必要。開始時の旧取得失効や新設定世代の発行も本体workflowではまだ未実装である。返却済みsnapshotを物理的に撤回できるとは扱わない。
+
 readonly-settings-preparation.jsを追加した。begin/record/inspect/invalidateだけを持ち、port・sender・時計・ファイルへの依存はない。次の固定command名を返すが送信は行わない。単一OKの受理後だけ次へ進み、途中失敗では受理済み一覧を破棄して終了する。終了後のOK・旧ticket・別所有者・任意commandを拒否する。
 
 189項目で固定順序、全段階の失敗、遅着・複製参照、全完了後もprofile=null/実行不可/復元未確認であることを確認。通常許可リストが候補3commandと04を拒否したままであることも検査する。設定世代・本体準備処理への接続は未実装。
