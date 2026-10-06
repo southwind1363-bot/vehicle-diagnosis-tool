@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: read-only rawパーサーのS0対応
+
+`parseElmReadOnlyRawTranscript`に明示profile `iso15765_11bit_normal_h1_caf1_d0_s0_e0`を追加。S0時のCAN行は大文字hex 19桁（3桁ID＋8byte）だけを受理し、桁数/文字種を確認してから既存ISO-TP検査へ渡す。CR/CRLF、終端prompt、状態行、資源上限、sourceごとの順序検査は共通。raw全体の空白除去やprofile自動推定は行わない。S1は引き続きcompact行を拒否する。
+
+根拠: [Elm Electronics ELM327 v2.3 datasheet](https://www.elmelectronics.com/wp-content/uploads/2020/05/ELM327DSL.pdf) p.26のS0/S1説明（ECU応答への空白挿入制御）。実機がその設定を満たす証拠ではなく、11bit/H1/CAF1/D0/E0/通常アドレスもcaller宣言のまま。42ケースのNode/Chromium一致、S1とのpayload一致、29bit/混在/欠落/ISO-TP順序違反/上限を検証する。
+
+これは文法パーサーだけの拡張。Mode04、生receiptの一取得/前後意味評価、capture所有者のprofile許可はS1のまま。実接続・設定観測・通常画面への配線は未実施で、既存のpayloadSemanticsVerified/実行/送信flagはfalseを維持する。
+
 ## 2026-10-06: 実受信関数を使う模擬byte結合試験
 
 `validate-serial-receipt-handoff.js`はscript.jsから実際のread loop・完了待機・表示加工関数を読み込み、有限の模擬byte列とTextDecoderを使う。テスト側だけにdecode結果の観測処理を置き、captureへ渡す。navigator/実ポート/送信は使用せず、productionのhookや取得所有権を追加したことにはならない。profileと時刻は宣言された試験値、キャンセル監視はstubであり、実接続寿命の証明には使わない。

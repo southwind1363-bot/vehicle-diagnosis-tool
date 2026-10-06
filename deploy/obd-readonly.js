@@ -1599,11 +1599,14 @@
   }
 
   const ELM_READ_ONLY_RAW_TRANSCRIPT_COMMANDS = Object.freeze({ "03": 0x43, "07": 0x47, "0A": 0x4A, "0101": 0x41 });
+  const ELM_READ_ONLY_COMPACT_TRANSCRIPT_PROFILE = "iso15765_11bit_normal_h1_caf1_d0_s0_e0";
 
   function parseElmReadOnlyRawTranscript(input) {
     const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["profile", "command", "transcript", "completion"], "invalid_elm_read_only_raw_transcript_input");
     const { profile, command, transcript, completion: callerCompletion } = inputSnapshot;
-    if (profile !== ELM_MODE04_RAW_TRANSCRIPT_PROFILE) throw new TypeError("invalid_elm_read_only_raw_transcript_profile");
+    if (profile !== ELM_MODE04_RAW_TRANSCRIPT_PROFILE && profile !== ELM_READ_ONLY_COMPACT_TRANSCRIPT_PROFILE) throw new TypeError("invalid_elm_read_only_raw_transcript_profile");
+    const compact = profile === ELM_READ_ONLY_COMPACT_TRANSCRIPT_PROFILE;
+    const framePattern = compact ? /^[0-9A-F]{19}$/ : /^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/;
     if (typeof command !== "string" || !Object.hasOwn(ELM_READ_ONLY_RAW_TRANSCRIPT_COMMANDS, command)) throw new TypeError("invalid_elm_read_only_raw_transcript_command");
     if (typeof transcript !== "string") throw new TypeError("invalid_elm_read_only_raw_transcript");
     if (transcript.length > 32768) throw new RangeError("invalid_elm_read_only_raw_transcript");
@@ -1671,10 +1674,10 @@
       }
       const terminalStatus = new Map([["STOPPED", "stopped"], ["ERROR", "error"], ["UNABLE TO CONNECT", "unable_to_connect"], ["CAN ERROR", "can_error"], ["BUFFER FULL", "buffer_full"]]).get(line.text);
       if (terminalStatus) { addStatus(terminalStatus, line.lineNumber); addError(terminalStatus, line.lineNumber); continue; }
-      if (!line.terminated && /^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/.test(line.text)) { addError("incomplete_final_frame", line.lineNumber); continue; }
+      if (!line.terminated && framePattern.test(line.text)) { addError("incomplete_final_frame", line.lineNumber); continue; }
       if (/^(?:03|07|0A|0101|AT(?:[A-Z0-9 ]*)?)$/.test(line.text)) { addError("unexpected_command_echo", line.lineNumber); continue; }
-      if (/^[0-9A-F]{8}(?: [0-9A-F]{2}){8}$/.test(line.text)) { addError("unsupported_29bit_frame", line.lineNumber); continue; }
-      if (!/^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/.test(line.text)) {
+      if ((compact ? /^[0-9A-F]{24}$/ : /^[0-9A-F]{8}(?: [0-9A-F]{2}){8}$/).test(line.text)) { addError("unsupported_29bit_frame", line.lineNumber); continue; }
+      if (!framePattern.test(line.text)) {
         addError(/^[0-9A-F]+$/.test(line.text) ? "compact_frame" : (/^[0-9A-F ]+$/.test(line.text) ? "invalid_hex" : "unexpected_line"), line.lineNumber);
         continue;
       }
@@ -1682,7 +1685,9 @@
       anyCanLine = true;
       if (canLineCount >= 128) { addError("can_line_overflow", line.lineNumber); continue; }
       canLineCount += 1;
-      const tokens = line.text.split(" ");
+      // Decode only after exact profile-specific grammar; never infer S0 or repair raw input.
+      const tokens = compact ? [line.text.slice(0, 3), ...line.text.slice(3).match(/.{2}/g)] : line.text.split(" ");
+      const packetLine = tokens.join(" ");
       const sourceId = tokens[0];
       const bytes = tokens.slice(1).map((token) => Number.parseInt(token, 16));
       if (Number.parseInt(sourceId, 16) > 0x7ff) { addError("invalid_can_id", line.lineNumber, sourceId); continue; }
@@ -1692,17 +1697,17 @@
         const length = pci & 0x0f;
         if (length < 1 || length > 7) { discardPending(sourceId, "malformed_single_frame_interrupted_first_frame", line.lineNumber); addError("invalid_single_frame_length", line.lineNumber, sourceId); continue; }
         discardPending(sourceId, "single_frame_interrupted_first_frame", line.lineNumber);
-        acceptPacketLines(sourceId, [line.text], line.lineNumber, bytes.slice(1, 1 + length));
+        acceptPacketLines(sourceId, [packetLine], line.lineNumber, bytes.slice(1, 1 + length));
       } else if (frameType === 1) {
         const expectedLength = ((pci & 0x0f) << 8) + bytes[1];
         if (expectedLength < 8 || expectedLength > 4095) { discardPending(sourceId, "malformed_first_frame_interrupted_first_frame", line.lineNumber); addError("invalid_first_frame_length", line.lineNumber, sourceId); continue; }
         discardPending(sourceId, "replaced_first_frame", line.lineNumber);
-        pendingBySource.set(sourceId, { expectedLength, nextSequence: 1, lines: [line.text], lineNumber: line.lineNumber });
+        pendingBySource.set(sourceId, { expectedLength, nextSequence: 1, lines: [packetLine], lineNumber: line.lineNumber });
       } else if (frameType === 2) {
         const pending = pendingBySource.get(sourceId);
         if (!pending) { addError("orphan_consecutive_frame", line.lineNumber, sourceId); continue; }
         if ((pci & 0x0f) !== pending.nextSequence) { pendingBySource.delete(sourceId); addError("consecutive_frame_sequence_error", line.lineNumber, sourceId); continue; }
-        pending.lines.push(line.text);
+        pending.lines.push(packetLine);
         pending.nextSequence = (pending.nextSequence + 1) & 0x0f;
         if (6 + ((pending.lines.length - 1) * 7) >= pending.expectedLength) { pendingBySource.delete(sourceId); acceptPacketLines(sourceId, pending.lines, pending.lineNumber); }
       } else {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import "./validate-elm-readonly-compact.js";
 
 const source = fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8");
 const context = vm.createContext({ window: {}, navigator: {} });

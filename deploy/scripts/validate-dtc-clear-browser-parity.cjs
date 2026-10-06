@@ -53,6 +53,11 @@ module.exports = async function validateDtcClearBrowserParity(context) {
     await require('./validate-dtc-clear-browser-owner.cjs')(page, expected[0].text.text);
     await require('./validate-single-readout-preview.cjs')(page, runtime.window.ObdReadOnly);
     await require('./validate-readonly-capture-browser.cjs')(page, runtime.window.ObdReadOnly);
+    const { runCompactTranscriptCases } = await import('./validate-elm-readonly-compact.js');
+    const compactCases = runCompactTranscriptCases(runtime.window.ObdReadOnly);
+    const compactActual = await page.evaluate(inputs => inputs.map(input => window.ObdReadOnly.parseElmReadOnlyRawTranscript(input)), compactCases.map(row => row.input));
+    assert.deepEqual(compactActual, JSON.parse(JSON.stringify(compactCases.map(row => row.result))));
+    console.log(`Compact read-only Node/Chromium parity: ${compactCases.length} cases passed`);
     assert.deepEqual(errors, []); assert.deepEqual(rejectedRequests, []);
     console.log('Fixed receipt Node/Chromium parity: 14 cases, monitor output, disposal, invalidation and false authority flags passed');
   } finally { await page.close(); }
