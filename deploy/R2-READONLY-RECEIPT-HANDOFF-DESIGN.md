@@ -140,7 +140,7 @@ finishは四つの構造がそろった場合だけreceiptStructureCompleteを�
 
 | 現行箇所 | ソースで確認した動作 | 受渡しに必要な変更・制限 |
 | --- | --- | --- |
-| `sendElmDeveloperCommand` / `readElmDeveloperResponse` | command開始時のport/reader/writer・revision・処理所有者を固定し、許可リストを通して送信。3.13.630でwrite待ち中のreader入替も拒否 | この所有者の内側で取得情報を発行する。UIやJSONが指定するtokenを認証に使わない |
+| `sendElmDeveloperCommand` / `readElmDeveloperResponse` | command開始時のport/reader/writer・revision・処理所有者を固定し、許可リストを通して送信。3.13.630でwrite待ち中のreader入替を拒否、3.13.631で旧writeのタイムアウトによる別世代/別所有者の切断も拒否 | この所有者の内側で取得情報を発行する。UIやJSONが指定するtokenを認証に使わない |
 | `takeCompletedElmDeveloperResponse` | 末尾promptを除去、CRをLFへ変換、trimして返す | 返却文字列へpromptを付け直してraw証拠と呼ばない。加工前の境界を扱う設計・試験が必要 |
 | `runObdDeveloperRead` | `{command,response,responseElapsedMs}`を蓄積。読取全体の開始日時と失敗/中断を扱う | command別の開始/終了、受信完了状態、試行所有者を失わず結び付ける。成功応答だけで欠落commandを補完しない |
 | `buildWebSerialAttemptTranscript` | command見出しを付けた文字列へ再構成する | 再構成文は表示・既存解析用。取得証拠に昇格させない |

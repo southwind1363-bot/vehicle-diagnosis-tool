@@ -8,18 +8,20 @@ let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks++; };
 function client() {
   const writing = deferred(), response = deferred();
-  let writes = 0, reads = 0;
+  let writes = 0, reads = 0, disconnects = 0, now = 0, timer = null;
   const session = { port: {}, reader: {}, writer: { write() { writes++; return writing.promise; } },
     encoder: new TextEncoder(), readLoopActive: true, textBuffer: "" };
   const context = vm.createContext({ obdDevSession: session, obdSerialRevision: 1, obdSerialDisconnectOperation: null,
     // This suite checks reference ownership, not elapsed time. Other imported
     // validators may block the event loop; deadline behavior has separate tests.
-    obdSerialConnectPending: false, performance: { now: () => 0 }, setTimeout: () => 0, clearTimeout() {},
+    obdSerialConnectPending: false, performance: { now: () => now },
+    setTimeout(callback) { timer = callback; return 0; }, clearTimeout() { timer = null; },
     throwIfObdSerialOperationCancelled() {}, isAllowedObdDeveloperCommand: command => command === "03",
-    disconnectObdDeveloperVci() { throw new Error("unexpected timeout"); },
+    disconnectObdDeveloperVci() { disconnects++; },
     readElmDeveloperResponse() { reads++; return response.promise; } });
   vm.runInContext(source.match(/async function sendElmDeveloperCommand\([^\n]*\) \{[\s\S]*?\r?\n\}/)[0], context);
-  return { context, session, writing, response, counts: () => ({ writes, reads }) };
+  return { context, session, writing, response, counts: () => ({ writes, reads, disconnects }),
+    advance() { now = 3000; }, expire() { now = 3000; assert.ok(timer); timer(); } };
 }
 // Exercise the actual sender with deferred writes/responses; never opens a port.
 for (const replacement of [{}, null]) {
@@ -58,5 +60,22 @@ for (const key of ["reader", "writer", "port", "pendingCommandOperation"]) {
     assert.deepEqual(wire.writes, ["03\r"]); checks++;
     check(!session.pendingCommandOperation && !session.pendingWriteOperation, "byte-backed reader replacement releases send ownership");
   } finally { await wire.close(); }
+}
+for (const boundary of ["timer", "late_write"]) {
+  for (const key of ["reader", "writer", "port", "pendingCommandOperation", "pendingWriteOperation", "revision", "unchanged"]) {
+    const c = client(), pending = c.context.sendElmDeveloperCommand("03", 3000);
+    const rejected = assert.rejects(pending, /elm_transport_write_timeout:03/);
+    const replacement = {};
+    if (key === "revision") c.context.obdSerialRevision++;
+    else if (key !== "unchanged") c.session[key] = replacement;
+    if (boundary === "timer") c.expire();
+    else { c.advance(); c.writing.resolve(); }
+    await rejected; checks++;
+    check(c.counts().disconnects === (key === "unchanged" ? 1 : 0), `${boundary}/${key}: only current write may disconnect its transport`);
+    c.writing.resolve(); await new Promise(setImmediate);
+    check(c.counts().disconnects === (key === "unchanged" ? 1 : 0), "late settlement never disconnects twice");
+    check(c.counts().writes === 1 && c.counts().reads === 0, "expired write never reads or retries");
+    if (["pendingCommandOperation", "pendingWriteOperation"].includes(key)) check(c.session[key] === replacement, "expired cleanup preserves replacement owner");
+  }
 }
 console.log(`Serial command reader: ${checks} checks passed; actual sender and byte loop with synthetic transport only`);
