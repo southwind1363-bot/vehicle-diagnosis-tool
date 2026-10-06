@@ -1,10 +1,15 @@
-// Trusted development runtime only. Grammar/transport observations are not payload semantics.
+// Trusted development runtime only. Observations never establish provenance or execution authority.
 export function createReceiptRawValidation(api) {
   const descriptor = api && Object.getOwnPropertyDescriptor(api, "parseElmReadOnlyRawTranscript");
   if (!descriptor || !Object.hasOwn(descriptor, "value") || typeof descriptor.value !== "function") {
     throw new TypeError("invalid_receipt_parser_api");
   }
   const parse = descriptor.value.bind(api);
+  const semanticDescriptor = Object.getOwnPropertyDescriptor(api, "evaluateSingleReadoutRawReceipts");
+  if (semanticDescriptor && (!Object.hasOwn(semanticDescriptor, "value") || typeof semanticDescriptor.value !== "function")) {
+    throw new TypeError("invalid_receipt_observer_api");
+  }
+  const observe = semanticDescriptor?.value.bind(api);
   return receipts => {
     const readouts = receipts.map(receipt => {
       const parsed = parse({ profile: receipt.profile, command: receipt.command,
@@ -15,7 +20,9 @@ export function createReceiptRawValidation(api) {
         errorCodes: Object.freeze([...new Set(parsed.errors.map(error => error.code))]),
         noDataReported: parsed.statuses.some(status => status.code === "no_data") });
     });
+    const semanticObservation = observe ? observe({ receipts: receipts.map(({ command, profile, completion, transcript }) =>
+      ({ command, profile, completion, transcript })) }) : null;
     return Object.freeze({ status: readouts.every(row => row.completion === "complete" && row.errorCodes.length === 0)
-      ? "parsed" : "rejected", readouts: Object.freeze(readouts) });
+      ? "parsed" : "rejected", readouts: Object.freeze(readouts), semanticObservation });
   };
 }

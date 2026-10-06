@@ -43,6 +43,12 @@ module.exports = async function validateDtcClearBrowserParity(context) {
     await page.waitForFunction(() => typeof window.runFixtureCases === 'function');
     const actual = await page.evaluate(() => window.runFixtureCases(window.ObdReadOnly));
     assert.deepEqual(actual, expected, 'Browser evidence validation differs from Node');
+    const { runSingleReadoutCases } = await import('./validate-single-readout-semantics.js');
+    const singleCases = runSingleReadoutCases(runtime.window.ObdReadOnly);
+    const singleActual = await page.evaluate(inputs => inputs.map(receipts =>
+      window.ObdReadOnly.evaluateSingleReadoutRawReceipts({ receipts })), singleCases.map(row => row.receipts));
+    assert.deepEqual(singleActual, JSON.parse(JSON.stringify(singleCases.map(row => row.observation))));
+    console.log('Single-readout Node/Chromium semantic parity: 17 cases passed');
     await require('./validate-dtc-clear-browser-owner.cjs')(page, expected[0].text.text);
     assert.deepEqual(errors, []); assert.deepEqual(rejectedRequests, []);
     console.log('Fixed receipt Node/Chromium parity: 14 cases, monitor output, disposal, invalidation and false authority flags passed');

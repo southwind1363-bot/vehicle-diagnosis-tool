@@ -1,5 +1,7 @@
 # R2 一取得内のDTC/readiness観測を共通化する契約
 
+2026-10-06実装: evaluateSingleReadoutRawReceiptsを追加し、前後評価器とraw構造検査・内部observerを共用。新入口は4 raw receiptのみを受け、日時/接続tokenを要求しない。取得元はunverified_input、source/raw/payloadは非公開、全権限flagはfalse。開発用所有者のfinishへ接続し、文法と意味観測を別々に保持。17ケース/346項目、変更前の前後評価結果全体17ケース一致、Node/Chromiumの新入口一致を検証する。通常UI/実transport/保存へは未接続。
+
 2026-10-06。ソース確認済みの設計。実装、診断分類、保存schema、送信許可は変更していない。
 
 ## 共通化する範囲

@@ -1843,25 +1843,31 @@
 
   // Shared pure validation; callers retain their own attempt and operation boundaries.
   function parseGenericObdDtcClearReadoutReceipts(receiptValues, errorPrefix) {
+    return parseSingleReadoutRawReceipts(receiptValues, errorPrefix, true);
+  }
+
+  function parseSingleReadoutRawReceipts(receiptValues, errorPrefix, withTimestamps = false) {
     const receiptInput = copyGenericObdDtcClearResponseDenseArray(receiptValues, 4, `${errorPrefix}_receipts`);
     if (receiptInput.length !== 4) throw new TypeError(`${errorPrefix}_receipts`);
 
     return receiptInput.map((value, index) => {
       const receipt = copyGenericObdDtcClearResponseRecord(value,
-        ["ordinal", "intent", "command", "profile", "startedAt", "completedAt", "completion", "transcript"],
+        withTimestamps ? ["ordinal", "intent", "command", "profile", "startedAt", "completedAt", "completion", "transcript"]
+          : ["command", "profile", "completion", "transcript"],
         `${errorPrefix}_receipt`);
       const expected = GENERIC_OBD_DTC_CLEAR_POST_READOUT_INTENTS[index];
-      if (receipt.ordinal !== expected.ordinal || receipt.intent !== expected.intent || receipt.command !== expected.command
+      if ((withTimestamps && (receipt.ordinal !== expected.ordinal || receipt.intent !== expected.intent)) || receipt.command !== expected.command
         || receipt.profile !== GENERIC_OBD_DTC_CLEAR_POST_READOUT_PROFILE
         || !["complete", "timeout", "disconnected", "error"].includes(receipt.completion)) {
         throw new TypeError(`${errorPrefix}_receipt`);
       }
-      if (!isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.startedAt)
-        || !isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.completedAt)) {
+      if (withTimestamps && (!isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.startedAt)
+        || !isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.completedAt))) {
         throw new TypeError(`${errorPrefix}_timestamp`);
       }
       return {
         ...receipt,
+        ordinal: expected.ordinal, intent: expected.intent,
         expected,
         parsed: parseElmReadOnlyRawTranscript({
           profile: receipt.profile,
@@ -1969,6 +1975,24 @@
     });
   }
 
+
+  // Raw single-acquisition observation. No timestamps, clear event or connection tokens are invented.
+  function evaluateSingleReadoutRawReceipts(input) {
+    const errorPrefix = "invalid_single_readout_raw";
+    const snapshot = copyGenericObdDtcClearResponseRecord(input, ["receipts"], errorPrefix);
+    const receipts = parseSingleReadoutRawReceipts(snapshot.receipts, errorPrefix);
+    const readouts = observeGenericObdDtcClearReadoutReceipts(receipts).map(row => ({
+      ordinal: row.ordinal, intent: row.intent, command: row.command,
+      observation: row.observation, evidenceComplete: false, blockerIds: row.blockerIds
+    }));
+    return freezeGenericObdDtcClearResponse({
+      schemaVersion: "single_readout_raw_observation_v1", provenance: "unverified_input",
+      readouts, payloadSemanticsVerified: false, realTransportProofAvailable: false,
+      sameVehicleVerified: false, clearBoundaryVerified: false, readoutCoverageComplete: false,
+      comparisonAvailable: false, clearSucceededInferred: false, executionEnabled: false,
+      vehicleCommandEnabled: false, wouldTransmit: false, canExecute: false
+    });
+  }
 
   // Before-readout observation only: no clear event or expected ECU scope is inferred.
   function evaluateGenericObdDtcClearBeforeReadoutReceipts(input) {
@@ -45361,6 +45385,7 @@
     parseElmReadOnlyRawTranscript,
     createGenericObdDtcClearReceiveWindow,
     evaluateGenericObdDtcClearBeforeReadoutReceipts,
+    evaluateSingleReadoutRawReceipts,
     evaluateGenericObdDtcClearPostReadoutReceipts,
     transitionGenericObdDtcClearWorkflow,
     createGenericObdDtcClearController,
