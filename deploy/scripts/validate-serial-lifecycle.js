@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import "./validate-serial-response-lines.js";
+import "./validate-serial-command-reader.js";
 import "./validate-serial-settings.js";
 import "./validate-serial-integration.js";
 import "./validate-serial-receipt-handoff.js";
