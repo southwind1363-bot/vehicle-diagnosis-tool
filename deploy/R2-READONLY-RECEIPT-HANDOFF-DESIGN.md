@@ -1,5 +1,11 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 設定観測と送受信関数の結合検証
+
+既存runtime hook試験へメモリ内のwriter/readerを追加し、本体のsendElmDeveloperCommand・read loop・完了待機・正規化・設定観測を通して検証する。1/7/全体byte分割、ATE0のechoとCRLF、既存8commandの送信byte一致、完了後の処理所有権解放を確認。二重OK・ERROR・prompt欠落・12000文字超過・複数protocol・空応答・置換文字では設定summaryを使用できず、自動再送もしない。pagehide失効も確認した。
+
+追加39項目、従来分を含む68項目。poll待機の時計とbyte供給は人工値であり、物理portのopen・実機通信・driver実行はしない。profileはnullのまま。本体・公開資産・保存形式は3.13.627から変更なし。
+
 ## 2026-10-06: 本体の既存受信経路へ設定観測を接続
 
 二つの観測factoryをscript.jsへ移し、開発用moduleは本体の純粋関数を隔離VMで読み込む試験adapterへ変更した。通常obdDevSession内の非保存領域にowner/ticketを持ち、初期化開始で新ticket、既存commandの正規化済み応答を記録する。provenanceはunverified_inputで、実車検証済みとは扱わない。送信command・timeout・分類・ログ処理は従来のまま。
