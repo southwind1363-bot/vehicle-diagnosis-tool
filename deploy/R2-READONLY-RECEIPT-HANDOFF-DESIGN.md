@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 設定観測の接続寿命モデル
+
+`readonly-settings-session.js`は設定観測所有者を私有session ticketに結び付ける。生成時に指定する信頼済みcontext providerはport/reader/writerの参照、非負整数revision、connected/unlockedの真偽を返す。beginと記録/inspectの際にown data descriptorだけを読む。contextのwrapper objectが同じである必要はないが、内部の接続参照と値は開始時と一致しなければならない。
+
+不一致やprovider失敗で記録を失効し、値を元に戻しても復活させない。旧ticketはproviderを呼ばず拒否。providerやProxy descriptor内で再初期化/失効されても、古い処理は新しい試行を変更せず終了する。明示invalidateはrevision変更や切断完了のawaitを必要としない。233項目で初期化中/観測後の各参照変更・ロック・通信断・遅着・再入を検証。
+
+これは非通信モデルで、providerの真正性や実車適合を証明しない。現在のアプリへevent hookは追加していないため、実際のdisconnect/lock/pagehide等では今後同期invalidateを呼ぶ必要がある。保存済みsummary自体は撤回できないので、利用時はsession.inspectで再検査する。profile=nullと全実行flag=falseを維持し、表示summaryを解析許可には使わない。
+
 ## 2026-10-06: 初期化・protocol応答の開発用記録
 
 `readonly-settings-observation.js`は現行のATZ/ATE0/ATL0/ATS0/ATH1/ATSP0と、その後の単一ATDPN応答を記録する非通信モデル。私有ticketの参照で試行を区別し、begin/失効では旧観測を使用不能にする。正規化済み応答を受け、初回ATE0のecho移行だけは`ATE0\nOK`を許す。ほかは厳密な`OK`のみで、部分一致・複数OK・ERROR混在は拒否する。順序違反/不正応答後は観測を破棄する。
