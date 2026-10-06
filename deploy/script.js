@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.628";
+const APP_VERSION = "3.13.629";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1210,6 +1210,7 @@ window.addEventListener("pagehide", () => {
   obdDevSession.settingsObservation?.owner.invalidate();
   if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
   clearObdOperationJournalComparison();
+  if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
 });
 obdAccessPasswordInput.addEventListener("keydown", (event) => {
   handleObdUnlockKeydown(event, obdAccessUnlockButton);
@@ -6139,7 +6140,28 @@ function renderObdSerialSettings() {
     || obdDevSession.connectionState !== "disconnected";
 }
 
+function renderObdSettingsObservation() {
+  const panel = document.querySelector("#obdSettingsObservationDetails");
+  const status = document.querySelector("#obdSettingsObservationStatus");
+  if (!panel || !status) return;
+  panel.hidden = true;
+  status.textContent = "";
+  if (!obdAccessUnlocked || !obdDevModeUnlocked || obdDevSession.previewMode) { panel.open = false; return; }
+  const settings = obdDevSession.settingsObservation;
+  const observed = settings?.ticket ? settings.owner.inspect(settings.ticket) : null;
+  const summary = observed?.ok ? observed.summary : null;
+  if (!summary) { panel.open = false; return; }
+  const stage = summary.phase === "initializing" ? "初期化応答を記録中。"
+    : summary.phase === "awaiting_protocol" ? "初期化応答を記録済み。通信番号は未観測です。"
+      : "初期化応答と通信番号を記録済み。";
+  const protocol = typeof summary.protocolNumberReported === "string" && /^(?:A?[0-9A-C])$/.test(summary.protocolNumberReported)
+    ? ` アダプター報告の通信番号: ${summary.protocolNumberReported}。` : "";
+  status.textContent = `${stage}${protocol} 生応答の設定確認は未完了です（CAN自動整形・DLC表示・アドレス方式が未確認）。実機動作の保証ではありません。`;
+  panel.hidden = false;
+}
+
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
+  if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
   if (typeof renderObdSerialSettings === "function") renderObdSerialSettings();
   renderObdMeasurementConditionSummary();
   renderObdDeveloperPasswordState();
@@ -7522,6 +7544,7 @@ if (!continueObdSerialOperation(revision)) return;
 function resetWebSerialConnectionAttemptMetadata() {
   obdDevSession.settingsObservation?.owner.invalidate();
   if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
+  if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
   obdDevSession.lastDisconnectReason = null;
   obdDevSession.disconnectedAt = null;
   obdDevSession.connectedAt = null;
@@ -7811,6 +7834,7 @@ async function initializeElmDeveloperAdapter() {
   const settings = obdDevSession.settingsObservation;
   const settingsTicket = settings?.owner.begin().ticket || null;
   if (settings) settings.ticket = settingsTicket;
+  if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
   const initSteps = [
     { command: "ATZ", step: "adapter_reset" },
     { command: "ATE0", step: "disable_echo" },
@@ -7828,8 +7852,10 @@ async function initializeElmDeveloperAdapter() {
       response = await sendElmDeveloperCommand(command, timeoutMs);
       throwIfObdSerialOperationCancelled(revision);
       settings?.owner.recordInitialization(settingsTicket, command, response);
+      if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
     } catch (error) {
       if (settings && settings.ticket === settingsTicket) { settings.owner.invalidate(); settings.ticket = null; }
+      if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
       if (!continueObdSerialOperation(revision)) throw error;
       obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
         status: "failed",
@@ -7844,6 +7870,7 @@ async function initializeElmDeveloperAdapter() {
     const outcome = classifyWebSerialCommandResponse(command, response);
     if (outcome.commandStatus !== "completed") {
       if (settings && settings.ticket === settingsTicket) { settings.owner.invalidate(); settings.ticket = null; }
+      if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
       obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
         status: "failed",
         baudRate: obdDevSession.adapterInitializationSummary?.baudRate,

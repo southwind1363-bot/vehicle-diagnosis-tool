@@ -8,6 +8,7 @@ import "./validate-serial-receipt-handoff.js";
 import "./validate-readonly-settings-observation.js";
 import "./validate-readonly-settings-session.js";
 import "./validate-settings-runtime-hooks.js";
+import "./validate-settings-observation-view.js";
 import "./validate-readonly-settings-preparation.js";
 import "./validate-settings-preparation-session.js";
 import "./validate-settings-transition.js";
