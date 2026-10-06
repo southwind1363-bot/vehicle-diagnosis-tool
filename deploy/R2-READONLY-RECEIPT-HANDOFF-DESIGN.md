@@ -1,5 +1,11 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: protocol確認の分類失敗で観測を失効
+
+ATDPにERRORが返っても、その後のATDPNがA6なら観測が残る不整合を模擬byte試験で再現した。captureObdDeveloperProtocolAfterStoredDtcは、既存分類がcompletedの時だけ番号を記録し、それ以外では開始時ticketが現在のticketと一致する場合に限り失効する。失効後のATDPNは旧ticketとして拒否される。既存のcommand順序・identity集約・戻り値は変更しない。
+
+ERROR・?・UNABLE TO CONNECTの3ケースと、再初期化後に古いATDP失敗が到着するケースを追加し、合計80項目で確認。本体3.13.628。これはメモリ内送受信の検証で、CAF/DLC/アドレス方式は引き続き未観測、profile=null・送信許可なしを維持する。
+
 ## 2026-10-06: 設定観測と送受信関数の結合検証
 
 既存runtime hook試験へメモリ内のwriter/readerを追加し、本体のsendElmDeveloperCommand・read loop・完了待機・正規化・設定観測を通して検証する。1/7/全体byte分割、ATE0のechoとCRLF、既存8commandの送信byte一致、完了後の処理所有権解放を確認。二重OK・ERROR・prompt欠落・12000文字超過・複数protocol・空応答・置換文字では設定summaryを使用できず、自動再送もしない。pagehide失効も確認した。

@@ -97,6 +97,15 @@ for (const command of ["ATZ", "ATE0", "ATS0", "ATH1", "ATDPN"]) {
   check(!c.settings.owner.inspect(old).ok && c.settings.ticket === fresh, "late protocol cannot overwrite new initialization");
   check(c.settings.owner.inspect(fresh).summary.phase === "awaiting_protocol", "old protocol not assigned to new ticket");
 }
+{
+  const c = client("ATDP", "ATDP"); await c.context.initializeElmDeveloperAdapter();
+  const old = c.settings.ticket, pending = c.context.captureObdDeveloperProtocolAfterStoredDtc();
+  await c.reached.promise;
+  await c.context.initializeElmDeveloperAdapter(); const fresh = c.settings.ticket;
+  c.wait.resolve(); check(await pending === false, "failed protocol query remains unsuccessful");
+  check(!c.settings.owner.inspect(old).ok && c.settings.ticket === fresh, "late ATDP failure preserves new initialization");
+  check(c.settings.owner.inspect(fresh).summary.phase === "awaiting_protocol", "failed old query cannot supply new protocol");
+}
 // Run the real send/receive chain against an in-memory byte queue. No port is opened.
 function attachWire(c, size, overrides = {}) {
   const session = c.context.obdDevSession, queue = [], writes = [];
@@ -149,7 +158,8 @@ for (const size of [1, 7, 32768]) {
   } finally { await wire.close(); }
 }
 function sessionIdle(c) { return !c.context.obdDevSession.pendingCommandOperation && !c.context.obdDevSession.pendingWriteOperation; }
-for (const [command, reply] of [["ATS0", "OK\rOK\r>"], ["ATS0", "ERROR\r>"],
+for (const [command, reply] of [["ATDP", "ERROR\r>"], ["ATDP", "?\r>"], ["ATDP", "UNABLE TO CONNECT\r>"],
+  ["ATS0", "OK\rOK\r>"], ["ATS0", "ERROR\r>"],
   ["ATS0", "OK\r"], ["ATS0", "x".repeat(12001)], ["ATDPN", "A6\rA8\r>"], ["ATDPN", "\r>"],
   ["ATDPN", "A6\r"], ["ATDPN", "A6\uFFFD\r>"]]) {
   const c = client(), wire = attachWire(c, 7, { [command]: reply });
