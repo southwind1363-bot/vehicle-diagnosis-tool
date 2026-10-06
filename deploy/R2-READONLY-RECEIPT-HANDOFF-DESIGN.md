@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 分割文字列の取得境界モデル
+
+`scripts/fixtures/readonly-receipt-capture.js`はdecode済みの非空文字列chunkを、コマンド固有ticketにだけ追加する。begin/startCommand/append/endCommand/finish/inspect/invalidateを持つ開発用モデルで、portやdecoder、時計を呼ばない。profile/時刻はcaller宣言のまま。promptを見つけても自動終了・送信せず、明示終了時に生文字列を既存所有者へ渡す。
+
+上限は1 commandのJS文字列length 32768。超過/入力不正ではbufferと所有receiptを破棄し、切捨て・正規化・prompt追加を行わない。旧command ticketは次commandへのappend/endに使えず、旧試行の失効は新試行を壊さない。処理中の世代変更も再検査する。これはJS文字列参照の解放であり、物理的メモリ消去の保証ではない。
+
+全分割点、CRLF/prompt境界、1文字chunk、文字列の完全一致、上限ちょうど/1文字超過、二重終了、timeout/切断、偽造参照、終了時再入を1235項目で確認し既存receipt CIへ登録。byte列のdecode、実受信完了イベントの観測、ELM設定の実確認は別工程。既存sendElmDeveloperCommand/readElmDeveloperResponseへの配線はまだ行わない。
+
 次工程の詳細: [一取得内のDTC/readiness意味観測契約](R2-SINGLE-READOUT-SEMANTICS-DESIGN.md)。既存observerを共通化し、仮の日時や接続参照を加えずrawから観測する設計を整理した。実装は未着手。
 
 ## 2026-10-06: raw文法検査の接続
