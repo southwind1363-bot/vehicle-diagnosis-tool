@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-07 設定世代切替の結果照合: 同期trueだけで旧settingsTicketのまま準備を開始できる問題を再現・修正。旧receipt失効後に切替前contextを取得し、切替後にsettingsTicketの変更と接続参照/revision/解除状態の一致を確認。準備開始時も確認済みcontextへ固定し、直前変更・getter・再入を拒否。transition検証82項目。本体3.13.628・追加送信・保存形式・ZIPは変更なし。
+
 2026-10-06 設定開始の非通信フロー: 旧receipt失効→設定世代更新→preparation開始の順序をまとめるtransitionを追加。信頼済み所有者の同期true確認だけを受け付け、例外・未確認・再入では新ticketを誤発行しない。実際の非通信receipt/settings所有者との結合50項目に合格。送信/自動再送/復元処理は持たず、通常本体への接続もなし。本体3.13.628・ZIP・保存形式は変更なし。
 
 2026-10-06 設定準備器の接続寿命: 非実行preparation sessionを追加し、port/reader/writer・settingsTicket・revision・接続/解除状態へ結合。変更後の人工OK・旧ticket・再入を238項目で検証。本体の切断/再初期化/pagehideも模擬transportで確認し、候補設定commandは送信なし。通常workflowの世代発行/同期失効/追加設定送信は未実装。本体3.13.628・ZIP・保存形式は変更なし。

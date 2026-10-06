@@ -50,7 +50,7 @@ for (const stage of ["clear", "rotate", "context"]) {
     });
     const result = transition.begin();
     check(!result.ok && result.ticket === null && !JSON.stringify(result).includes("private"), "failure cannot issue preparation ticket or expose exception");
-    check(calls.length === ["clear", "rotate", "context"].indexOf(stage) + 1, "no later stage or automatic retry after failure");
+    assert.deepEqual(calls, stage === "clear" ? ["clear"] : stage === "context" ? ["clear", "context"] : ["clear", "context", "rotate"]); checks++;
     if (stage !== "clear") check(o.receipts.inspect(o.attempt).summary === null, "later failure cannot restore old receipt");
   }
 }
@@ -68,5 +68,48 @@ for (const value of [false, null, {}, Promise.resolve(true)]) {
   const o = owners(); let later = 0;
   const transition = createReadOnlySettingsTransition(() => o.state, () => value, () => { later++; return true; });
   check(transition.begin().reason === "receipt_invalidation_unconfirmed" && later === 0, "only synchronous true confirms invalidation");
+}
+{
+  const o = owners();
+  const transition = createReadOnlySettingsTransition(() => o.state,
+    () => { o.receipts.invalidate(); return true; }, () => true);
+  check(!transition.begin().ok, "true without a new settings generation cannot start preparation");
+}
+for (const key of ["port", "reader", "writer", "revision", "connected", "unlocked"]) {
+  const o = owners();
+  const transition = createReadOnlySettingsTransition(() => o.state,
+    () => { o.receipts.invalidate(); return true; }, () => {
+      o.state.settingsTicket = {};
+      o.state[key] = key === "revision" ? 2 : ["connected", "unlocked"].includes(key) ? false : {};
+      return true;
+    });
+  check(transition.begin().reason === "settings_context_changed", "generation rotation cannot hide a changed transport");
+  check(o.receipts.inspect(o.attempt).summary === null, "failed rotation leaves old receipt expired");
+}
+for (const key of ["settingsTicket", "writer"]) {
+  const o = owners(); let reads = 0;
+  const transition = createReadOnlySettingsTransition(() => {
+    reads++;
+    if (reads === 3) o.state[key] = {}; // After the postcondition, while preparation begins.
+    return o.state;
+  }, () => { o.receipts.invalidate(); return true; }, () => { o.state.settingsTicket = {}; return true; });
+  check(!transition.begin().ok, "preparation cannot bind a context changed after rotation verification");
+}
+{
+  const o = owners(); let getterCalls = 0, rotates = 0;
+  const transition = createReadOnlySettingsTransition(() => Object.defineProperty({ ...o.state }, "settingsTicket", {
+    get() { getterCalls++; return o.state.settingsTicket; }
+  }), () => { o.receipts.invalidate(); return true; }, () => { rotates++; return true; });
+  check(!transition.begin().ok && getterCalls === 0 && rotates === 0, "accessor context rejected before rotation without invoking getter");
+}
+for (const atRead of [2, 3]) {
+  const o = owners(); let reads = 0, nested = false, fresh;
+  const transition = createReadOnlySettingsTransition(() => {
+    reads++;
+    if (!nested && reads === atRead) { nested = true; fresh = transition.begin(); }
+    return o.state;
+  }, () => { o.receipts.invalidate(); return true; }, () => { o.state.settingsTicket = {}; return true; });
+  check(!transition.begin().ok && fresh.ok, "late context reentry replaces outer transition");
+  check(transition.inspect(fresh.ticket).ok, "late outer context observation preserves new preparation");
 }
 console.log(`Settings transition: ${checks} checks passed; trusted synthetic owners only, no transport or settings commands`);
