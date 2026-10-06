@@ -9,6 +9,7 @@ import "./validate-readonly-settings-observation.js";
 import "./validate-readonly-settings-session.js";
 import "./validate-settings-runtime-hooks.js";
 import "./validate-readonly-receipt-session.js";
+import "./validate-receipt-runtime-handoff.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["connectObdDeveloperVci", "disconnectObdDeveloperVci", "lockObdDeveloperMode", "lockObdAccess", "setObdDeveloperConnectionState", "resetWebSerialConnectionAttemptMetadata", "isWebSerialPortSelectionCancelled", "getWebSerialConnectionFailureReason", "isCurrentObdSerialOperation", "continueObdSerialOperation", "throwIfObdSerialOperationCancelled", "beginObdBridgeOperation", "isObdBridgeOperationBlocked"];

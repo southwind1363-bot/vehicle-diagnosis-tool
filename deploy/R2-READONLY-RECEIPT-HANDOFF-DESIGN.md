@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 接続寿命付き取得記録と実送受信関数の結合試験
+
+設定hook試験の模擬writer/reader・隔離VMをserial-runtime-harnessへ抽出し、同じ本体関数を二つの試験で使用する。新しい試験はdecoderの戻り文字列を試験側でだけreceipt sessionへ渡し、同一port/reader/writerのまま03/07/0A/0101を送受信する。本体にcapture hookを設置したものではなく、profile・時刻は明示的な試験値。
+
+142項目でS0/S1・1/7/全体byte分割のraw評価、既存の表示正規化との分離、旧commandの遅着拒否、完了後の実disconnect関数による失効を確認。NO DATAは文法成立と意味判定を分け、S1宣言へS0/bare LFを渡すと文法拒否となる。timeout・12000文字超過・decode中の切断/reader交換/writer交換/revision変更/lockでは完全receiptを返さず、試験側の失効処理により遅いpromptも拒否する。追加送信・自動再送はない。
+
+既存設定hook80項目も維持。物理portのopen、driver実行、実車通信は行わない。実transportの設定確認と時刻/完了イベントの所有、productionの同期失効hookは別工程。本体3.13.628・配布ZIP・保存形式は変更なし。
+
 ## 2026-10-06: 取得記録を接続寿命へ結合する非通信モデル
 
 readonly-receipt-sessionは既存captureの外側で接続contextを保持する。begin/startCommand/append/endCommand/finish/inspectの各入口でport/reader/writer参照・revision・connected/unlockedをown data descriptorから確認し、違い・例外・不正contextではcaptureを失効してraw参照と結果を解放する。接続値を戻しても旧ticketは復活しない。呼出元は切断等のイベントでinvalidateを同期実行する必要があり、このモデル自体はイベント購読しない。

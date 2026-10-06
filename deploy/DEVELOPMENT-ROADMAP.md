@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-06 取得記録の実関数結合検証: 共通の模擬serial harnessで本体send/read/完了待機とreceipt sessionを試験側だけ接続。同一接続の4command、S0/S1・1/7/全体byte分割、rawと表示正規化の分離、NO DATA/不正文法、timeout/過大応答/切断/参照交換/revision変更/lockを142項目で確認。既存設定hook80項目も共通harnessへ移行し合格。本体3.13.628・ZIP・通常画面は変更なし。実機profile/時刻/取得hookは未実装。
+
 2026-10-06 取得記録の接続寿命モデル: readonly-receipt-sessionで既存captureをport/reader/writer・revision・接続/解除状態へ結合。各操作で再確認し、変更時にrawと派生結果を失効。試行/commandの私有ticketで旧参照・欠落・複製を拒否し、provider/parser再入が新試行を壊さないことを218項目で検証。profileは明示必須だがcaller宣言のまま。通常transport/画面/保存へは未接続。本体3.13.628・ZIPは変更なし。
 
 3.13.628配布ZIP: 別フォルダーへの展開で851ファイル/16942079 bytesの一致を確認。SHA256: 474D0C3BF0283A56ADBEFBF9679F977CFE9A803108CC667530EB720FBA32E66F。
