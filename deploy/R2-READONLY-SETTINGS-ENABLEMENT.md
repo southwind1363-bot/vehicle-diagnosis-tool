@@ -50,6 +50,10 @@ PDF本文を確認。PP29表のスクリーンショット取得は失敗した�
 
 ## 非実行準備器の実装記録
 
+2026-10-06追記: readonly-settings-transitionで旧取得失効→設定世代更新→準備開始を順序付けた。生成時に指定する信頼済み所有者の同期callbackだけを使い、各操作がtrueを返して確認できた後に次へ進む。Promiseやtruthy objectは完了確認として受け付けない。準備開始で既存の準備ticketを先に失効し、処理中の再入による新しい準備を古い完了で壊さない。
+
+50項目で非通信receipt/settings所有者との結合、各段階の例外・未確認、再入、追加処理や自動再試行がないことを確認。trueは信頼済みcallbackの契約であり、物理的な切断・設定復元・実機操作の証拠ではない。旧取得の失効自体が失敗/未確認の場合は新準備を拒否し、旧取得が消えたと断言しない。失効確認後の後段失敗では、旧取得を復元しない。通常画面・transportへは未接続で、既存の保存済み診断結果を削除する処理ではない。
+
 2026-10-06追記: readonly-settings-preparation-sessionで準備器をport/reader/writer、settingsTicket、revision、connected/unlockedへ結合した。begin/record/inspectでown data descriptorからcontextを確認し、変化・例外・不正値では結果を失効。旧ticketはproviderを呼ばず拒否し、provider内の再入が新しい準備を壊さない。
 
 238項目で全段階のcontext変更・getter非実行・復活拒否・再入を確認。本体初期化/切断/再初期化/pagehideを模擬transportで動かし、設定所有者が無効になった後の人工OKも拒否する。候補3commandは送信していない。このwrapperはイベントを購読せず、実接続では呼出側の同期invalidateが必要。開始時の旧取得失効や新設定世代の発行も本体workflowではまだ未実装である。返却済みsnapshotを物理的に撤回できるとは扱わない。
