@@ -1,9 +1,9 @@
 // Fixed development samples only. No clear event, external receipt, storage or transport.
-import { createReadOnlyReceiptOwner } from "./readonly-receipt-owner.js";
+import { createReadOnlyReceiptCapture } from "./readonly-receipt-capture.js";
 
 export function createSingleReadoutPreviewSession(api, scenario = "normal") {
   if (!["normal", "no_data", "conflict", "missing_prompt"].includes(scenario)) throw new TypeError("unknown_single_readout_sample");
-  const owner = createReadOnlyReceiptOwner(api);
+  const owner = createReadOnlyReceiptCapture(api);
   const ticket = owner.begin();
   try {
     ["03", "07", "0A", "0101"].forEach((command, index) => {
@@ -12,9 +12,13 @@ export function createSingleReadoutPreviewSession(api, scenario = "normal") {
       if (scenario === "no_data") transcript = "NO DATA\r>";
       if (scenario === "conflict" && index === 0) transcript = transcript.replace(">", "7E8 04 43 01 01 01 AA AA AA\r>");
       if (scenario === "missing_prompt" && index === 3) transcript = transcript.replace(">", "");
-      const result = owner.append(ticket, { command, profile: "iso15765_11bit_normal_h1_caf1_d0_s1_e0",
-        startedAt: index * 2, completedAt: index * 2 + 1, completion: "complete", transcript });
-      if (!result.ok) throw new Error("single_readout_sample_unavailable");
+      const started = owner.startCommand(ticket, command, "iso15765_11bit_normal_h1_caf1_d0_s1_e0", index * 2);
+      if (!started.ok) throw new Error("single_readout_sample_unavailable");
+      // Artificial chunks and times for the fixed sample; no serial reception is implied.
+      for (let offset = 0; offset < transcript.length; offset += 7) {
+        if (!owner.append(started.ticket, transcript.slice(offset, offset + 7)).ok) throw new Error("single_readout_sample_unavailable");
+      }
+      if (!owner.endCommand(started.ticket, index * 2 + 1, "complete").ok) throw new Error("single_readout_sample_unavailable");
     });
     if (!owner.finish(ticket, "complete").ok) throw new Error("single_readout_sample_unavailable");
     return Object.freeze({

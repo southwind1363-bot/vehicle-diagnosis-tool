@@ -6,7 +6,8 @@ export function createMonitorPreviewBrowserSource(kind = "pair") {
   const files = kind === "single" ? [
     ["readonly-receipt-raw-validation.js", [], ["createReceiptRawValidation"]],
     ["readonly-receipt-owner.js", ['import { createReceiptRawValidation } from "./readonly-receipt-raw-validation.js";'], ["createReadOnlyReceiptOwner"]],
-    ["single-readout-preview-session.js", ['import { createReadOnlyReceiptOwner } from "./readonly-receipt-owner.js";'], ["createSingleReadoutPreviewSession"]]
+    ["readonly-receipt-capture.js", ['import { createReadOnlyReceiptOwner } from "./readonly-receipt-owner.js";'], ["createReadOnlyReceiptCapture"]],
+    ["single-readout-preview-session.js", ['import { createReadOnlyReceiptCapture } from "./readonly-receipt-capture.js";'], ["createSingleReadoutPreviewSession"]]
   ] : [
     ["dtc-clear-readout-scope.js", [], ["inspectDtcClearReadoutFixtureScope", "createDtcClearReadoutFixtureScope"]],
     ["dtc-clear-scoped-readout-core.js", ['import { inspectDtcClearReadoutFixtureScope } from "./dtc-clear-readout-scope.js";'], ["createDtcClearFixtureValidators"]],

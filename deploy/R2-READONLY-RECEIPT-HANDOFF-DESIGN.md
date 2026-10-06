@@ -1,5 +1,11 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 一取得の操作見本への接続
+
+`single-readout-preview-session.js`は固定応答を7文字ずつcaptureへ追加し、commandの明示終了後に4記録を検証する。既存のinspect/disposeだけを外へ公開し、閉鎖・条件変更ではcaptureを失効させる。独立HTMLの固定module一覧にもcaptureを追加した。chunk分割と時刻は人工値であり、400msの待機も実受信の再現ではない。
+
+Node/Chromium共通の199操作で1文字/7文字/全体入力のsummary一致、旧command遅着、旧試行・複製参照の拒否、上限超過後のsummary非公開と破棄を確認。正常/NO DATA/矛盾/終端欠落の既存表示と操作HTMLの閉鎖・遅着試験も合格。実transportへの接続には引き続きdecode・設定観測・完了イベントの契約が必要。
+
 ## 2026-10-06: 分割文字列の取得境界モデル
 
 `scripts/fixtures/readonly-receipt-capture.js`はdecode済みの非空文字列chunkを、コマンド固有ticketにだけ追加する。begin/startCommand/append/endCommand/finish/inspect/invalidateを持つ開発用モデルで、portやdecoder、時計を呼ばない。profile/時刻はcaller宣言のまま。promptを見つけても自動終了・送信せず、明示終了時に生文字列を既存所有者へ渡す。

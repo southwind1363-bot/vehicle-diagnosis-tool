@@ -24,7 +24,7 @@ module.exports = async function validateDtcClearBrowserParity(context) {
   const assets = new Map([['/runtime.js', runtimeSource]]);
   for (const name of ['dtc-clear-browser-cases.js', 'dtc-clear-scoped-readout-core.js', 'dtc-clear-readout-scope.js',
     'dtc-clear-browser-sample.js', 'dtc-clear-browser-preview-session.js', 'monitor-preview-controller.js', 'monitor-preview-view.js',
-    'readonly-receipt-owner.js', 'readonly-receipt-raw-validation.js', 'single-readout-preview-session.js', 'single-readout-preview-view.js']) {
+    'readonly-receipt-owner.js', 'readonly-receipt-capture.js', 'readonly-capture-browser-cases.js', 'readonly-receipt-raw-validation.js', 'single-readout-preview-session.js', 'single-readout-preview-view.js']) {
     assets.set('/' + name, fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8'));
   }
   assets.set('/index.html', '<!doctype html><html lang="ja"><meta charset="utf-8"><title>固定receipt照合試験</title><script src="/runtime.js"></script><script type="module">import {runDtcClearBrowserCases} from "./dtc-clear-browser-cases.js"; window.runFixtureCases = runDtcClearBrowserCases;</script></html>');
@@ -52,6 +52,7 @@ module.exports = async function validateDtcClearBrowserParity(context) {
     console.log('Single-readout Node/Chromium semantic parity: 17 cases passed');
     await require('./validate-dtc-clear-browser-owner.cjs')(page, expected[0].text.text);
     await require('./validate-single-readout-preview.cjs')(page, runtime.window.ObdReadOnly);
+    await require('./validate-readonly-capture-browser.cjs')(page, runtime.window.ObdReadOnly);
     assert.deepEqual(errors, []); assert.deepEqual(rejectedRequests, []);
     console.log('Fixed receipt Node/Chromium parity: 14 cases, monitor output, disposal, invalidation and false authority flags passed');
   } finally { await page.close(); }
