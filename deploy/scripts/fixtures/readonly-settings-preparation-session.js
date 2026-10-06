@@ -46,6 +46,9 @@ export function createReadOnlySettingsPreparationSession(readContext) {
     record(ticket, command, completion, response) {
       return run(ticket, ownerTicket => owner.record(ownerTicket, command, completion, response));
     },
+    recordProtocol(ticket, command, completion, response) {
+      return run(ticket, ownerTicket => owner.recordProtocol(ownerTicket, command, completion, response));
+    },
     inspect(ticket) { return run(ticket, ownerTicket => owner.inspect(ownerTicket)); },
     invalidate
   });

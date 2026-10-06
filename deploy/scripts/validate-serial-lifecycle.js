@@ -12,6 +12,7 @@ import "./validate-settings-observation-view.js";
 import "./validate-readonly-settings-preparation.js";
 import "./validate-settings-preparation-session.js";
 import "./validate-settings-transition.js";
+import "./validate-settings-preparation-protocol.js";
 import "./validate-readonly-receipt-session.js";
 import "./validate-receipt-runtime-handoff.js";
 

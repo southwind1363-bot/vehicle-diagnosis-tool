@@ -5,13 +5,13 @@ export function createReadOnlySettingsPreparation() {
   const result = (ok, reason = null, ticket = null) => Object.freeze({ ok, reason, ticket });
   const matches = ticket => current !== null && current.ticket === ticket;
   const fail = reason => {
-    current.phase = "rejected"; current.reason = reason; current.accepted = [];
+    current.phase = "rejected"; current.reason = reason; current.accepted = []; current.protocol = null;
     return result(false, reason);
   };
   return Object.freeze({
     begin() {
       const ticket = Object.freeze({});
-      current = { ticket, phase: "preparing", accepted: [], reason: null };
+      current = { ticket, phase: "preparing", accepted: [], protocol: null, reason: null };
       return result(true, null, ticket);
     },
     record(ticket, command, completion, response) {
@@ -24,11 +24,23 @@ export function createReadOnlySettingsPreparation() {
       if (current.accepted.length === commands.length) current.phase = "acknowledgements_observed";
       return result(true);
     },
+    recordProtocol(ticket, command, completion, response) {
+      if (!matches(ticket)) return result(false, "unknown_or_expired_preparation");
+      if (current.phase === "rejected") return result(false, "preparation_ended");
+      if (current.phase !== "acknowledgements_observed" || command !== "ATDPN") return fail("preparation_protocol_order_mismatch");
+      if (completion !== "complete") return fail("preparation_protocol_incomplete");
+      // Exact bounded primitive comparison, without coercion or adapter-default inference.
+      if (!["6", "8", "A6", "A8"].includes(response)) return fail("preparation_protocol_unavailable");
+      current.protocol = response;
+      current.phase = "protocol_observed";
+      return result(true);
+    },
     inspect(ticket) {
       if (!matches(ticket)) return Object.freeze({ ok: false, reason: "unknown_or_expired_preparation", summary: null });
       const summary = Object.freeze({ phase: current.phase, reason: current.reason,
         provenance: "simulated_only", acceptedCommands: Object.freeze([...current.accepted]),
         nextCommand: current.phase === "preparing" ? commands[current.accepted.length] : null,
+        protocolNumberReported: current.protocol,
         profile: null, profileVerified: false, rawRetained: false,
         executionEnabled: false, vehicleCommandEnabled: false, wouldTransmit: false, canExecute: false,
         realTransportProofAvailable: false, automaticRetryAllowed: false, restorationVerified: false });

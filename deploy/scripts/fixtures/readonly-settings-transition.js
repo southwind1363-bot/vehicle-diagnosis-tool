@@ -65,6 +65,12 @@ export function createReadOnlySettingsTransition(readContext, invalidateReceipts
       const result = preparation.record(record.preparationTicket, command, completion, response);
       return current === record ? result : reject("settings_transition_replaced");
     },
+    recordProtocol(ticket, command, completion, response) {
+      const record = current;
+      if (!record || record.ticket !== ticket) return reject("unknown_or_expired_transition");
+      const result = preparation.recordProtocol(record.preparationTicket, command, completion, response);
+      return current === record ? result : reject("settings_transition_replaced");
+    },
     inspect(ticket) {
       const record = current;
       if (!record || record.ticket !== ticket) return reject("unknown_or_expired_transition");

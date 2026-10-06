@@ -52,6 +52,10 @@ PDF本文を確認。PP29表のスクリーンショット取得は失敗した�
 
 ## 非実行準備器の実装記録
 
+2026-10-07 通信番号追記: preparationへrecordProtocol(ticket, command, completion, response)を追加し、session/transitionでも同じ接続・設定世代の照合を通す。固定3設定の単一OK後に限り、ATDPN/completeと6・8・A6・A8の単一文字列を受理しprotocol_observedへ進む。早すぎる番号、再照会、不完全/不明/曖昧な報告は試行を拒否し、設定受理一覧と番号を消去する。旧ticketからの呼出しは新試行を変更しない。
+
+259項目で順序・固定入力・接続参照/設定世代/解除状態の変化・再入・遅着・失効を確認。モデルへの呼出順だけを確認するため、利用者が後から渡した文字列の実受信時刻や車両疎通を証明するものではない。報告値はprotocolNumberReportedとして保持するがprofileはnullで、capture開始や車両操作を許可しない。初期化のecho/header/space設定、実受信区間と時刻の結合は別途必要。通常transportへの接続はなく、本体3.13.629とZIPは変更しない。
+
 2026-10-07追記: transitionの世代更新callbackがtrueを返しても、settingsTicketが変わっていなければ拒否するよう修正。旧receiptの失効確認後にcontextをown data descriptorから取り、更新後は新しいsettingsTicketと、同一port/reader/writer/revision/connected/unlockedを要求する。準備器を開始する際にもその確認済みcontextと照合し、確認直後の参照変更を取り込まない。
 
 82項目で未変更の世代、接続入替、更新中のロック/切断、確認後の変更、getter非実行、各観測点の再入を確認。これらは信頼済みproviderの参照照合であり、アダプターの設定値・実機由来・物理的な切断を証明しない。通常transportへの配線と追加commandの許可は引き続き未実装。
