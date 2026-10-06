@@ -1,5 +1,7 @@
 # R2 一取得内のDTC/readiness観測を共通化する契約
 
+2026-10-06操作見本: `node deploy/scripts/preview-single-readout-interactive.js`で独立した単回の模擬HTMLをstdoutへ生成する。追加引数は拒否。正常/no_data/conflict/missing_promptと人工失敗を選択し、条件変更で旧表示を閉じる。開始時の固定記録を所有し、自動取得/自動再試行はしない。単回版はreadonly owner/validation/sessionだけを固定manifestへ収録し、clear sampleを生成しない。共通の操作処理とCSP、私有runtimeを使用。オフラインChromiumで本文一致、待機中切替・閉鎖・失敗・回復、pagehide・履歴復帰、キーボード・幅・未許可script拒否を検証。通常UIや配布ZIPには追加していない。
+
 2026-10-06表示接続: 固定の正常/no_data/conflict/missing_promptだけを生成するsingle-readout-preview-sessionを追加。所有者で検査後、inspect時にticketを再確認して日本語へ変換する。source一覧・raw・payloadは表示しない。全体の0件やreadiness全項目完了は主張せず、対象ECU範囲の未確認を各区分に残す。共通controllerと一取得用DOM adapterで更新/閉鎖/遅着成功・失敗を34項目で確認。意味検証APIのないruntimeは表示不可。通常UIへの接続や操作HTMLへの追加は未実施。
 
 2026-10-06実装: evaluateSingleReadoutRawReceiptsを追加し、前後評価器とraw構造検査・内部observerを共用。新入口は4 raw receiptのみを受け、日時/接続tokenを要求しない。取得元はunverified_input、source/raw/payloadは非公開、全権限flagはfalse。開発用所有者のfinishへ接続し、文法と意味観測を別々に保持。17ケース/346項目、変更前の前後評価結果全体17ケース一致、Node/Chromiumの新入口一致を検証する。通常UI/実transport/保存へは未接続。

@@ -4,19 +4,22 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { spawnSync } = require('node:child_process');
 
-module.exports = async function validateInteractiveMonitor(context, output) {
+module.exports = async function validateInteractiveMonitor(context, output, kind = "pair") {
+  const single = kind === "single";
+  const artifact = name => path.join(output, single ? "single-" + name : name);
   const vm = require('node:vm');
   const { createDtcClearBrowserPreviewSession } = await import('./fixtures/dtc-clear-browser-preview-session.js');
   const runtime = vm.createContext({ window: {}, navigator: {} });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../obd-readonly.js'), 'utf8'), runtime);
-  const sample = createDtcClearBrowserPreviewSession(runtime.window.ObdReadOnly);
+  const { createSingleReadoutPreviewSession } = await import("./fixtures/single-readout-preview-session.js");
+  const sample = single ? createSingleReadoutPreviewSession(runtime.window.ObdReadOnly) : createDtcClearBrowserPreviewSession(runtime.window.ObdReadOnly);
   let expected;
   try { assert(sample.inspect().ok); expected = sample.inspect().text; }
   finally { sample.dispose(); }
   const { createInteractiveMonitorPreview } = await import('./preview-monitor-review-interactive.js');
-  const file = path.join(output, 'interactive.html');
-  fs.writeFileSync(file, createInteractiveMonitorPreview(), 'utf8');
-  const invalid = spawnSync(process.execPath, [path.join(__dirname, 'preview-monitor-review-interactive.js'), 'private.json'], { encoding: 'utf8', timeout: 10000 });
+  const file = artifact('interactive.html');
+  fs.writeFileSync(file, createInteractiveMonitorPreview(kind), 'utf8');
+  const invalid = spawnSync(process.execPath, [path.join(__dirname, single ? 'preview-single-readout-interactive.js' : 'preview-monitor-review-interactive.js'), 'private.json'], { encoding: 'utf8', timeout: 10000 });
   assert.equal(invalid.status, 2); assert.equal(invalid.stdout, ''); assert(!invalid.stderr.includes('private.json'));
   const page = await context.newPage();
   const errors = [], external = [];
@@ -49,11 +52,11 @@ module.exports = async function validateInteractiveMonitor(context, output) {
     await page.clock.runFor(500);
     assert.equal(await page.locator('pre').textContent(), expected);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    await page.screenshot({ path: path.join(output, '390-interactive-ready.png'), fullPage: true });
+    await page.screenshot({ path: artifact('390-interactive-ready.png'), fullPage: true });
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ colorScheme: 'dark' });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    await page.screenshot({ path: path.join(output, '1280-interactive-dark.png') });
+    await page.screenshot({ path: artifact('1280-interactive-dark.png') });
     await page.setViewportSize({ width: 390, height: 900 });
     await page.emulateMedia({ colorScheme: 'light' });
     // Refresh clears immediately; reopening while old work is pending retains only the new result.
@@ -67,12 +70,12 @@ module.exports = async function validateInteractiveMonitor(context, output) {
     await close.focus();
     await page.keyboard.press('Enter');
     assert.equal(await page.locator('#review').textContent(), '');
-    await page.screenshot({ path: path.join(output, '390-interactive-closed.png') });
+    await page.screenshot({ path: artifact('390-interactive-closed.png') });
     const scenario = page.getByLabel('模擬条件', { exact: true });
     await scenario.selectOption('failure');
     await show.click();
     await page.clock.runFor(500);
-    assert.equal(await page.locator('#review [role="status"]').innerText(), '前後記録を確認できません');
+    assert.equal(await page.locator('#review [role="status"]').innerText(), single ? '記録を確認できません' : '前後記録を確認できません');
     assert.equal(await page.locator('pre').textContent(), '');
     assert(await show.isEnabled());
     assert.equal(await page.evaluate(() => document.activeElement.id), 'show', 'Failure must retain the initiating keyboard position');
@@ -81,7 +84,7 @@ module.exports = async function validateInteractiveMonitor(context, output) {
     assert.equal(await page.locator('#review').innerText(), failureText, 'Failure retried without explicit input');
     assert(!failureText.includes('simulated_preview_failure'));
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    await page.screenshot({ path: path.join(output, '390-interactive-failure.png') });
+    await page.screenshot({ path: artifact('390-interactive-failure.png') });
     // A failed old attempt must not clear a new success after changing the scenario.
     await show.click();
     await scenario.selectOption('normal');
@@ -98,7 +101,27 @@ module.exports = async function validateInteractiveMonitor(context, output) {
     await show.click();
     await page.clock.runFor(500);
     assert.equal(await page.locator('pre').textContent(), '');
-    assert.equal(await page.locator('#review [role="status"]').innerText(), '前後記録を確認できません');
+    assert.equal(await page.locator('#review [role="status"]').innerText(), single ? '記録を確認できません' : '前後記録を確認できません');
+    if (single) {
+      assert.equal(await page.locator('h1').innerText(), '一回分の模擬記録');
+      for (const name of ['normal', 'no_data', 'conflict', 'missing_prompt']) {
+        // Switch during a pending read: it must close immediately and never auto-start.
+        await scenario.selectOption('normal');
+        await show.click();
+        await scenario.selectOption(name === 'normal' ? 'no_data' : name);
+        assert.equal(await page.locator('#review').textContent(), '');
+        await page.clock.runFor(500);
+        assert.equal(await page.locator('#review').textContent(), '');
+        await scenario.selectOption(name);
+        await show.click(); await page.clock.runFor(500);
+        const owned = createSingleReadoutPreviewSession(runtime.window.ObdReadOnly, name);
+        try { assert.equal(await page.locator('pre').textContent(), owned.inspect().text); }
+        finally { owned.dispose(); }
+        assert.equal(await page.locator('#review h2').textContent(), '模擬の一回分の記録');
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await page.screenshot({ path: artifact('390-' + name + '.png'), fullPage: true });
+      }
+    }
     // The pagehide listener closes ready/pending owners, including a simulated persisted page.
     await scenario.selectOption('normal');
     for (const pending of [false, true]) {
@@ -122,6 +145,6 @@ module.exports = async function validateInteractiveMonitor(context, output) {
     await show.click(); await page.clock.runFor(500);
     assert.equal(await page.locator('pre').textContent(), expected, 'Explicit read after history return failed');
     assert.deepEqual(errors, []); assert.deepEqual(external, []);
-    console.log('Interactive receipt preview: browser-derived output, close/pagehide, late results, failure, recovery, focus and CSP passed');
+    console.log(kind + ' interactive receipt preview: browser-derived output, close/pagehide, late results, failure, recovery, focus and CSP passed');
   } finally { await page.close(); }
 };

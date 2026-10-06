@@ -1,8 +1,13 @@
 // Node-only assembly of a fixed local module list for the standalone offline demo.
 import fs from "node:fs";
 
-export function createMonitorPreviewBrowserSource() {
-  const files = [
+export function createMonitorPreviewBrowserSource(kind = "pair") {
+  if (!["pair", "single"].includes(kind)) throw new TypeError("unknown_preview_kind");
+  const files = kind === "single" ? [
+    ["readonly-receipt-raw-validation.js", [], ["createReceiptRawValidation"]],
+    ["readonly-receipt-owner.js", ['import { createReceiptRawValidation } from "./readonly-receipt-raw-validation.js";'], ["createReadOnlyReceiptOwner"]],
+    ["single-readout-preview-session.js", ['import { createReadOnlyReceiptOwner } from "./readonly-receipt-owner.js";'], ["createSingleReadoutPreviewSession"]]
+  ] : [
     ["dtc-clear-readout-scope.js", [], ["inspectDtcClearReadoutFixtureScope", "createDtcClearReadoutFixtureScope"]],
     ["dtc-clear-scoped-readout-core.js", ['import { inspectDtcClearReadoutFixtureScope } from "./dtc-clear-readout-scope.js";'], ["createDtcClearFixtureValidators"]],
     ["dtc-clear-browser-sample.js", ['import { createDtcClearReadoutFixtureScope } from "./dtc-clear-readout-scope.js";'], ["createDtcClearBrowserFixtureInput"]],
