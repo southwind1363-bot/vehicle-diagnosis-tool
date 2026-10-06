@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 取得記録を接続寿命へ結合する非通信モデル
+
+readonly-receipt-sessionは既存captureの外側で接続contextを保持する。begin/startCommand/append/endCommand/finish/inspectの各入口でport/reader/writer参照・revision・connected/unlockedをown data descriptorから確認し、違い・例外・不正contextではcaptureを失効してraw参照と結果を解放する。接続値を戻しても旧ticketは復活しない。呼出元は切断等のイベントでinvalidateを同期実行する必要があり、このモデル自体はイベント購読しない。
+
+試行とcommandのticketは外側でも私有参照にし、内部captureのticketを公開しない。旧/複製/欠落commandはproviderを呼ぶ前に拒否する。providerやparserから再入して新しい取得が始まった場合、古い処理結果を返さず新試行を維持する。完了した結果の参照もcontextを再確認するが、呼出側に渡し済みのsnapshotを物理的に撤回するものではない。
+
+218項目でS0/S1の既存評価、全操作のcontext変更、完了後切断、遅着、getter非実行、例外・再入を検証。profileは引数で明示必須であり、実測設定や実車同一性を証明しない。実機設定が未確認の現行productionへは接続しない。通常画面・保存形式・本体3.13.628・配布ZIPは変更なし。
+
 ## 2026-10-06: protocol確認の分類失敗で観測を失効
 
 ATDPにERRORが返っても、その後のATDPNがA6なら観測が残る不整合を模擬byte試験で再現した。captureObdDeveloperProtocolAfterStoredDtcは、既存分類がcompletedの時だけ番号を記録し、それ以外では開始時ticketが現在のticketと一致する場合に限り失効する。失効後のATDPNは旧ticketとして拒否される。既存のcommand順序・identity集約・戻り値は変更しない。
