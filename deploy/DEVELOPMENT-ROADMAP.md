@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-06 R2一取得の模擬表示接続: single-readout-preview-session/viewを追加し、固定4例のraw→所有者→意味観測→日本語表示を接続。NO DATAはゼロ件にせず、応答矛盾/終端欠落は保留を表示。前後比較と区別した見出し・状態案内を使用。Node/browser本文一致、更新/閉鎖/遅着/失敗の34項目と既存境界7484等合格。開発用結合試験のみ、通常UI/実車通信/保存は未接続。本体3.13.624・ZIPは変更なし。
+
 2026-10-06 R2一取得意味観測の実装: 共通raw構造検査と既存observerを使うevaluateSingleReadoutRawReceiptsを追加。仮日時/接続tokenなしでDTC/readinessを観測し、開発用所有者へ接続。17ケース346項目と旧前後評価17ケース一致、既存境界検証合格。通常UI・実通信・診断分類・保存schemaは変更なし。本体/キャッシュ3.13.624へ更新。ZIPを別フォルダーへ展開し851ファイル/16932753 bytesの一致確認。SHA256: CCBDECE8064FCA2E0A422188CF6201A3403D6AAA81603510EFC0937527B6840E。
 
 2026-10-06 R2一取得の意味観測設計: 内部observeGenericObdDtcClearReadoutReceiptsが前後評価器から共用されることをソース確認。count/pair・0/重複コード・同source矛盾・readiness長さ・negative/NO DATAの既存判定を整理し、日時/接続参照を捏造せずraw入口を共通化する契約を追加。文書のみ、意味検証の接続は未実装。本体3.13.623・ZIP・診断分類・保存・送信許可は変更なし。

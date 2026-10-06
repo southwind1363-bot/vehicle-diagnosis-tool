@@ -1,9 +1,9 @@
 // Development-only DOM adapter. Never treats display snapshots as execution authority.
-export function attachMonitorPreviewView(container, review) {
+export function attachMonitorPreviewView(container, review, copy = {}) {
   const document = container.ownerDocument;
   const panel = document.createElement("section");
   const heading = document.createElement("h2");
-  heading.textContent = "模擬の前後記録";
+  heading.textContent = copy.heading ?? "模擬の前後記録";
   const notice = document.createElement("p");
   notice.textContent = "実車の読取結果ではありません。実車比較は未確認・車両送信なし。";
   const status = document.createElement("p");
@@ -18,7 +18,7 @@ export function attachMonitorPreviewView(container, review) {
   let active = true;
   const labels = Object.freeze({ empty: "前後記録がありません", reading: "前後記録を確認中",
     ready: "固定の模擬記録を表示中", invalidated: "記録の確認条件が変わりました",
-    unavailable: "前後記録を確認できません" });
+    unavailable: "前後記録を確認できません", ...copy.labels });
   const render = snapshot => {
     if (!active) return;
     // Clear before interpreting a replacement, including unknown or malformed state.
