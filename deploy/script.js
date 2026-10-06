@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.631";
+const APP_VERSION = "3.13.632";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9857,7 +9857,7 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
     throw new Error(`許可していないコマンドです: ${normalized}`);
   }
   const { writer, reader, port, encoder } = obdDevSession;
-  if (!writer || !port || !obdDevSession.readLoopActive) throw new Error("elm_transport_disconnected");
+  if (!writer || !reader || !port || obdDevSession.readLoopActive !== true) throw new Error("elm_transport_disconnected");
   if (obdSerialDisconnectOperation || obdDevSession.pendingCommandOperation || obdDevSession.pendingWriteOperation) throw new Error("elm_write_busy");
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 60000) throw new Error("elm_write_timeout_invalid");
   const commandOperation = { writer, reader, port, revision };
@@ -9909,10 +9909,12 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
       clearTimeout(timer);
     }
     throwIfObdSerialOperationCancelled(revision);
-    if (obdDevSession.writer !== writer || obdDevSession.reader !== reader || obdDevSession.port !== port) throw new Error("elm_transport_disconnected");
+    if (obdDevSession.pendingCommandOperation !== commandOperation || obdDevSession.readLoopActive !== true
+      || obdDevSession.writer !== writer || obdDevSession.reader !== reader || obdDevSession.port !== port) throw new Error("elm_transport_disconnected");
     const response = await readElmDeveloperResponse(timeoutMs);
     throwIfObdSerialOperationCancelled(revision);
-    if (obdDevSession.pendingCommandOperation !== commandOperation || obdDevSession.writer !== writer || obdDevSession.reader !== reader || obdDevSession.port !== port) throw new Error("elm_transport_disconnected");
+    if (obdDevSession.pendingCommandOperation !== commandOperation || obdDevSession.readLoopActive !== true
+      || obdDevSession.writer !== writer || obdDevSession.reader !== reader || obdDevSession.port !== port) throw new Error("elm_transport_disconnected");
     if (!response) throw new Error(`elm_response_timeout:${normalized}`);
     return response;
   } finally {

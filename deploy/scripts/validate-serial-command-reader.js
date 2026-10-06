@@ -24,6 +24,31 @@ function client() {
     advance() { now = 3000; }, expire() { now = 3000; assert.ok(timer); timer(); } };
 }
 // Exercise the actual sender with deferred writes/responses; never opens a port.
+for (const [key, value] of [["reader", null], ["reader", undefined], ["writer", null], ["port", null],
+  ...[false, null, undefined, 0, 1, "true"].map(value => ["readLoopActive", value])]) {
+  const c = client(); c.session[key] = value; c.session.textBuffer = "keep_previous_buffer";
+  const pending = c.context.sendElmDeveloperCommand("03", 3000);
+  const rejected = assert.rejects(pending, /elm_transport_disconnected/);
+  c.writing.resolve(); c.response.resolve("43 00 00"); await rejected; checks++;
+  check(c.counts().writes === 0 && c.counts().reads === 0 && c.counts().disconnects === 0, "unavailable receiver rejects before transport activity");
+  check(c.session.textBuffer === "keep_previous_buffer" && !c.session.pendingCommandOperation && !c.session.pendingWriteOperation, "preflight rejection preserves buffer and creates no owner");
+}
+for (const [key, value] of [["pendingCommandOperation", {}], ["pendingCommandOperation", null],
+  ["readLoopActive", false], ["readLoopActive", 1]]) {
+  const c = client(), pending = c.context.sendElmDeveloperCommand("03", 3000);
+  const rejected = assert.rejects(pending, /elm_transport_disconnected/);
+  c.session[key] = value; c.writing.resolve(); c.response.resolve("43 00 00"); await rejected; checks++;
+  check(c.counts().writes === 1 && c.counts().reads === 0, "changed ownership/read loop rejects before response wait");
+  check(c.session[key] === value && !c.session.pendingWriteOperation, "old completion preserves replacement state");
+}
+for (const value of [false, 1, "true"]) {
+  const c = client(), pending = c.context.sendElmDeveloperCommand("03", 3000);
+  const rejected = assert.rejects(pending, /elm_transport_disconnected/);
+  c.writing.resolve(); await new Promise(setImmediate);
+  check(c.counts().reads === 1, "response was pending before receive loop changed");
+  c.session.readLoopActive = value; c.response.resolve("43 00 00"); await rejected; checks++;
+  check(!c.session.pendingCommandOperation && c.counts().writes === 1, "late response cannot succeed after receive loop stops");
+}
 for (const replacement of [{}, null]) {
   const c = client(), pending = c.context.sendElmDeveloperCommand("03", 3000);
   const rejected = assert.rejects(pending, /elm_transport_disconnected/);
