@@ -5,6 +5,7 @@ import "./validate-serial-response-lines.js";
 import "./validate-serial-settings.js";
 import "./validate-serial-integration.js";
 import "./validate-serial-receipt-handoff.js";
+import "./validate-readonly-settings-observation.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["connectObdDeveloperVci", "disconnectObdDeveloperVci", "lockObdDeveloperMode", "lockObdAccess", "setObdDeveloperConnectionState", "resetWebSerialConnectionAttemptMetadata", "isWebSerialPortSelectionCancelled", "getWebSerialConnectionFailureReason", "isCurrentObdSerialOperation", "continueObdSerialOperation", "throwIfObdSerialOperationCancelled", "beginObdBridgeOperation", "isObdBridgeOperationBlocked"];

@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 初期化・protocol応答の開発用記録
+
+`readonly-settings-observation.js`は現行のATZ/ATE0/ATL0/ATS0/ATH1/ATSP0と、その後の単一ATDPN応答を記録する非通信モデル。私有ticketの参照で試行を区別し、begin/失効では旧観測を使用不能にする。正規化済み応答を受け、初回ATE0のecho移行だけは`ATE0\nOK`を許す。ほかは厳密な`OK`のみで、部分一致・複数OK・ERROR混在は拒否する。順序違反/不正応答後は観測を破棄する。
+
+ATZは非空の応答を受け取ったことしか扱わず、bannerからreset成功・既定値・adapter真正性を推定しない。ATSP0へのOKとATDPNの11bit対応番号の報告は別観測。6/8/A6/A8でもCAF/D/アドレス方式は不明なためprofile=null・profileVerified=falseを維持する。summaryにはcommand名と限定protocol値、不明項目だけを残し、raw応答は保持しない。
+
+314項目で拒否・失効・不明設定を検証。さらに実際のinitializeElmDeveloperAdapterと分類関数を隔離VMで使い、模擬送信先への6commandと各失敗時停止を照合した。実機やportは使わず、productionの設定記録hook・decode/完了境界・接続寿命は未接続。明示的な失効の配線と、残る設定をどう観測するかは次工程。通常UI/保存schema/送信許可を変更しない。
+
 ## 2026-10-06: S0の一取得評価・所有者・見本への接続
 
 一取得APIは四つのreceiptすべてが同じ許可profile（S0またはS1）であることを確認し、既存のDTC/readiness観測へ渡す。profileは必須で、混在・未知値を拒否する。消去前後APIは従来どおりS1に限定し、今回の拡張を消去処理へ適用しない。

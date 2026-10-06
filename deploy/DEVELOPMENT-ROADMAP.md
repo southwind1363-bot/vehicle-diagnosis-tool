@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-06 R2設定応答の開発用所有者: 現行6初期化commandの順序と厳密なOK応答、初期化後の単一ATDPN報告を私有ticketへ記録。ATZのbannerから既定値を推定せず、CAN自動整形/DLC表示/アドレス方式が不明なのでprofileは常にnull。314項目で曖昧応答・順序違反・不明protocol・旧参照・失効を確認し、実初期化関数を模擬応答で動かして成功後もprofile未確定となることを検証。production hook/追加送信/保存は未実装。本体3.13.626・ZIPは変更なし。
+
 2026-10-06 R2一取得のS0接続: evaluateSingleReadoutRawReceiptsで四つのreceiptが同一S0/S1 profileの場合だけ受理。所有者/captureは生成時のprofileを固定し既定S1を維持。17ケースのS0/S1意味結果・所有者・分割受信の一致、4位置のprofile混在と不明設定の拒否、消去前後APIのS1限定を確認。操作見本へ空白なし応答を追加。本体/キャッシュ3.13.626。設定の実測・実接続・通常UI・保存schemaの変更はなし。
 
 3.13.626配布ZIP: 別フォルダーへの展開で851ファイル/16933527 bytesの一致を確認。SHA256: 92D05ADE17DD7334743897C0FA5FAC8F3097EE66C6D9C9C954FB269D4B21BCA0。
