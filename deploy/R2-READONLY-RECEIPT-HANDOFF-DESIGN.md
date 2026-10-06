@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: 実受信関数を使う模擬byte結合試験
+
+`validate-serial-receipt-handoff.js`はscript.jsから実際のread loop・完了待機・表示加工関数を読み込み、有限の模擬byte列とTextDecoderを使う。テスト側だけにdecode結果の観測処理を置き、captureへ渡す。navigator/実ポート/送信は使用せず、productionのhookや取得所有権を追加したことにはならない。profileと時刻は宣言された試験値、キャンセル監視はstubであり、実接続寿命の証明には使わない。
+
+208項目で1/7/全体byte分割、CRLF・promptの無加工保持と既存表示結果の一致を確認。加工済み表示にpromptを足してもraw検査を通らず、S0応答・bare LFも固定S1/CR profileでは拒否される。終端欠落・空応答・容量超過ではテスト所有者を失効させ、遅着を拒否する。通常serial検証に登録した。
+
+実read loopの上限は12000文字で、超過時にbufferを消去しserial_response_too_largeとして切断する。captureの32768文字上限まで受信できるわけではない。今後の配線は、この早い失敗境界より後でrawを復元せず、切断と同時に所有者を失効させる必要がある。固定S1設定を通常S0接続へ転記せず、設定観測の契約を先に解決する。
+
 ## 2026-10-06: 一取得の操作見本への接続
 
 `single-readout-preview-session.js`は固定応答を7文字ずつcaptureへ追加し、commandの明示終了後に4記録を検証する。既存のinspect/disposeだけを外へ公開し、閉鎖・条件変更ではcaptureを失効させる。独立HTMLの固定module一覧にもcaptureを追加した。chunk分割と時刻は人工値であり、400msの待機も実受信の再現ではない。
