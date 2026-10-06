@@ -14,6 +14,7 @@ import "./validate-readonly-receipt-owner.js";
 import "./validate-readonly-receipt-raw-validation.js";
 import "./validate-single-readout-semantics.js";
 import "./validate-readonly-receipt-capture.js";
+import "./validate-single-readout-compact.js";
 
 let ioCalls = 0;
 const forbidden = () => { ioCalls += 1; throw new Error("Unexpected I/O"); };

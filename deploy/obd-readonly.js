@@ -1854,7 +1854,7 @@
   function parseSingleReadoutRawReceipts(receiptValues, errorPrefix, withTimestamps = false) {
     const receiptInput = copyGenericObdDtcClearResponseDenseArray(receiptValues, 4, `${errorPrefix}_receipts`);
     if (receiptInput.length !== 4) throw new TypeError(`${errorPrefix}_receipts`);
-
+    let attemptProfile = null;
     return receiptInput.map((value, index) => {
       const receipt = copyGenericObdDtcClearResponseRecord(value,
         withTimestamps ? ["ordinal", "intent", "command", "profile", "startedAt", "completedAt", "completion", "transcript"]
@@ -1862,10 +1862,13 @@
         `${errorPrefix}_receipt`);
       const expected = GENERIC_OBD_DTC_CLEAR_POST_READOUT_INTENTS[index];
       if ((withTimestamps && (receipt.ordinal !== expected.ordinal || receipt.intent !== expected.intent)) || receipt.command !== expected.command
-        || receipt.profile !== GENERIC_OBD_DTC_CLEAR_POST_READOUT_PROFILE
+        || (receipt.profile !== GENERIC_OBD_DTC_CLEAR_POST_READOUT_PROFILE
+          && (withTimestamps || receipt.profile !== ELM_READ_ONLY_COMPACT_TRANSCRIPT_PROFILE))
+        || (attemptProfile !== null && receipt.profile !== attemptProfile)
         || !["complete", "timeout", "disconnected", "error"].includes(receipt.completion)) {
         throw new TypeError(`${errorPrefix}_receipt`);
       }
+      attemptProfile = receipt.profile;
       if (withTimestamps && (!isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.startedAt)
         || !isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.completedAt))) {
         throw new TypeError(`${errorPrefix}_timestamp`);

@@ -2,8 +2,9 @@
 import { createReadOnlyReceiptCapture } from "./readonly-receipt-capture.js";
 
 export function createSingleReadoutPreviewSession(api, scenario = "normal") {
-  if (!["normal", "no_data", "conflict", "missing_prompt"].includes(scenario)) throw new TypeError("unknown_single_readout_sample");
-  const owner = createReadOnlyReceiptCapture(api);
+  if (!["normal", "compact", "no_data", "conflict", "missing_prompt"].includes(scenario)) throw new TypeError("unknown_single_readout_sample");
+  const profile = scenario === "compact" ? "iso15765_11bit_normal_h1_caf1_d0_s0_e0" : "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
+  const owner = createReadOnlyReceiptCapture(api, profile);
   const ticket = owner.begin();
   try {
     ["03", "07", "0A", "0101"].forEach((command, index) => {
@@ -12,7 +13,8 @@ export function createSingleReadoutPreviewSession(api, scenario = "normal") {
       if (scenario === "no_data") transcript = "NO DATA\r>";
       if (scenario === "conflict" && index === 0) transcript = transcript.replace(">", "7E8 04 43 01 01 01 AA AA AA\r>");
       if (scenario === "missing_prompt" && index === 3) transcript = transcript.replace(">", "");
-      const started = owner.startCommand(ticket, command, "iso15765_11bit_normal_h1_caf1_d0_s1_e0", index * 2);
+      if (scenario === "compact") transcript = transcript.replaceAll(" ", "");
+      const started = owner.startCommand(ticket, command, profile, index * 2);
       if (!started.ok) throw new Error("single_readout_sample_unavailable");
       // Artificial chunks and times for the fixed sample; no serial reception is implied.
       for (let offset = 0; offset < transcript.length; offset += 7) {

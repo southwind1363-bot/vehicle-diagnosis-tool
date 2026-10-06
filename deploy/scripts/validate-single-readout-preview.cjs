@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 module.exports = async function validateSingleReadoutPreview(page, api) {
   const { createSingleReadoutPreviewSession } = await import('./fixtures/single-readout-preview-session.js');
   const expected = {};
-  for (const scenario of ['normal', 'no_data', 'conflict', 'missing_prompt']) {
+  for (const scenario of ['normal', 'compact', 'no_data', 'conflict', 'missing_prompt']) {
     const session = createSingleReadoutPreviewSession(api, scenario);
     expected[scenario] = session.inspect().text;
     assert.equal(typeof expected[scenario], 'string');
@@ -58,5 +58,5 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
       return checks;
     } finally { close(); container.remove(); }
   }, expected);
-  console.log(`Single-readout preview: 4 sample cases / ${checks} browser lifecycle checks passed`);
+  console.log(`Single-readout preview: ${Object.keys(expected).length} sample cases / ${checks} browser lifecycle checks passed`);
 };

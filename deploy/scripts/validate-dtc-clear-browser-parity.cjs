@@ -58,6 +58,11 @@ module.exports = async function validateDtcClearBrowserParity(context) {
     const compactActual = await page.evaluate(inputs => inputs.map(input => window.ObdReadOnly.parseElmReadOnlyRawTranscript(input)), compactCases.map(row => row.input));
     assert.deepEqual(compactActual, JSON.parse(JSON.stringify(compactCases.map(row => row.result))));
     console.log(`Compact read-only Node/Chromium parity: ${compactCases.length} cases passed`);
+    const { runCompactReadoutCases } = await import('./validate-single-readout-compact.js');
+    const compactReadouts = runCompactReadoutCases(runtime.window.ObdReadOnly);
+    const compactObservations = await page.evaluate(inputs => inputs.map(receipts => window.ObdReadOnly.evaluateSingleReadoutRawReceipts({ receipts })), compactReadouts.map(row => row.receipts));
+    assert.deepEqual(compactObservations, JSON.parse(JSON.stringify(compactReadouts.map(row => row.observation))));
+    console.log(`Compact single-readout Node/Chromium semantic parity: ${compactReadouts.length} cases passed`);
     assert.deepEqual(errors, []); assert.deepEqual(rejectedRequests, []);
     console.log('Fixed receipt Node/Chromium parity: 14 cases, monitor output, disposal, invalidation and false authority flags passed');
   } finally { await page.close(); }

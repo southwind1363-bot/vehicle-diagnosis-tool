@@ -1,10 +1,10 @@
 // Non-communicating development model. Caller declarations are never real transport evidence.
 import { createReceiptRawValidation } from "./readonly-receipt-raw-validation.js";
 const commands = ["03", "07", "0A", "0101"];
-const profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
 const keys = ["command", "profile", "startedAt", "completedAt", "completion", "transcript"];
 
-export function createReadOnlyReceiptOwner(api) {
+export function createReadOnlyReceiptOwner(api, profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0") {
+  if (!["iso15765_11bit_normal_h1_caf1_d0_s1_e0", "iso15765_11bit_normal_h1_caf1_d0_s0_e0"].includes(profile)) throw new TypeError("invalid_receipt_profile");
   const validateRaw = api === undefined ? null : createReceiptRawValidation(api);
   const registry = new WeakMap();
   let current = null;

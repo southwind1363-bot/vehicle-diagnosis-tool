@@ -1,5 +1,13 @@
 # R2 通常read-only取得からの記録受渡し契約
 
+## 2026-10-06: S0の一取得評価・所有者・見本への接続
+
+一取得APIは四つのreceiptすべてが同じ許可profile（S0またはS1）であることを確認し、既存のDTC/readiness観測へ渡す。profileは必須で、混在・未知値を拒否する。消去前後APIは従来どおりS1に限定し、今回の拡張を消去処理へ適用しない。
+
+開発用所有者/captureは第二引数でprofileを明示選択し、生成後は固定する。省略時はS1、異なるprofileのreceipt/commandは拒否。raw/時刻/設定を補正せず、profileEvidenceはcaller_declared_only、実車・実行・送信flagはfalseを維持。これは保存schemaの変更ではない。
+
+17ケースでS0/S1の意味観測一致とowner/capture経由の同一結果を確認し、全4位置の混在・未知設定と旧消去APIの拒否も試験する。一取得の操作HTMLに固定S0正常例を追加し、条件変更で旧表示を破棄する既存経路を使う。実transportの設定観測と通常UIへの配線は未実施。
+
 ## 2026-10-06: read-only rawパーサーのS0対応
 
 `parseElmReadOnlyRawTranscript`に明示profile `iso15765_11bit_normal_h1_caf1_d0_s0_e0`を追加。S0時のCAN行は大文字hex 19桁（3桁ID＋8byte）だけを受理し、桁数/文字種を確認してから既存ISO-TP検査へ渡す。CR/CRLF、終端prompt、状態行、資源上限、sourceごとの順序検査は共通。raw全体の空白除去やprofile自動推定は行わない。S1は引き続きcompact行を拒否する。

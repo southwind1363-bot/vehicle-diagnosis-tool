@@ -1,8 +1,8 @@
 // Non-communicating capture model. Strings are already decoded; no port, clock or settings are inferred.
 import { createReadOnlyReceiptOwner } from "./readonly-receipt-owner.js";
 
-export function createReadOnlyReceiptCapture(api) {
-  const owner = createReadOnlyReceiptOwner(api);
+export function createReadOnlyReceiptCapture(api, selectedProfile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0") {
+  const owner = createReadOnlyReceiptOwner(api, selectedProfile);
   let current = null;
   const result = (ok, reason = null, ticket = null) => Object.freeze({ ok, reason, ticket });
   const isCurrent = ticket => current !== null && current.ticket === ticket;
@@ -35,7 +35,7 @@ export function createReadOnlyReceiptCapture(api) {
       if (current.phase !== "collecting") return result(false, "attempt_ended");
       if (current.command) return result(false, "command_busy");
       if (command !== ["03", "07", "0A", "0101"][current.count] || current.count >= 4) return fail("command_order_mismatch");
-      if (profile !== "iso15765_11bit_normal_h1_caf1_d0_s1_e0") return fail("profile_unavailable");
+      if (profile !== selectedProfile) return fail("profile_unavailable");
       if (!Number.isSafeInteger(startedAt) || startedAt < 0) return fail("invalid_timing");
       const ticket = Object.freeze({});
       current.command = { ticket, command, profile, startedAt, text: "" };
