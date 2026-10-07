@@ -6,6 +6,7 @@ import "./validate-case-storage.js";
 import "./validate-readout-print.js";
 import "./validate-operation-availability.js";
 import "./validate-dtc-clear-workflow.js";
+import "./validate-dtc-clear-walkthrough.js";
 import "./validate-dtc-clear-target-binding.js";
 import "./validate-dtc-clear-responses.js";
 import "./validate-dtc-clear-receive-window.js";

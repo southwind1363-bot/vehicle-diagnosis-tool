@@ -2,7 +2,7 @@
 import fs from "node:fs";
 
 export function createMonitorPreviewBrowserSource(kind = "pair") {
-  if (!["pair", "single"].includes(kind)) throw new TypeError("unknown_preview_kind");
+  if (!["pair", "single", "workflow"].includes(kind)) throw new TypeError("unknown_preview_kind");
   const files = kind === "single" ? [
     ["readonly-receipt-raw-validation.js", [], ["createReceiptRawValidation"]],
     ["readonly-receipt-owner.js", ['import { createReceiptRawValidation } from "./readonly-receipt-raw-validation.js";'], ["createReadOnlyReceiptOwner"]],
@@ -17,6 +17,9 @@ export function createMonitorPreviewBrowserSource(kind = "pair") {
       'import { createDtcClearBrowserFixtureInput } from "./dtc-clear-browser-sample.js";'
     ], ["createDtcClearBrowserPreviewSession"]]
   ];
+  if (kind === "workflow") files.push(["dtc-clear-walkthrough.js", [
+    'import { createDtcClearBrowserPreviewSession } from "./dtc-clear-browser-preview-session.js";'
+  ], ["createDtcClearWalkthrough"]]);
   const modules = files.map(([file, imports, exports]) => {
     let source = fs.readFileSync(new URL(file, import.meta.url), "utf8").replace(/\r\n?/g, "\n");
     // This is a closed manifest, not a general JavaScript bundler. Source changes fail closed.

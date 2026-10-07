@@ -2,9 +2,9 @@
 import { createDtcClearFixtureValidators } from "./dtc-clear-scoped-readout-core.js";
 import { createDtcClearBrowserFixtureInput } from "./dtc-clear-browser-sample.js";
 
-export function createDtcClearBrowserPreviewSession(api) {
+export function createDtcClearBrowserPreviewSession(api, sample = "monitor") {
   const validators = createDtcClearFixtureValidators(api);
-  const input = createDtcClearBrowserFixtureInput(validators);
+  const input = createDtcClearBrowserFixtureInput(validators, sample);
   const { scope, context } = input;
   let handle;
   try {
@@ -17,12 +17,13 @@ export function createDtcClearBrowserPreviewSession(api) {
     throw error;
   }
   // The closure retains only the derived handle and its scope/context, not raw receipts.
-  return ownSession(handle, scope, context);
+  return ownSession(handle, scope, context, sample === "workflow");
 }
 
-function ownSession(handle, scope, context) {
+function ownSession(handle, scope, context, includeDifference) {
   return Object.freeze({
     inspect() { return handle.inspectMonitorStatePairText(context); },
+    ...(includeDifference ? { inspectDifference() { return handle.inspectDifference(context); } } : {}),
     dispose() {
       handle.dispose();
       scope.invalidate(context);

@@ -64,6 +64,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await require('./validate-scanner-registry-failure.cjs')(browser, root, output);
       await require('./validate-settings-observation-browser.cjs')(browser, root, output);
       await require('./validate-timeout-cleanup-browser.cjs')(browser, root, output);
+      await require('./validate-dtc-clear-walkthrough-browser.cjs')(browser, output);
     }
     recordRuntime('initial');
     const configureContext = async (preUnlocked = true) => {
