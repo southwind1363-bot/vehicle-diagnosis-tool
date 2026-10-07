@@ -323,6 +323,25 @@ async function readClient() {
   return result;
 }
 
+for (const failure of ["none", "cancel", "reader", "writer", "close"]) {
+  const { context: c, port } = await readClient();
+  const released = [], sent = [];
+  const action = name => { released.push(name); if (name === failure) throw new Error("synthetic_cleanup_failure"); };
+  c.obdDevSession.reader.cancel = async () => action("cancel");
+  c.obdDevSession.reader.releaseLock = () => action("reader");
+  c.obdDevSession.writer.releaseLock = () => action("writer");
+  port.close = async () => action("close");
+  c.sendElmDeveloperCommand = async command => { sent.push(command); if (command === "07") throw new Error("elm_response_timeout:07"); return "43 01 33"; };
+  check(await c.runObdDeveloperRead("read", ["03", "07", "0A"]) === false, `${failure}: timed-out read remains incomplete`);
+  check(sent.join(",") === "03,07" && released.join(",") === "cancel,reader,writer,close", "timeout stops commands and attempts each cleanup once");
+  check(c.recorded.length === 1 && c.retained.length === 1 && c.retained[0].responses.length === 1, "partial result survives cleanup failure exactly once");
+  const message = c.obdDevStatus.textContent;
+  check(message.includes("読取実行結果を保持しています"), "status still explains retained result");
+  if (failure === "none") check(message.includes("安全に切断しました") && c.obdDevSession.connectionState === "disconnected" && !c.obdSerialDisconnectOperation, "confirmed close has accurate success wording");
+  else check(message.includes("終了を確認できていません") && !message.includes("安全に切断しました")
+    && c.obdSerialDisconnectOperation?.cleanupFailed && c.obdDevSession.connectionState === "disconnecting", `${failure}: failed cleanup must not claim successful disconnect`);
+}
+
 for (const fail of [false, true]) {
   const { context: c } = await readClient();
   const waiting = deferred();

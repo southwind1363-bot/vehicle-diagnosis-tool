@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.632";
+const APP_VERSION = "3.13.633";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6240,6 +6240,9 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
       : obdSerialDisconnectOperation.writePending
         ? "VCIへの未完了送信と終了処理を確認中です。再接続はできません。車両側の停止は未確認です。"
         : "VCIの終了処理を待っています。再接続はできません。車両側の停止は未確認です。";
+    if (obdDevSession.lastDisconnectReason === "response_timeout") {
+      obdDevStatus.textContent = `VCI応答がタイムアウトしました。${obdDevStatus.textContent}${obdDevSession.lastSession ? " 読取結果を保持しています。" : ""}`;
+    }
   } else if (!primaryUnlocked) {
     obdDevStatus.textContent = "詳細画面はロック中です。詳細用パスワードで解除できます。通常の読取は診断ホームから利用できます。";
   } else if (primaryActionNeedsSerial && !serialReady) {
@@ -6259,6 +6262,9 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
       "adapter_initialization_failed", "adapter_identification_failed"].includes(obdDevSession.lastDisconnectReason)) {
     const failureStatus = buildWebSerialConnectionStatus();
     obdDevStatus.textContent = [failureStatus.displayStatus, failureStatus.nextAction].filter(Boolean).join("。") + "。";
+    if (obdDevSession.lastDisconnectReason === "response_timeout") {
+      obdDevStatus.textContent = `VCI応答がタイムアウトしたため、接続を終了しました。${obdDevStatus.textContent}${obdDevSession.lastSession ? " 読取結果を保持しています。" : ""}`;
+    }
   } else if (!connected) {
     const requestedStatus = obdDevSession.bridgeEndpoint
       ? getRequestedInterfaceReadyStatus()
@@ -9399,10 +9405,13 @@ async function runObdDeveloperRead(label, commands) {
     if (transportFailed) await disconnectObdDeveloperVci({ reason: responseTooLarge ? "serial_response_too_large" : timedOut ? "response_timeout" : "transport_failed" });
     if (!continueObdSerialOperation(revision)) return false;
     if (obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = "transport_error";
+    const timeoutDisconnectMessage = !obdSerialDisconnectOperation && obdDevSession.connectionState === "disconnected"
+      ? "安全に切断しました。"
+      : "VCI接続の終了を確認できていません。読取の再開は保留しています。";
     obdDevStatus.textContent = responseTooLarge
       ? `${formatWebSerialConnectionFailure("serial_response_too_large")}${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`
       : timedOut
-      ? `${label}の応答がタイムアウトしたため、安全に切断しました。${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`
+      ? `${label}の応答がタイムアウトしました。${timeoutDisconnectMessage}${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`
       : `${label}に失敗しました: ${message}${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`;
     return false;
   } finally {
