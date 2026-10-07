@@ -8,6 +8,7 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
   if (!Object.hasOwn(samples, scenario)) throw new TypeError("unknown_walkthrough_scenario");
   let blockedReason = null;
   let followupPlan = null;
+  let controller = null;
   let stage = "empty", workflow = null, comparison = null, session = null;
   let history = Object.freeze([]);
   const record = () => {
@@ -15,6 +16,19 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
       reason: blockedReason, provenance: "simulated_only", wouldTransmit: false })]);
   };
   const release = () => { session?.dispose(); session = null; comparison = null; followupPlan = null; };
+  const failTransition = () => {
+    release(); controller = null; workflow = null;
+    blockedReason = "workflow_transition_rejected"; stage = "unavailable"; record();
+    return false;
+  };
+  const transition = (event, expectedState) => {
+    try {
+      const next = controller.transition(workflow, event);
+      if (next !== controller.getSnapshot() || next.state !== expectedState) return failTransition();
+      workflow = next;
+      return true;
+    } catch { return failTransition(); }
+  };
   const inspect = () => Object.freeze({ stage, workflow, comparison, scenario, blockedReason, history, followupPlan,
     provenance: "simulated_only", executionEnabled: false, vehicleCommandEnabled: false,
     wouldTransmit: false, canExecute: false, repairConfirmed: false });
@@ -28,10 +42,11 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
         const missingKeys = { pre_record_missing: "preClearSnapshotSaved", recovery_missing: "recoveryPlan",
           applicability_missing: "vehicleApplicabilityConfirmed" };
         if (Object.hasOwn(missingKeys, scenario)) evidence[missingKeys[scenario]] = false;
-        workflow = api.buildGenericObdDtcClearWorkflow({
+        controller = api.createGenericObdDtcClearController({
           target: { vehicleId: "simulated-vehicle", ecuId: "simulated-ecu", transportId: "simulated-transport" },
           preOperationSessionId: scenario === "pre_record_missing" ? null : "fixed-simulated-before-record", evidence
         });
+        workflow = controller.getSnapshot();
         if (workflow.state !== "confirmation_required") {
           blockedReason = "preconditions_incomplete";
           stage = "preconditions_missing";
@@ -42,26 +57,29 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
         stage = "prepared";
         record();
         return true;
-      } catch { release(); workflow = null; stage = "unavailable"; record(); return false; }
+      } catch { release(); controller = null; workflow = null; stage = "unavailable"; record(); return false; }
     },
     confirm() {
       if (stage !== "prepared") return false;
-      workflow = api.transitionGenericObdDtcClearWorkflow(workflow, { type: "record_confirmation",
+      if (!transition({ type: "record_confirmation",
         revision: workflow.revision, target: workflow.target,
-        preOperationSessionId: workflow.preOperationSessionId, impactAcknowledged: true });
+        preOperationSessionId: workflow.preOperationSessionId, impactAcknowledged: true }, "confirmation_recorded")) return false;
       stage = "confirmed";
       record();
       return true;
     },
     reviewBlockedDispatch() {
       if (stage !== "confirmed") return false;
-      workflow = api.transitionGenericObdDtcClearWorkflow(workflow, { type: "request_dispatch", revision: workflow.revision });
+      if (!transition({ type: "request_dispatch", revision: workflow.revision }, "dispatch_blocked")) return false;
       stage = "dispatch_blocked";
       record();
       return true;
     },
     compareFixedRecords() {
       if (stage !== "dispatch_blocked") return false;
+      try {
+        if (controller.getSnapshot() !== workflow) return failTransition();
+      } catch { return failTransition(); }
       const result = session.inspect();
       const difference = session.inspectDifference();
       const plan = session.inspectFollowupPlan();
@@ -88,8 +106,9 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
       release();
       blockedReason = null;
       if (workflow && workflow.state !== "cancelled") {
-        workflow = api.transitionGenericObdDtcClearWorkflow(workflow, { type: "cancel", revision: workflow.revision });
+        if (!transition({ type: "cancel", revision: workflow.revision }, "cancelled")) return inspect();
       }
+      controller = null;
       stage = "cancelled";
       record();
       return inspect();

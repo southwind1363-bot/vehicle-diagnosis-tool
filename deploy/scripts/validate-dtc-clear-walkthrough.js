@@ -118,4 +118,43 @@ for (const scenario of ["result_unknown", "reread_failed", "no_data", "ecu_missi
   assert.equal(flow.inspect().history[3].reason, snapshot.blockedReason, "Ending must retain the earlier hold reason in this simulation's history");
   console.log(`Walkthrough ${scenario}: existing receipt validator rejected ${snapshot.blockedReason}; no comparison or retry`);
 }
-console.log("DTC clear walkthrough: ordered preparation/confirmation/blocked dispatch/comparison, cancellation at every stage and failure passed; fixed simulation only");
+// Move the actual private controller ahead of the view to reproduce a stale view snapshot.
+for (const [completedSteps, actionToReject] of [[1, "confirm"], [2, "reviewBlockedDispatch"], [3, "compareFixedRecords"],
+  [1, "cancel"], [2, "cancel"], [3, "cancel"], [4, "cancel"]]) {
+  let owner;
+  const flow = createDtcClearWalkthrough({ ...api,
+    buildGenericObdDtcClearWorkflow() { throw new Error("direct_builder_must_not_be_used"); },
+    transitionGenericObdDtcClearWorkflow() { throw new Error("direct_transition_must_not_be_used"); },
+    createGenericObdDtcClearController(input) { owner = api.createGenericObdDtcClearController(input); return owner; }
+  });
+  for (const action of actions.slice(0, completedSteps)) assert.equal(flow[action](), true);
+  const oldView = flow.inspect();
+  const current = owner.getSnapshot();
+  owner.transition(current, { type: "cancel", revision: current.revision });
+  if (actionToReject === "cancel") flow.cancel();
+  else assert.equal(flow[actionToReject](), false);
+  const rejected = flow.inspect();
+  assert.equal(rejected.stage, "unavailable");
+  assert.equal(rejected.blockedReason, "workflow_transition_rejected");
+  assert.equal(rejected.workflow, null); assert.equal(rejected.comparison, null); assert.equal(rejected.followupPlan, null);
+  assert.equal(rejected.history.length, oldView.history.length + 1);
+  assert.equal(rejected.history.at(-1).stage, "unavailable");
+  assert.equal(owner.getSnapshot().state, "cancelled");
+  for (const action of actions) assert.equal(flow[action](), false);
+  assert.deepEqual(flow.inspect(), rejected);
+  assert.equal(flow.cancel().stage, "cancelled");
+}
+for (const mode of ["throw", "unchanged", "copied"]) {
+  const flow = createDtcClearWalkthrough({ ...api, createGenericObdDtcClearController(input) {
+    const owner = api.createGenericObdDtcClearController(input);
+    return { getSnapshot: owner.getSnapshot, transition(snapshot, event) {
+      if (mode === "throw") throw new Error("private_failure_details");
+      if (mode === "unchanged") return snapshot;
+      return { ...owner.transition(snapshot, event) };
+    } };
+  } });
+  assert.equal(flow.prepare(), true); assert.equal(flow.confirm(), false);
+  assert.equal(flow.inspect().stage, "unavailable");
+  assert.equal(JSON.stringify(flow.inspect()).includes("private_failure_details"), false);
+}
+console.log("DTC clear walkthrough: ordered flow and actual controller ownership, stale views, transition rejection and cancellation passed; fixed simulation only");
