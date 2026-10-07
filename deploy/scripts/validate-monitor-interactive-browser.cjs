@@ -104,6 +104,18 @@ module.exports = async function validateInteractiveMonitor(context, output, kind
     assert.equal(await page.locator('#review [role="status"]').innerText(), single ? '記録を確認できません' : '前後記録を確認できません');
     if (single) {
       assert.equal(await page.locator('h1').innerText(), '一回分の模擬記録');
+      for (const failure of ['failure', 'clock_failure']) {
+        await scenario.selectOption(failure);
+        await show.click(); await page.clock.runFor(500);
+        assert.equal(await page.locator('#review [role="status"]').innerText(), '記録を確認できません');
+        assert.equal(await page.locator('pre').textContent(), '');
+        await page.clock.runFor(2000);
+        assert.equal(await page.locator('pre').textContent(), '');
+        await show.click();
+        await scenario.selectOption('normal');
+        await show.click(); await page.clock.runFor(500);
+        assert.equal(await page.locator('pre').textContent(), expected, 'Late acquisition failure cannot overwrite a new result');
+      }
       for (const name of ['normal', 'compact', 'no_data', 'conflict', 'missing_prompt']) {
         // Switch during a pending read: it must close immediately and never auto-start.
         await scenario.selectOption('normal');

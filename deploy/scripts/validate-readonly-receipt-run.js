@@ -139,3 +139,16 @@ for (const scenario of ["normal", "compact", "no_data", "conflict", "missing_pro
   if (scenario === "no_data") assert.doesNotMatch(display.text, /報告元からコード0件の応答/);
 }
 console.log("Receipt run display: five acquisition results match the existing single-readout preview; no-data, conflicts and missing prompt stay distinct");
+for (const [scenario, reason] of [["failure", "receipt_incomplete"], ["clock_failure", "receipt_clock_unavailable"]]) {
+  let parses = 0;
+  const session = createSingleReadoutRunPreviewSession({ ...api, parseElmReadOnlyRawTranscript(input) {
+    parses++; return api.parseElmReadOnlyRawTranscript(input);
+  } }, scenario);
+  await session.ready;
+  assert.deepEqual(session.inspect(), { ok: false, reason, text: null });
+  assert.equal(parses, 0, "Failed partial acquisition must not publish a complete receipt evaluation");
+  session.dispose(); assert.equal(session.inspect().reason, "scope_invalidated");
+  const cancelled = createSingleReadoutRunPreviewSession(api, scenario);
+  cancelled.dispose(); await cancelled.ready;
+  assert.equal(cancelled.inspect().text, null);
+}

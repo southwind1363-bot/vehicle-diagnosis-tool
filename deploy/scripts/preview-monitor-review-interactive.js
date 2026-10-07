@@ -18,10 +18,10 @@ const attachView = ${single ? attachSingleReadoutPreviewView.toString() : "attac
 const scenario = document.querySelector('#scenario');
 let acquired;
 const review = createReview(() => {
-  acquired = ${single ? "createSingleReadoutRunPreviewSession(fixtureApi, scenario.value === 'failure' ? 'normal' : scenario.value)" : "createDtcClearBrowserPreviewSession(fixtureApi)"};
+  acquired = ${single ? "createSingleReadoutRunPreviewSession(fixtureApi, scenario.value)" : "createDtcClearBrowserPreviewSession(fixtureApi)"};
   return acquired;
 }, () => {
-  const fail = scenario.value === 'failure';
+  const fail = ${single ? "false" : "scenario.value === 'failure'"};
   return Promise.all([acquired.ready, new Promise((resolve, reject) => setTimeout(() => {
     if (fail) reject(new Error('simulated_preview_failure')); else resolve();
   }, 400))]);
@@ -69,7 +69,7 @@ select{font:inherit;max-width:100%;min-height:48px;padding:8px;border-radius:8px
 <h1>${single ? "一回分の模擬記録" : "模擬記録の表示と閉鎖"}</h1>
 <p class="notice">開発用・固定サンプルです。実車の読取結果ではありません。表示待ちは模擬動作で、車両通信は行いません。</p>
 <p>「模擬記録を表示」で${single ? "一回分の固定記録を確認できます。消去前後の比較ではありません。" : "固定の前後状態を確認できます。"}表示待ちの途中でも閉じられます。</p>
-<label for="scenario">模擬条件</label><select id="scenario" aria-describedby="scenario-help"><option value="normal">記録を表示できる場合</option>${single ? '<option value="compact">空白なしの応答</option><option value="no_data">NO DATAの報告</option><option value="conflict">応答が矛盾する場合</option><option value="missing_prompt">応答の終端が欠ける場合</option>' : ""}<option value="failure">確認が失敗する場合</option></select>
+<label for="scenario">模擬条件</label><select id="scenario" aria-describedby="scenario-help"><option value="normal">記録を表示できる場合</option>${single ? '<option value="compact">空白なしの応答</option><option value="no_data">NO DATAの報告</option><option value="conflict">応答が矛盾する場合</option><option value="missing_prompt">応答の終端が欠ける場合</option>' : ""}${single ? '<option value="clock_failure">取得途中の時計検査に失敗</option><option value="failure">取得途中の応答待ちに失敗</option>' : '<option value="failure">確認が失敗する場合</option>'}</select>
 <p id="scenario-help">条件を変えると表示を閉じます。失敗時も自動で再試行しません。</p>
 <div class="controls"><button id="show" type="button">模擬記録を表示</button><button id="close" type="button" disabled>表示を閉じる</button></div>
 <p id="closed" role="status" aria-live="polite"></p><div id="review"></div>

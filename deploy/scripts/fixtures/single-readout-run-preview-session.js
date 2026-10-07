@@ -4,11 +4,20 @@ import { createReadOnlyReceiptRun } from "./readonly-receipt-run.js";
 import { formatSingleReadoutReceiptPreview } from "./single-readout-receipt-preview.js";
 
 export function createSingleReadoutRunPreviewSession(api, scenario = "normal") {
-  const sample = createSingleReadoutSample(scenario);
+  const sample = createSingleReadoutSample(["failure", "clock_failure"].includes(scenario) ? "normal" : scenario);
   const context = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
-  let disposed = false, display = null;
-  const runner = createReadOnlyReceiptRun(() => context, api, sample.profile, () => Math.floor(performance.now()), async (command, append) => {
+  let disposed = false, display = null, clockReads = 0;
+  const runner = createReadOnlyReceiptRun(() => context, api, sample.profile, () => {
+    clockReads++;
+    // Fail before the second command; never substitute a timestamp or retry.
+    return scenario === "clock_failure" && clockReads === 3 ? NaN : Math.floor(performance.now());
+  }, async (command, append) => {
     const receipt = sample.receipts.find(item => item.command === command);
+    if (scenario === "failure" && command === "07") {
+      await Promise.resolve();
+      if (disposed || !append(receipt.transcript.slice(0, 7))) return "cancelled";
+      return "timeout";
+    }
     for (let offset = 0; offset < receipt.transcript.length; offset += 7) {
       await Promise.resolve();
       if (disposed || !append(receipt.transcript.slice(offset, offset + 7))) return "cancelled";
