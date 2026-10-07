@@ -6,14 +6,15 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
     pre_record_missing: "workflow", recovery_missing: "workflow", applicability_missing: "workflow" };
   if (!Object.hasOwn(samples, scenario)) throw new TypeError("unknown_walkthrough_scenario");
   let blockedReason = null;
+  let followupPlan = null;
   let stage = "empty", workflow = null, comparison = null, session = null;
   let history = Object.freeze([]);
   const record = () => {
     history = Object.freeze([...history, Object.freeze({ ordinal: history.length + 1, stage,
       reason: blockedReason, provenance: "simulated_only", wouldTransmit: false })]);
   };
-  const release = () => { session?.dispose(); session = null; comparison = null; };
-  const inspect = () => Object.freeze({ stage, workflow, comparison, scenario, blockedReason, history,
+  const release = () => { session?.dispose(); session = null; comparison = null; followupPlan = null; };
+  const inspect = () => Object.freeze({ stage, workflow, comparison, scenario, blockedReason, history, followupPlan,
     provenance: "simulated_only", executionEnabled: false, vehicleCommandEnabled: false,
     wouldTransmit: false, canExecute: false, repairConfirmed: false });
   return Object.freeze({
@@ -62,11 +63,13 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
       if (stage !== "dispatch_blocked") return false;
       const result = session.inspect();
       const difference = session.inspectDifference();
+      const plan = session.inspectFollowupPlan();
       if (!result.ok || !difference.ok) {
         blockedReason = result.reason || difference.reason;
         release();
         stage = scenario === "result_unknown" && blockedReason === "clear_evaluation_incomplete" ? "result_unknown"
           : scenario === "reread_failed" && blockedReason === "post_fixture_scope_incomplete" ? "reread_failed" : "unavailable";
+        if (["result_unknown", "reread_failed"].includes(stage)) followupPlan = plan;
         record();
         return false;
       }
@@ -75,6 +78,7 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
         `[${source.sourceId}] ${names[item.intent]}：前のみ ${source.removed.join(", ") || "なし"} / 後のみ ${source.added.join(", ") || "なし"} / 前後共通 ${source.retained.join(", ") || "なし"}`));
       comparison = "固定の模擬DTC差分（消去成功・修理完了の判定ではありません）\n" + lines.join("\n") + "\n\n" + result.text;
       stage = "compared";
+      followupPlan = plan;
       record();
       return true;
     },

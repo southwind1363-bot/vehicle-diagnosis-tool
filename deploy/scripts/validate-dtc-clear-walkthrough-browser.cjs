@@ -13,6 +13,7 @@ module.exports = async (browser, output) => {
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('http://127.0.0.1/walkthrough');
+      assert.equal(await page.locator('#followup').isVisible(), false);
       const steps = ['prepare', 'confirm', 'reviewBlockedDispatch', 'compareFixedRecords'];
       for (let index = 0; index < steps.length; index++) {
         for (let other = 0; other < steps.length; other++) assert.equal(await page.locator('#' + steps[other]).isEnabled(), index === other);
@@ -25,11 +26,15 @@ module.exports = async (browser, output) => {
       assert.match(await page.locator('#comparison').innerText(), /前のみ P0133/);
       assert.match(await page.locator('#comparison').innerText(), /後のみ P0300/);
       assert.match(await page.locator('#comparison').innerText(), /前後共通 P0420/);
+      assert.equal(await page.locator('#followup').isVisible(), true);
+      assert.deepEqual(await page.locator('#followup-items li').allTextContents(), ['保存DTC', '保留DTC', '永久DTC', 'レディネス']);
       assert.equal(await page.locator('#history li').count(), 4);
       assert.match(await page.locator('#history').innerText(), /送信拒否を確認/);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       await page.screenshot({ path: path.join(output, `dtc-clear-walkthrough-${width}.png`), fullPage: true });
       await page.locator('#cancel').click(); assert.equal(await page.locator('#comparison').innerText(), '');
+      assert.equal(await page.locator('#followup').isVisible(), false);
+      assert.equal(await page.locator('#followup-items li').count(), 0);
       assert.equal(await page.locator('#history li').count(), 5);
       await page.locator('#cancel').click(); assert.equal(await page.locator('#history li').count(), 5);
       for (const [scenario, missing] of [['pre_record_missing', '消去前DTC状態保存'], ['recovery_missing', '失敗時復旧計画'], ['applicability_missing', '車種・ECU適合確認']]) {
@@ -37,6 +42,7 @@ module.exports = async (browser, output) => {
         assert.equal(await page.locator('#requirements li').count(), 0);
         await page.locator('#prepare').click();
         assert.match(await page.locator('#status').innerText(), /事前条件が不足/);
+        assert.equal(await page.locator('#followup').isVisible(), false);
         assert.equal(await page.locator('#requirements li').count(), 12);
         assert.ok((await page.locator('#requirements li[data-complete="false"]').allTextContents()).some(text => text.includes(missing)));
         if (scenario === 'pre_record_missing') assert.match(await page.locator('#record-state').textContent(), /参照がありません/);
@@ -53,6 +59,8 @@ module.exports = async (browser, output) => {
         assert.equal(await page.locator('#comparison').innerText(), '');
         assert.match(await page.locator('#status').innerText(), scenario === 'result_unknown' ? /結果不明/ : /再読取が完了していません/);
         assert.match(await page.locator('#status').innerText(), /自動再/);
+        assert.equal(await page.locator('#followup').isVisible(), true);
+        assert.deepEqual(await page.locator('#followup-items li').allTextContents(), ['保存DTC', '保留DTC', '永久DTC', 'レディネス']);
         assert.equal(await page.locator('#history li').count(), 4);
         assert.match(await page.locator('#history li').last().innerText(), /比較保留/);
         for (const step of steps) assert.equal(await page.locator('#' + step).isEnabled(), false);
@@ -65,6 +73,7 @@ module.exports = async (browser, output) => {
       assert.equal(await page.locator('#reviewBlockedDispatch').isEnabled(), false);
       assert.equal(await page.locator('#comparison').innerText(), '');
       assert.equal(await page.locator('#history li').count(), 0);
+      assert.equal(await page.locator('#followup').isVisible(), false);
       await page.reload(); await page.locator('#prepare').click();
       await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
       assert.equal(await page.locator('#confirm').isEnabled(), false);
