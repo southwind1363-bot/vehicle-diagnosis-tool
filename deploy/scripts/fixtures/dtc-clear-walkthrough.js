@@ -2,7 +2,8 @@
 import { createDtcClearBrowserPreviewSession } from "./dtc-clear-browser-preview-session.js";
 
 export function createDtcClearWalkthrough(api, scenario = "normal") {
-  const samples = { normal: "workflow", result_unknown: "workflow_unknown", reread_failed: "workflow_reread_failed" };
+  const samples = { normal: "workflow", result_unknown: "workflow_unknown", reread_failed: "workflow_reread_failed",
+    pre_record_missing: "workflow", recovery_missing: "workflow", applicability_missing: "workflow" };
   if (!Object.hasOwn(samples, scenario)) throw new TypeError("unknown_walkthrough_scenario");
   let blockedReason = null;
   let stage = "empty", workflow = null, comparison = null, session = null;
@@ -22,10 +23,19 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
       try {
         const evidence = Object.fromEntries(api.getServiceOperationReadinessRequirements("clear_dtc")
           .filter(item => item.evidenceKey !== "impactAcknowledged").map(item => [item.evidenceKey, true]));
+        const missingKeys = { pre_record_missing: "preClearSnapshotSaved", recovery_missing: "recoveryPlan",
+          applicability_missing: "vehicleApplicabilityConfirmed" };
+        if (Object.hasOwn(missingKeys, scenario)) evidence[missingKeys[scenario]] = false;
         workflow = api.buildGenericObdDtcClearWorkflow({
           target: { vehicleId: "simulated-vehicle", ecuId: "simulated-ecu", transportId: "simulated-transport" },
-          preOperationSessionId: "fixed-simulated-before-record", evidence
+          preOperationSessionId: scenario === "pre_record_missing" ? null : "fixed-simulated-before-record", evidence
         });
+        if (workflow.state !== "confirmation_required") {
+          blockedReason = "preconditions_incomplete";
+          stage = "preconditions_missing";
+          record();
+          return false;
+        }
         session = createDtcClearBrowserPreviewSession(api, samples[scenario]);
         stage = "prepared";
         record();

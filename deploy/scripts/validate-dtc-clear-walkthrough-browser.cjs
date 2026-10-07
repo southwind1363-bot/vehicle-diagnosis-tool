@@ -17,6 +17,8 @@ module.exports = async (browser, output) => {
       for (let index = 0; index < steps.length; index++) {
         for (let other = 0; other < steps.length; other++) assert.equal(await page.locator('#' + steps[other]).isEnabled(), index === other);
         await page.locator('#' + steps[index]).focus(); await page.keyboard.press('Enter');
+        if (index === 0) assert.equal(await page.locator('#requirements li[data-complete="false"]').count(), 1);
+        if (index === 1) assert.equal(await page.locator('#requirements li[data-complete="false"]').count(), 0);
       }
       assert.match(await page.locator('#status').innerText(), /実際の消去成功や修理完了を示しません/);
       assert.ok((await page.locator('#comparison').innerText()).length > 0);
@@ -30,6 +32,20 @@ module.exports = async (browser, output) => {
       await page.locator('#cancel').click(); assert.equal(await page.locator('#comparison').innerText(), '');
       assert.equal(await page.locator('#history li').count(), 5);
       await page.locator('#cancel').click(); assert.equal(await page.locator('#history li').count(), 5);
+      for (const [scenario, missing] of [['pre_record_missing', '消去前DTC状態保存'], ['recovery_missing', '失敗時復旧計画'], ['applicability_missing', '車種・ECU適合確認']]) {
+        await page.selectOption('#scenario', scenario);
+        assert.equal(await page.locator('#requirements li').count(), 0);
+        await page.locator('#prepare').click();
+        assert.match(await page.locator('#status').innerText(), /事前条件が不足/);
+        assert.equal(await page.locator('#requirements li').count(), 12);
+        assert.ok((await page.locator('#requirements li[data-complete="false"]').allTextContents()).some(text => text.includes(missing)));
+        if (scenario === 'pre_record_missing') assert.match(await page.locator('#record-state').textContent(), /参照がありません/);
+        for (const step of steps) assert.equal(await page.locator('#' + step).isEnabled(), false);
+        assert.equal(await page.locator('#comparison').innerText(), '');
+        await page.locator('details').evaluate(el => { el.open = true; });
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        await page.screenshot({ path: path.join(output, `dtc-clear-${scenario}-${width}.png`), fullPage: true });
+      }
       for (const scenario of ['result_unknown', 'reread_failed']) {
         await page.selectOption('#scenario', scenario);
         assert.equal(await page.locator('#history li').count(), 0);

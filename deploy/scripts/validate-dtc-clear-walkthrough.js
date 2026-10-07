@@ -54,6 +54,21 @@ for (let stop = 0; stop <= 4; stop++) {
   for (const action of actions) assert.equal(flow[action](), false);
 }
 const failed = createDtcClearWalkthrough({ getServiceOperationReadinessRequirements() { throw new Error('private'); } });
+for (const [scenario, missing] of [["pre_record_missing", "pre_clear_snapshot_saved"], ["recovery_missing", "recovery_plan"], ["applicability_missing", "vehicle_applicability_confirmed"]]) {
+  const flow = createDtcClearWalkthrough(api, scenario);
+  assert.equal(flow.prepare(), false);
+  const snapshot = flow.inspect();
+  assert.equal(snapshot.stage, "preconditions_missing");
+  assert.equal(snapshot.workflow.state, "pre_save_required");
+  assert.ok(snapshot.workflow.readiness.missingRequirementIds.includes(missing));
+  assert.equal(snapshot.workflow.confirmation.recorded, false);
+  assert.equal(snapshot.workflow.dispatch.attempted, false);
+  assert.equal(snapshot.comparison, null);
+  assert.equal(snapshot.history.length, 1);
+  for (const action of actions) assert.equal(flow[action](), false);
+  assert.deepEqual(flow.inspect(), snapshot);
+  flow.cancel(); assert.equal(flow.inspect().stage, "cancelled");
+}
 assert.equal(failed.prepare(), false); assert.equal(failed.inspect().stage, "unavailable");
 assert.equal(failed.inspect().workflow, null); assert.equal(failed.confirm(), false);
 assert.throws(() => createDtcClearWalkthrough(api, "unknown"));
