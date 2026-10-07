@@ -22,6 +22,12 @@ for (let stop = 0; stop <= 4; stop++) {
   for (let index = 0; index <= stop; index++) {
     const before = flow.inspect();
     assert.equal(before.stage, stages[index]);
+    assert.equal(before.history.length, index);
+    assert.equal(Object.isFrozen(before.history), true);
+    for (const [position, entry] of before.history.entries()) {
+      assert.equal(entry.ordinal, position + 1); assert.equal(Object.isFrozen(entry), true);
+      assert.equal(entry.provenance, "simulated_only"); assert.equal(entry.wouldTransmit, false);
+    }
     assert.equal(before.executionEnabled, false); assert.equal(before.wouldTransmit, false);
     assert.equal(before.vehicleCommandEnabled, false); assert.equal(before.canExecute, false);
     assert.equal(before.repairConfirmed, false);
@@ -30,6 +36,7 @@ for (let stop = 0; stop <= 4; stop++) {
     }
     if (index === stop) break;
     assert.equal(flow[actions[index]](), true);
+    assert.equal(before.history.length, index, "Old snapshots must not gain later events");
   }
   if (stop === 4) {
     assert.equal(flow.inspect().workflow.state, "dispatch_blocked");
@@ -41,6 +48,8 @@ for (let stop = 0; stop <= 4; stop++) {
     assert.match(flow.inspect().comparison, /前後共通 P0420/);
   }
   flow.cancel(); flow.cancel();
+  assert.equal(flow.inspect().history.length, stop + 1);
+  assert.equal(flow.inspect().history.at(-1).stage, "cancelled");
   assert.equal(flow.inspect().stage, "cancelled"); assert.equal(flow.inspect().comparison, null);
   for (const action of actions) assert.equal(flow[action](), false);
 }
@@ -56,10 +65,13 @@ for (const scenario of ["result_unknown", "reread_failed"]) {
   assert.equal(snapshot.stage, scenario); assert.equal(snapshot.comparison, null);
   assert.equal(snapshot.blockedReason, scenario === "result_unknown" ? "clear_evaluation_incomplete" : "post_fixture_scope_incomplete");
   assert.equal(snapshot.workflow.dispatch.attempted, false);
+  assert.deepEqual(snapshot.history.map(entry => entry.stage), ["prepared", "confirmed", "dispatch_blocked", scenario]);
+  assert.equal(snapshot.history.at(-1).reason, snapshot.blockedReason);
   assert.equal(snapshot.executionEnabled, false); assert.equal(snapshot.repairConfirmed, false);
   for (const action of actions) assert.equal(flow[action](), false);
   assert.deepEqual(flow.inspect(), snapshot);
   flow.cancel(); assert.equal(flow.inspect().blockedReason, null);
+  assert.equal(flow.inspect().history[3].reason, snapshot.blockedReason, "Ending must retain the earlier hold reason in this simulation's history");
   console.log(`Walkthrough ${scenario}: existing receipt validator rejected ${snapshot.blockedReason}; no comparison or retry`);
 }
 console.log("DTC clear walkthrough: ordered preparation/confirmation/blocked dispatch/comparison, cancellation at every stage and failure passed; fixed simulation only");
