@@ -93,6 +93,31 @@ module.exports = async function validateTimeoutCleanupBrowser(browser, root, out
       assert.ok(JSON.stringify(saved).includes('P0133'));
       assert.ok(!JSON.stringify(saved).includes('synthetic_private'));
       assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), snapshot);
+      const readFacts = target => target.evaluate(() => ({
+        codes: obdDevSession.lastSession.dtcSnapshot.codes,
+        summary: obdDevSession.lastSession.webSerialReadoutSummary
+      }));
+      const originalFacts = await readFacts(page);
+      assert.equal(originalFacts.summary.failedCount, 1);
+      const restoredPage = await context.newPage();
+      restoredPage.on('pageerror', error => errors.push(error.message));
+      await restoredPage.goto('http://127.0.0.1');
+      await restoredPage.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      await restoredPage.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await restoredPage.locator('#obdUiModeSwitch [data-obd-ui-mode="simple"]').click();
+      const [fileChooser] = await Promise.all([
+        restoredPage.waitForEvent('filechooser'),
+        restoredPage.getByRole('button', { name: '保存した読取結果を開く', exact: true }).click()
+      ]);
+      await fileChooser.setFiles(savedPath);
+      await restoredPage.locator('#obdDetectedCodes').getByText('P0133', { exact: false }).first().waitFor();
+      assert.deepEqual(await readFacts(restoredPage), originalFacts, 'File restoration must preserve timeout attempts and acquired DTCs');
+      await restoredPage.evaluate(() => renderObdStageView('results'));
+      assert.equal(await restoredPage.locator('#obdSimpleResultBadge').innerText(), '一部取得');
+      assert.equal(await restoredPage.evaluate(() => Boolean(obdDevSession.port || obdDevSession.reader || obdDevSession.writer || obdSerialDisconnectOperation)), false,
+        'Imported failure evidence must not restore a live connection or cleanup owner');
+      await restoredPage.close();
+      assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), snapshot);
       const retry = await page.evaluate(async () => {
         await connectObdDeveloperVci();
         return { calls: window.timeoutPickerCalls, snapshot: JSON.stringify(obdDevSession.lastSession),
@@ -104,6 +129,6 @@ module.exports = async function validateTimeoutCleanupBrowser(browser, root, out
       await page.close();
     }
     assert.deepEqual(errors, []);
-    console.log('Timeout cleanup browser: pending save/reconnect blocked, settled JSON download preserves DTC, quarantine blocks picker, confirmed cleanup permits picker cancellation; messages and 390/1280px passed; synthetic transport only');
+    console.log('Timeout cleanup browser: pending save/reconnect blocked, JSON download and fresh-page import preserve DTC/failed attempts, restored partial status has no live connection, quarantine blocks picker, confirmed cleanup permits picker cancellation; messages and 390/1280px passed; synthetic transport only');
   } finally { await context.close(); }
 };
