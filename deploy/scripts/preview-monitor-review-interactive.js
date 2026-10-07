@@ -16,11 +16,15 @@ const createReview = ${createSimulatedReviewController.toString()};
 const attachMonitorPreviewView = ${attachMonitorPreviewView.toString()};
 const attachView = ${single ? attachSingleReadoutPreviewView.toString() : "attachMonitorPreviewView"};
 const scenario = document.querySelector('#scenario');
-const review = createReview(() => ${single ? "createSingleReadoutPreviewSession(fixtureApi, scenario.value === 'failure' ? 'normal' : scenario.value)" : "createDtcClearBrowserPreviewSession(fixtureApi)"}, () => {
+let acquired;
+const review = createReview(() => {
+  acquired = ${single ? "createSingleReadoutRunPreviewSession(fixtureApi, scenario.value === 'failure' ? 'normal' : scenario.value)" : "createDtcClearBrowserPreviewSession(fixtureApi)"};
+  return acquired;
+}, () => {
   const fail = scenario.value === 'failure';
-  return new Promise((resolve, reject) => setTimeout(() => {
+  return Promise.all([acquired.ready, new Promise((resolve, reject) => setTimeout(() => {
     if (fail) reject(new Error('simulated_preview_failure')); else resolve();
-  }, 400));
+  }, 400))]);
 });
 const root = document.querySelector('#review');
 const show = document.querySelector('#show');

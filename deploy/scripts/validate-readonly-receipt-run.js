@@ -3,6 +3,9 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { createReadOnlyReceiptRun } from "./fixtures/readonly-receipt-run.js";
 import { client, attachWire } from "./fixtures/serial-runtime-harness.js";
+import { formatSingleReadoutReceiptPreview } from "./fixtures/single-readout-receipt-preview.js";
+import { createSingleReadoutPreviewSession } from "./fixtures/single-readout-preview-session.js";
+import { createSingleReadoutRunPreviewSession } from "./fixtures/single-readout-run-preview-session.js";
 const host = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), host);
 const api = host.window.ObdReadOnly;
@@ -46,6 +49,9 @@ for (const failure of [null, "reader", "clock_start", "clock_end"]) {
       assert.deepEqual(wire.writes, [...initialization, ...commands.slice(0, sentCount)].map(command => command + "\r"));
       if (failure) assert.equal(result.summary, null);
       else { assert.equal(result.summary.receiptCount, 4); assert.equal(result.summary.realTransportProofAvailable, false); }
+      const display = formatSingleReadoutReceiptPreview(result);
+      if (failure) { assert.equal(display.ok, false); assert.equal(display.text, null); }
+      else { assert.equal(display.ok, true); assert.match(display.text, /NO DATA報告あり。故障コード0件とは判断できません/); }
     } finally { await wire.close(); }
   }
 }
@@ -96,3 +102,40 @@ for (const failure of ["throw", "incomplete", "overflow", "invalid_chunk"]) {
   }
 }
 console.log("Receipt run: 13 real-function synthetic-wire cases preserve prior results and stop subsequent commands; cancellation waits for reader settlement before manual restart");
+
+for (const scenario of ["normal", "compact", "no_data", "conflict", "missing_prompt"]) {
+  const state = context(); let tick = 0;
+  const selectedProfile = scenario === "compact" ? profile.replace("s1", "s0") : profile;
+  const run = createReadOnlyReceiptRun(() => state, api, selectedProfile, () => tick++, async (command, append) => {
+    const index = commands.indexOf(command);
+    let raw = index === 3 ? "7E8 06 41 01 00 07 01 00 AA\r>"
+      : `7E8 02 ${["43", "47", "4A"][index]} 00 AA AA AA AA AA\r>`;
+    if (scenario === "compact") raw = raw.replaceAll(" ", "");
+    if (scenario === "no_data") raw = "NO DATA\r>";
+    if (scenario === "conflict" && index === 0) raw = raw.replace(">", "7E8 04 43 01 01 01 AA AA AA\r>");
+    if (scenario === "missing_prompt" && index === 3) raw = raw.replace(">", "");
+    for (let offset = 0; offset < raw.length; offset += 7) assert.equal(append(raw.slice(offset, offset + 7)), true);
+    return "complete";
+  });
+  const result = await run.run();
+  assert.equal(result.ok, true, "Reader completion remains separate from grammar and semantic observations");
+  const display = formatSingleReadoutReceiptPreview(result);
+  const previous = createSingleReadoutPreviewSession(api, scenario);
+  try { assert.deepEqual(display, previous.inspect()); } finally { previous.dispose(); }
+  const acquired = createSingleReadoutRunPreviewSession(api, scenario);
+  assert.equal(acquired.inspect().ok, false);
+  await acquired.ready;
+  assert.deepEqual(acquired.inspect(), display);
+  acquired.dispose(); assert.equal(acquired.inspect().text, null);
+  const cancelled = createSingleReadoutRunPreviewSession(api, scenario);
+  cancelled.dispose(); await cancelled.ready;
+  assert.equal(cancelled.inspect().ok, false); assert.equal(cancelled.inspect().text, null);
+  assert.equal(display.ok, true);
+  assert.match(display.text, /消去前後の比較ではありません/);
+  assert.equal(result.summary.comparisonAvailable, false);
+  assert.equal(result.summary.clearSucceededInferred, false);
+  if (scenario === "conflict") assert.match(display.text, /保存DTC: 判定保留/);
+  if (scenario === "missing_prompt") assert.match(display.text, /応答形式: 確認できません/);
+  if (scenario === "no_data") assert.doesNotMatch(display.text, /報告元からコード0件の応答/);
+}
+console.log("Receipt run display: five acquisition results match the existing single-readout preview; no-data, conflicts and missing prompt stay distinct");

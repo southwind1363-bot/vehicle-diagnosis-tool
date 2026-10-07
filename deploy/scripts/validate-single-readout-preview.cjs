@@ -19,10 +19,21 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
   assert.equal(grammarOnly.inspect().reason, 'semantic_observation_unavailable'); grammarOnly.dispose();
   const checks = await page.evaluate(async expected => {
     const { createSingleReadoutPreviewSession } = await import('./single-readout-preview-session.js');
+    const { createSingleReadoutRunPreviewSession } = await import('./single-readout-run-preview-session.js');
     const { attachSingleReadoutPreviewView } = await import('./single-readout-preview-view.js');
     const { createSimulatedReviewController } = await import('./monitor-preview-controller.js');
     let checks = 0, scenario = 'normal';
     const check = (condition, name) => { if (!condition) throw new Error(name); checks++; };
+    for (const [scenario, text] of Object.entries(expected)) {
+      const session = createSingleReadoutRunPreviewSession(window.ObdReadOnly, scenario);
+      check(!session.inspect().ok, 'acquisition is initially pending');
+      await session.ready;
+      check(session.inspect().ok && session.inspect().text === text, 'async acquisition matches existing rendering');
+      session.dispose(); check(session.inspect().text === null, 'completed acquisition disposal');
+      const pending = createSingleReadoutRunPreviewSession(window.ObdReadOnly, scenario);
+      pending.dispose(); await pending.ready;
+      check(!pending.inspect().ok && pending.inspect().text === null, 'cancelled acquisition cannot publish late text');
+    }
     const sessions = [], gates = [];
     const review = createSimulatedReviewController(() => {
       const session = createSingleReadoutPreviewSession(window.ObdReadOnly, scenario);

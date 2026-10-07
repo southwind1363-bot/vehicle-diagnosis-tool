@@ -7,7 +7,17 @@ export function createMonitorPreviewBrowserSource(kind = "pair") {
     ["readonly-receipt-raw-validation.js", [], ["createReceiptRawValidation"]],
     ["readonly-receipt-owner.js", ['import { createReceiptRawValidation } from "./readonly-receipt-raw-validation.js";'], ["createReadOnlyReceiptOwner"]],
     ["readonly-receipt-capture.js", ['import { createReadOnlyReceiptOwner } from "./readonly-receipt-owner.js";'], ["createReadOnlyReceiptCapture"]],
-    ["single-readout-preview-session.js", ['import { createReadOnlyReceiptCapture } from "./readonly-receipt-capture.js";'], ["createSingleReadoutPreviewSession"]]
+    ["single-readout-receipt-preview.js", [], ["formatSingleReadoutReceiptPreview"]],
+    ["single-readout-sample.js", [], ["createSingleReadoutSample"]],
+    ["readonly-receipt-session.js", ['import { createReadOnlyReceiptCapture } from "./readonly-receipt-capture.js";'], ["createReadOnlyReceiptSession"]],
+    ["readonly-timed-receipt-session.js", ['import { createReadOnlyReceiptSession } from "./readonly-receipt-session.js";'], ["createTimedReadOnlyReceiptSession"]],
+    ["readonly-receipt-run.js", ['import { createTimedReadOnlyReceiptSession } from "./readonly-timed-receipt-session.js";'], ["createReadOnlyReceiptRun"]],
+    ["single-readout-run-preview-session.js", ['import { createSingleReadoutSample } from "./single-readout-sample.js";',
+      'import { createReadOnlyReceiptRun } from "./readonly-receipt-run.js";',
+      'import { formatSingleReadoutReceiptPreview } from "./single-readout-receipt-preview.js";'], ["createSingleReadoutRunPreviewSession"]],
+    ["single-readout-preview-session.js", ['import { createReadOnlyReceiptCapture } from "./readonly-receipt-capture.js";',
+      'import { createSingleReadoutSample } from "./single-readout-sample.js";',
+      'import { formatSingleReadoutReceiptPreview } from "./single-readout-receipt-preview.js";'], ["createSingleReadoutPreviewSession"]]
   ] : [
     ["dtc-clear-readout-scope.js", [], ["inspectDtcClearReadoutFixtureScope", "createDtcClearReadoutFixtureScope"]],
     ["dtc-clear-scoped-readout-core.js", ['import { inspectDtcClearReadoutFixtureScope } from "./dtc-clear-readout-scope.js";'], ["createDtcClearFixtureValidators"]],

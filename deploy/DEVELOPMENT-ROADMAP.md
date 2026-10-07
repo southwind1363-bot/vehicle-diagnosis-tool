@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-08 R2一取得の画面接続: 一回分の操作HTMLをreadonly-receipt-run→時計付きsession→既存raw/意味観測→共用日本語formatterへ接続。固定sample生成と表示文を共用し、同期の旧見本と非同期取得の5条件（正常/S0/NO DATA/矛盾/終端不足）の本文一致をNode/Chromiumで確認。取得終了を文法成立・ゼロ件・前後比較の許可に昇格させない。閉鎖/条件変更でsessionを破棄し、遅い完了は表示しない。既存操作HTMLの390/1280px・取消・CSP・外部要求0、61ライフサイクル項目を含む回帰試験に合格。受信bytesと接続は人工値、通常transport/保存/実車には未接続。本体3.13.633・ZIPは不変。
+
 2026-10-08 R2一取得の順次制御: readonly-receipt-runで固定4項目の開始時刻→信頼済み模擬reader→終了時刻→記録検査を接続。途中失敗で後続を止め、未完了記録はsummaryを返さない。取消は記録を即失効し、readerのPromiseがsettleするまで別runを拒否する。旧chunk callbackは次command/次runへ混入させない。実送受信関数と模擬wireの13ケースで各位置のtimeout/開始・終了時計失敗、送信列の停止、既存P0133結果参照の保持を確認。追加16失敗ケースと取消・遅着・手動再開も検証。readerの物理終了や全ECU応答を認定せず、通常transportには未接続。本体3.13.633・ZIP・保存形式・車両通信は不変。
 
 2026-10-08 R2取得時刻の専用層: readonly-timed-receipt-sessionを追加し、command開始/終了の時点で信頼済みclock callbackから非負の整数ミリ秒を取得する。時計例外・不正値・逆行では試行を失効し、旧ticket・別command・再入・接続/設定世代変更を拒否。実送受信関数を模擬wireで動かす既存試験も固定時刻からperformance.nowのローカル計測へ切替え、4commandの8時点と時計失敗時の読取送信0件を含む221項目に合格。通常受信hookは未接続で、時刻はUTC/実車由来/適合の証明ではない。profileは宣言値、実行不可・simulated_onlyを維持。本体3.13.633・ZIP・保存形式・車両通信は不変。
