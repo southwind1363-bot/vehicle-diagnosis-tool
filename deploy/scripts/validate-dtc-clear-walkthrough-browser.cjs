@@ -79,6 +79,38 @@ module.exports = async (browser, output) => {
       await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
       assert.equal(await page.locator('#confirm').isEnabled(), false);
       assert.match(await page.locator('#status').innerText(), /破棄/);
+      // A restored page remains closed until an explicit restart; no automatic replay.
+      await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+      assert.equal(await page.locator('#confirm').isEnabled(), false);
+      for (const scenario of ['normal', 'pre_record_missing', 'recovery_missing', 'applicability_missing',
+        'result_unknown', 'reread_failed', 'no_data', 'ecu_missing']) {
+        await page.selectOption('#scenario', scenario);
+        assert.equal(await page.locator('#restart').isVisible(), false);
+        await page.locator('#prepare').click();
+        if (!scenario.endsWith('_missing') || scenario === 'ecu_missing') {
+          for (const step of steps.slice(1)) await page.locator('#' + step).click();
+        }
+        const oldStatus = await page.locator('#status').innerText();
+        await page.locator('#cancel').click();
+        assert.equal(await page.locator('#restart').isVisible(), true);
+        await page.locator('details').evaluate(el => { el.open = true; });
+        await page.locator('#restart').focus(); await page.keyboard.press('Enter');
+        assert.equal(await page.locator('#scenario').inputValue(), scenario);
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'prepare');
+        assert.equal(await page.locator('#restart').isVisible(), false);
+        assert.equal(await page.locator('#history li').count(), 0);
+        assert.equal(await page.locator('#requirements li').count(), 0);
+        assert.equal(await page.locator('#record-state').textContent(), '');
+        assert.equal(await page.locator('#comparison').textContent(), '');
+        assert.equal(await page.locator('#followup').isVisible(), false);
+        assert.equal(await page.locator('details').evaluate(el => el.open), false);
+        for (const step of steps.slice(1)) assert.equal(await page.locator('#' + step).isEnabled(), false);
+        await page.keyboard.press('Enter');
+        if (!scenario.endsWith('_missing') || scenario === 'ecu_missing') {
+          for (const step of steps.slice(1)) await page.locator('#' + step).click();
+        }
+        assert.equal(await page.locator('#status').innerText(), oldStatus);
+      }
     }
     assert.deepEqual(errors, []); assert.deepEqual(external, []);
     console.log('DTC clear walkthrough browser: staged keyboard flow, comparison, cancel/pagehide, 390/1280px and no external requests passed');

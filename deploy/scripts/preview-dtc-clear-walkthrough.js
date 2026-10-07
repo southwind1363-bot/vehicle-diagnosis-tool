@@ -43,9 +43,17 @@ function render() {
     const item = document.createElement('li'); item.textContent = historyLabels[entry.stage]; return item;
   }));
   order.forEach((action,i) => document.getElementById(action).disabled = state.stage !== stages[i]);
+  document.querySelector('#restart').hidden = state.stage !== 'cancelled';
 }
 order.forEach(action => document.getElementById(action).addEventListener('click', () => {flow[action](); render();}));
 document.querySelector('#cancel').addEventListener('click', () => {flow.cancel(); render();});
+document.querySelector('#restart').addEventListener('click', () => {
+  if (flow.inspect().stage !== 'cancelled') return;
+  flow = createDtcClearWalkthrough(fixtureApi, document.querySelector('#scenario').value);
+  document.querySelector('details').open = false;
+  render();
+  document.querySelector('#prepare').focus();
+});
 document.querySelector('#scenario').addEventListener('change', event => {
   flow.cancel(); flow = createDtcClearWalkthrough(fixtureApi, event.target.value); render();
 });
@@ -57,8 +65,8 @@ render();`.replace(/\r\n?/g, "\n");
 <title>DTC消去前後の模擬一巡</title><style>body{font-family:system-ui;max-width:900px;margin:auto;padding:20px;line-height:1.8;background:#f4f7fa;color:#172431}button{font:inherit;min-height:48px;padding:10px;margin:5px;max-width:100%}select{display:block;font:inherit;min-height:48px;max-width:100%;padding:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere}button:focus-visible,select:focus-visible{outline:3px solid #1368ac}</style>
 <h1>DTC消去前後の模擬一巡</h1><p>開発用・固定サンプルです。実車通信、実際の消去、ファイル保存は行いません。前後の記録と時刻は人工入力です。</p>
 <label for="scenario">模擬条件</label><select id="scenario"><option value="normal">比較できる固定記録</option><option value="pre_record_missing">事前記録がない</option><option value="recovery_missing">復旧計画がない</option><option value="applicability_missing">対象適合が未確認</option><option value="result_unknown">消去応答がなく結果不明</option><option value="reread_failed">再読取が未完了</option><option value="no_data">保存DTCがNO DATA</option><option value="ecu_missing">一部ECUの応答がない</option></select><p>条件を変えると前の確認・比較を破棄します。操作は準備からやり直します。</p>
-<button id="prepare">1. 模擬の事前記録を準備</button><button id="confirm">2. 模擬条件を確認</button><button id="reviewBlockedDispatch">3. 送信拒否を確認</button><button id="compareFixedRecords">4. 固定の前後記録を比較</button><button id="cancel">終了して記録を破棄</button>
-<p id="status" role="status"></p><section id="followup" hidden><h2>次に必要な読取確認（模擬計画）</h2><p>模擬応答の評価が返す読取専用の確認計画です。この画面では読取や再送を実行しません。既存の前後比較だけで消去成功・修理完了を判断しません。</p><ul id="followup-items"></ul><p>実車で行う場合は接続・対象・実施条件を改めて確認する必要があります。自動再試行はしません。</p></section><details><summary>模擬の事前条件を確認</summary><p>すべて人工的な条件です。「成立」は実際の認証・保存・適合・実機確認の完了を意味しません。</p><p id="record-state"></p><ul id="requirements"></ul></details><section aria-labelledby="history-title"><h2 id="history-title">今回の模擬操作履歴</h2><p>この画面内だけの操作順です。実車の監査記録や実行時刻の証明ではありません。条件変更・再読込で消えます。</p><ol id="history"></ol></section><pre id="comparison"></pre><script>${script}</script></html>`;
+<button id="prepare">1. 模擬の事前記録を準備</button><button id="confirm">2. 模擬条件を確認</button><button id="reviewBlockedDispatch">3. 送信拒否を確認</button><button id="compareFixedRecords">4. 固定の前後記録を比較</button><button id="cancel">終了して記録を破棄</button><button id="restart" hidden>同じ模擬条件で最初から</button>
+<p id="status" role="status"></p><section id="followup" hidden><h2>次に必要な読取確認（模擬計画）</h2><p>模擬応答の評価が返す読取専用の確認計画です。この画面では読取や再送を実行しません。既存の前後比較だけで消去成功・修理完了を判断しません。</p><ul id="followup-items"></ul><p>実車で行う場合は接続・対象・実施条件を改めて確認する必要があります。自動再試行はしません。</p></section><details><summary>模擬の事前条件を確認</summary><p>すべて人工的な条件です。「成立」は実際の認証・保存・適合・実機確認の完了を意味しません。</p><p id="record-state"></p><ul id="requirements"></ul></details><section aria-labelledby="history-title"><h2 id="history-title">今回の模擬操作履歴</h2><p>この画面内だけの操作順です。実車の監査記録や実行時刻の証明ではありません。条件変更・再読込・最初からの操作で消えます。</p><ol id="history"></ol></section><pre id="comparison"></pre><script>${script}</script></html>`;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.length !== 2) throw new Error("fixed_walkthrough_only");
