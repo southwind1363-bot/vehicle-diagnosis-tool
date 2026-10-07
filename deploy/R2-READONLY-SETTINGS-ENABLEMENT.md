@@ -52,6 +52,10 @@ PDF本文を確認。PP29表のスクリーンショット取得は失敗した�
 
 ## 非実行準備器の実装記録
 
+2026-10-08 一取得の順次制御: `readonly-receipt-run.js`を開発用に追加。固定順序03/07/0A/0101だけを信頼済みreaderへ渡し、各commandの専用chunk callbackを発行する。時刻取得やreceipt受理に失敗したら後続readerを呼ばず、既存の診断セッションには書き込まない。callbackの戻り値`complete`は記録の構造検査へ渡すだけで、NO DATAをゼロ件、構造完了を意味検証済みに昇格させない。
+
+取消は記録だけを即失効する。readerの中断能力は持たず、未settleの読取がある間は新runを拒否する。settleしても物理的な接続終了を証明するものではなく、再開は明示run呼出でのみ行う。通常senderへの接続や実車の再試行許可は追加していない。模擬wireの既存結果参照保持と、失敗位置以降の送信0件を検証した。
+
 2026-10-08 取得区間の時計層: `readonly-timed-receipt-session.js`が既存receipt sessionを包み、呼出ごとの時刻引数をなくしてcommand開始/終了時に専用clockから採る。要求する値は同一試行内で非減少の非負整数ミリ秒。絶対日時やUTCへ変換せず、異常値・逆行・例外では取得を失効する。callbackは開発runtimeの信頼済み依存であり、任意時計の真正性を認定しない。取得ticket/command参照の照合と接続・設定世代の既存検査も維持する。
 
 実送受信関数と模擬wireの結合試験では`Math.floor(performance.now())`を利用し、開始検査に失敗したらsenderへ進まないことを確認した。これは試験hook呼出時のローカル区間計測であり、機器の応答時刻・実車由来・壁時計時刻ではない。通常transportへのcapture hook、profile観測の確定、UTC監査時刻との対応付けは引き続き別工程。保存schemaは変更していない。
