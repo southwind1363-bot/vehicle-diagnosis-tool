@@ -52,6 +52,10 @@ PDF本文を確認。PP29表のスクリーンショット取得は失敗した�
 
 ## 非実行準備器の実装記録
 
+2026-10-08 取得区間の時計層: `readonly-timed-receipt-session.js`が既存receipt sessionを包み、呼出ごとの時刻引数をなくしてcommand開始/終了時に専用clockから採る。要求する値は同一試行内で非減少の非負整数ミリ秒。絶対日時やUTCへ変換せず、異常値・逆行・例外では取得を失効する。callbackは開発runtimeの信頼済み依存であり、任意時計の真正性を認定しない。取得ticket/command参照の照合と接続・設定世代の既存検査も維持する。
+
+実送受信関数と模擬wireの結合試験では`Math.floor(performance.now())`を利用し、開始検査に失敗したらsenderへ進まないことを確認した。これは試験hook呼出時のローカル区間計測であり、機器の応答時刻・実車由来・壁時計時刻ではない。通常transportへのcapture hook、profile観測の確定、UTC監査時刻との対応付けは引き続き別工程。保存schemaは変更していない。
+
 2026-10-07 通信番号追記: preparationへrecordProtocol(ticket, command, completion, response)を追加し、session/transitionでも同じ接続・設定世代の照合を通す。固定3設定の単一OK後に限り、ATDPN/completeと6・8・A6・A8の単一文字列を受理しprotocol_observedへ進む。早すぎる番号、再照会、不完全/不明/曖昧な報告は試行を拒否し、設定受理一覧と番号を消去する。旧ticketからの呼出しは新試行を変更しない。
 
 259項目で順序・固定入力・接続参照/設定世代/解除状態の変化・再入・遅着・失効を確認。モデルへの呼出順だけを確認するため、利用者が後から渡した文字列の実受信時刻や車両疎通を証明するものではない。報告値はprotocolNumberReportedとして保持するがprofileはnullで、capture開始や車両操作を許可しない。初期化のecho/header/space設定、実受信区間と時刻の結合は別途必要。通常transportへの接続はなく、本体3.13.629とZIPは変更しない。

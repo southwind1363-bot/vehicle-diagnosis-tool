@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { client, attachWire } from "./fixtures/serial-runtime-harness.js";
-import { createReadOnlyReceiptSession } from "./fixtures/readonly-receipt-session.js";
+import { createTimedReadOnlyReceiptSession } from "./fixtures/readonly-timed-receipt-session.js";
 const runtime = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), runtime);
 const api = runtime.window.ObdReadOnly;
@@ -13,14 +13,17 @@ const base = ["7E8 02 43 00 AA AA AA AA AA\r>", "7E8 02 47 00 AA AA AA AA AA\r>"
   "7E8 02 4A 00 AA AA AA AA AA\r>", "7E8 06 41 01 00 07 01 00 AA\r\n>"];
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks++; };
-async function setup(size, profile, replies, interrupt = false) {
+async function setup(size, profile, replies, interrupt = false, clock = () => Math.floor(performance.now())) {
   const c = client(), wire = attachWire(c, size, Object.fromEntries(commands.map((command, i) => [command, replies[i]])));
   await c.context.initializeElmDeveloperAdapter();
   const state = c.context.obdDevSession;
-  const receipts = createReadOnlyReceiptSession(() => ({ port: state.port, reader: state.reader, writer: state.writer,
+  const timings = [];
+  const receipts = createTimedReadOnlyReceiptSession(() => ({ port: state.port, reader: state.reader, writer: state.writer,
     settingsTicket: state.settingsObservation.owner.inspect(state.settingsObservation.ticket).ok ? state.settingsObservation.ticket : null,
     revision: c.context.obdSerialRevision, connected: state.readLoopActive && !c.context.obdSerialDisconnectOperation,
-    unlocked: c.context.isCurrentObdSerialOperation(c.context.obdSerialRevision) }), api, profile);
+    unlocked: c.context.isCurrentObdSerialOperation(c.context.obdSerialRevision) }), api, profile, () => {
+      const time = clock(); timings.push(time); return time;
+    });
   const attempt = receipts.begin().ticket;
   let active, interrupted = false;
   const decoder = state.decoder;
@@ -36,12 +39,14 @@ async function setup(size, profile, replies, interrupt = false) {
     if (chunk) receipts.append(attempt, active, chunk);
     return chunk;
   } };
-  return { c, wire, receipts, attempt, async read(index) {
-    // Declared test timing, not measured hardware time.
-    active = receipts.startCommand(attempt, commands[index], index * 2).ticket;
+  return { c, wire, receipts, attempt, timings, async read(index) {
+    // Sample local monotonic time at the test hook, not hardware or UTC time.
+    const started = receipts.startCommand(attempt, commands[index]);
+    if (!started.ok) return { error: started.reason };
+    active = started.ticket;
     try {
       const response = await c.context.sendElmDeveloperCommand(commands[index], 80);
-      const ended = receipts.endCommand(attempt, active, index * 2 + 1, "complete");
+      const ended = receipts.endCommand(attempt, active, "complete");
       return { response, ended, commandTicket: active };
     } catch (error) {
       receipts.invalidate();
@@ -63,6 +68,8 @@ for (const spaces of ["s1", "s0"]) {
       }
       const result = h.receipts.finish(h.attempt, "complete");
       check(result.ok && result.summary.rawTranscriptValidation.status === "parsed", "four real receive paths join raw evaluation");
+      check(h.timings.length === 8 && h.timings.every((time, index) => Number.isSafeInteger(time)
+        && (index === 0 || time >= h.timings[index - 1])), "start/end hooks sample eight monotonic times");
       check(!result.summary.realTransportProofAvailable && !result.summary.wouldTransmit, "synthetic bytes confer no real-world authority");
       assert.deepEqual(h.wire.writes, [...initialization, ...commands].map(command => command + "\r")); checks++;
       await h.c.context.disconnectObdDeveloperVci({ reason: "device_disconnected" });
@@ -121,4 +128,13 @@ for (const phase of ["collecting", "finished"]) {
     } finally { h.receipts.invalidate(); await h.wire.close(); }
   }
 }
-console.log(`Receipt runtime handoff: ${checks} checks passed; synthetic ports, declared profiles/timing, test-only capture hook`);
+for (const clock of [() => NaN, () => { throw Error("private_clock_error"); }]) {
+  const h = await setup(7, profile, base, false, clock);
+  try {
+    const read = await h.read(0);
+    check(read.error === "receipt_clock_unavailable", "failed clock rejects before send hook");
+    assert.deepEqual(h.wire.writes, initialization.map(command => command + "\r")); checks++;
+    check(h.receipts.inspect(h.attempt).summary === null, "failed clock leaves no receipt");
+  } finally { h.receipts.invalidate(); await h.wire.close(); }
+}
+console.log(`Receipt runtime handoff: ${checks} checks passed; synthetic ports, declared profiles, sampled local intervals, test-only capture hook`);
