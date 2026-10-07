@@ -47,4 +47,19 @@ for (let stop = 0; stop <= 4; stop++) {
 const failed = createDtcClearWalkthrough({ getServiceOperationReadinessRequirements() { throw new Error('private'); } });
 assert.equal(failed.prepare(), false); assert.equal(failed.inspect().stage, "unavailable");
 assert.equal(failed.inspect().workflow, null); assert.equal(failed.confirm(), false);
+assert.throws(() => createDtcClearWalkthrough(api, "unknown"));
+for (const scenario of ["result_unknown", "reread_failed"]) {
+  const flow = createDtcClearWalkthrough(api, scenario);
+  assert.equal(flow.prepare(), true); assert.equal(flow.confirm(), true); assert.equal(flow.reviewBlockedDispatch(), true);
+  assert.equal(flow.compareFixedRecords(), false);
+  const snapshot = flow.inspect();
+  assert.equal(snapshot.stage, scenario); assert.equal(snapshot.comparison, null);
+  assert.equal(snapshot.blockedReason, scenario === "result_unknown" ? "clear_evaluation_incomplete" : "post_fixture_scope_incomplete");
+  assert.equal(snapshot.workflow.dispatch.attempted, false);
+  assert.equal(snapshot.executionEnabled, false); assert.equal(snapshot.repairConfirmed, false);
+  for (const action of actions) assert.equal(flow[action](), false);
+  assert.deepEqual(flow.inspect(), snapshot);
+  flow.cancel(); assert.equal(flow.inspect().blockedReason, null);
+  console.log(`Walkthrough ${scenario}: existing receipt validator rejected ${snapshot.blockedReason}; no comparison or retry`);
+}
 console.log("DTC clear walkthrough: ordered preparation/confirmation/blocked dispatch/comparison, cancellation at every stage and failure passed; fixed simulation only");

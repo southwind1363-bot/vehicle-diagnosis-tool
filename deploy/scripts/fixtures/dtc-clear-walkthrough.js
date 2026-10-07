@@ -1,10 +1,13 @@
 // Fixed simulated walkthrough only. No transport, saved records, or caller-supplied evidence.
 import { createDtcClearBrowserPreviewSession } from "./dtc-clear-browser-preview-session.js";
 
-export function createDtcClearWalkthrough(api) {
+export function createDtcClearWalkthrough(api, scenario = "normal") {
+  const samples = { normal: "workflow", result_unknown: "workflow_unknown", reread_failed: "workflow_reread_failed" };
+  if (!Object.hasOwn(samples, scenario)) throw new TypeError("unknown_walkthrough_scenario");
+  let blockedReason = null;
   let stage = "empty", workflow = null, comparison = null, session = null;
   const release = () => { session?.dispose(); session = null; comparison = null; };
-  const inspect = () => Object.freeze({ stage, workflow, comparison,
+  const inspect = () => Object.freeze({ stage, workflow, comparison, scenario, blockedReason,
     provenance: "simulated_only", executionEnabled: false, vehicleCommandEnabled: false,
     wouldTransmit: false, canExecute: false, repairConfirmed: false });
   return Object.freeze({
@@ -18,7 +21,7 @@ export function createDtcClearWalkthrough(api) {
           target: { vehicleId: "simulated-vehicle", ecuId: "simulated-ecu", transportId: "simulated-transport" },
           preOperationSessionId: "fixed-simulated-before-record", evidence
         });
-        session = createDtcClearBrowserPreviewSession(api, "workflow");
+        session = createDtcClearBrowserPreviewSession(api, samples[scenario]);
         stage = "prepared";
         return true;
       } catch { release(); workflow = null; stage = "unavailable"; return false; }
@@ -41,7 +44,13 @@ export function createDtcClearWalkthrough(api) {
       if (stage !== "dispatch_blocked") return false;
       const result = session.inspect();
       const difference = session.inspectDifference();
-      if (!result.ok || !difference.ok) { release(); stage = "unavailable"; return false; }
+      if (!result.ok || !difference.ok) {
+        blockedReason = result.reason || difference.reason;
+        release();
+        stage = scenario === "result_unknown" && blockedReason === "clear_evaluation_incomplete" ? "result_unknown"
+          : scenario === "reread_failed" && blockedReason === "post_fixture_scope_incomplete" ? "reread_failed" : "unavailable";
+        return false;
+      }
       const names = { read_stored_dtc: "保存DTC", read_pending_dtc: "保留DTC", read_permanent_dtc: "永久DTC" };
       const lines = difference.summary.differences.flatMap(item => item.sources.map(source =>
         `[${source.sourceId}] ${names[item.intent]}：前のみ ${source.removed.join(", ") || "なし"} / 後のみ ${source.added.join(", ") || "なし"} / 前後共通 ${source.retained.join(", ") || "なし"}`));
@@ -51,6 +60,7 @@ export function createDtcClearWalkthrough(api) {
     },
     cancel() {
       release();
+      blockedReason = null;
       if (workflow && workflow.state !== "cancelled") {
         workflow = api.transitionGenericObdDtcClearWorkflow(workflow, { type: "cancel", revision: workflow.revision });
       }
