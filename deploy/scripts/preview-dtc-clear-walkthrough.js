@@ -20,6 +20,7 @@ ecu_missing:'模擬の保存DTC応答で対象ECU 7E9の記録が欠けていま
 cancelled:'終了しました。記録の参照を破棄しました。', unavailable:'模擬記録を確認できません。自動再試行はしません。'};
 function render() {
   const state = flow.inspect();
+  document.querySelector('#scenario').value = state.scenario;
   document.querySelector('#status').textContent = labels[state.stage];
   document.querySelector('#comparison').textContent = state.comparison || '';
   const readoutLabels = {read_stored_dtc:'保存DTC', read_pending_dtc:'保留DTC', read_permanent_dtc:'永久DTC', read_readiness:'レディネス'};
@@ -49,7 +50,7 @@ order.forEach(action => document.getElementById(action).addEventListener('click'
 document.querySelector('#cancel').addEventListener('click', () => {flow.cancel(); render();});
 document.querySelector('#restart').addEventListener('click', () => {
   if (flow.inspect().stage !== 'cancelled') return;
-  flow = createDtcClearWalkthrough(fixtureApi, document.querySelector('#scenario').value);
+  flow = createDtcClearWalkthrough(fixtureApi, flow.inspect().scenario);
   document.querySelector('details').open = false;
   render();
   document.querySelector('#prepare').focus();
@@ -58,6 +59,10 @@ document.querySelector('#scenario').addEventListener('change', event => {
   flow.cancel(); flow = createDtcClearWalkthrough(fixtureApi, event.target.value); render();
 });
 window.addEventListener('pagehide', () => {flow.cancel(); render();});
+window.addEventListener('pageshow', event => {
+  if (event.persisted) flow.cancel();
+  render();
+});
 render();`.replace(/\r\n?/g, "\n");
   const hash = createHash("sha256").update(script).digest("base64");
   return `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

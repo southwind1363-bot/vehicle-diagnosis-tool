@@ -13,6 +13,12 @@ module.exports = async (browser, output) => {
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('http://127.0.0.1/walkthrough');
+      // Model form-state restoration without a user change event.
+      await page.evaluate(() => {
+        document.querySelector('#scenario').value = 'no_data';
+        window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false }));
+      });
+      assert.equal(await page.locator('#scenario').inputValue(), 'normal');
       assert.equal(await page.locator('#followup').isVisible(), false);
       const steps = ['prepare', 'confirm', 'reviewBlockedDispatch', 'compareFixedRecords'];
       for (let index = 0; index < steps.length; index++) {
@@ -82,6 +88,25 @@ module.exports = async (browser, output) => {
       // A restored page remains closed until an explicit restart; no automatic replay.
       await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
       assert.equal(await page.locator('#confirm').isEnabled(), false);
+      for (const stop of [1, 2, 3, 4]) {
+        await page.selectOption('#scenario', 'no_data');
+        for (const step of steps.slice(0, stop)) await page.locator('#' + step).click();
+        await page.evaluate(() => {
+          document.querySelector('#scenario').value = 'normal';
+          window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+        });
+        assert.equal(await page.locator('#scenario').inputValue(), 'no_data');
+        assert.match(await page.locator('#status').innerText(), /終了しました/);
+        assert.equal(await page.locator('#comparison').textContent(), '');
+        assert.equal(await page.locator('#followup').isVisible(), false);
+        for (const step of steps) assert.equal(await page.locator('#' + step).isEnabled(), false);
+        const count = await page.locator('#history li').count();
+        await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+        assert.equal(await page.locator('#history li').count(), count);
+        await page.locator('#restart').click();
+        for (const step of steps) await page.locator('#' + step).click();
+        assert.match(await page.locator('#status').innerText(), /NO DATA/);
+      }
       for (const scenario of ['normal', 'pre_record_missing', 'recovery_missing', 'applicability_missing',
         'result_unknown', 'reread_failed', 'no_data', 'ecu_missing']) {
         await page.selectOption('#scenario', scenario);
