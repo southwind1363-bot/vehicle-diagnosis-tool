@@ -11,7 +11,7 @@ export function createDtcClearBrowserPreviewSession(api, sample = "monitor") {
   try {
     const result = validators.createDtcClearDtcEvidencePairFixture(input);
     handle = result.handle;
-    if (!result.ok && ["workflow_unknown", "workflow_reread_failed"].includes(sample)) {
+    if (!result.ok && ["workflow_unknown", "workflow_reread_failed", "workflow_no_data", "workflow_ecu_missing"].includes(sample)) {
       let disposed = false;
       const inspect = () => Object.freeze({ ok: false, reason: disposed ? "scope_invalidated" : result.reason, text: null, summary: null });
       return Object.freeze({ inspect, inspectDifference: inspect,

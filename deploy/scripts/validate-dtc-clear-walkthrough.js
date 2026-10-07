@@ -3,9 +3,24 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { createDtcClearWalkthrough } from "./fixtures/dtc-clear-walkthrough.js";
 import { createDtcClearBrowserPreviewSession } from "./fixtures/dtc-clear-browser-preview-session.js";
+import { createDtcClearBrowserFixtureInput } from "./fixtures/dtc-clear-browser-sample.js";
+import { createDtcClearFixtureValidators } from "./fixtures/dtc-clear-scoped-readout-core.js";
 const host = vm.createContext({ window: {}, navigator: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), host);
 const api = host.window.ObdReadOnly;
+const validators = createDtcClearFixtureValidators(api);
+for (const [sampleName, missing] of [["workflow_no_data", ["7E8", "7E9"]], ["workflow_ecu_missing", ["7E9"]]]) {
+  const input = createDtcClearBrowserFixtureInput(validators, sampleName);
+  try {
+    assert.ok(input.postReadout.receipts.every(receipt => receipt.completion === "complete" && receipt.transcript.endsWith(">")));
+    const { scope, context, clearWindowSnapshot, clearCompletedAt, postReadout } = input;
+    const result = validators.evaluateDtcClearScopedPostReadoutFixture({ scope, context, clearWindowSnapshot, clearCompletedAt, postReadout });
+    assert.equal(result.fixtureScopeMatched, false);
+    assert.deepEqual(result.readouts[0].missingFixtureSourceIds, missing);
+    assert.ok(result.readouts.slice(1).every(row => row.fixtureScopeMatched));
+    assert.equal(result.readouts[0].positiveSourceIdsOutsideFixture.length, 0);
+  } finally { input.scope.invalidate(input.context); }
+}
 const expectedPlan = api.evaluateGenericObdDtcClearResponses({ expectedSourceIds: ["7EC"], frames: [], completion: "timeout" }).postOperationReadOnlyFollowupPlan;
 const checkPlan = plan => {
   assert.equal(plan, expectedPlan, "Plan must come from the existing response evaluator");
@@ -84,7 +99,7 @@ for (const [scenario, missing] of [["pre_record_missing", "pre_clear_snapshot_sa
 assert.equal(failed.prepare(), false); assert.equal(failed.inspect().stage, "unavailable");
 assert.equal(failed.inspect().workflow, null); assert.equal(failed.confirm(), false);
 assert.throws(() => createDtcClearWalkthrough(api, "unknown"));
-for (const scenario of ["result_unknown", "reread_failed"]) {
+for (const scenario of ["result_unknown", "reread_failed", "no_data", "ecu_missing"]) {
   const flow = createDtcClearWalkthrough(api, scenario);
   assert.equal(flow.prepare(), true); assert.equal(flow.confirm(), true); assert.equal(flow.reviewBlockedDispatch(), true);
   assert.equal(flow.compareFixedRecords(), false);

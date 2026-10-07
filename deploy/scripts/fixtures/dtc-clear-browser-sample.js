@@ -2,7 +2,7 @@
 import { createDtcClearReadoutFixtureScope } from "./dtc-clear-readout-scope.js";
 
 export function createDtcClearBrowserFixtureInput(validators, sample = "monitor") {
-  if (!["monitor", "workflow", "workflow_unknown", "workflow_reread_failed"].includes(sample)) throw new TypeError("unknown_fixed_sample");
+  if (!["monitor", "workflow", "workflow_unknown", "workflow_reread_failed", "workflow_no_data", "workflow_ecu_missing"].includes(sample)) throw new TypeError("unknown_fixed_sample");
   const workflowSample = sample !== "monitor";
   const profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
   const intents = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_readiness"];
@@ -27,6 +27,10 @@ export function createDtcClearBrowserFixtureInput(validators, sample = "monitor"
   if (sample === "workflow_reread_failed") {
     postReadout.receipts[3].completion = "timeout";
     postReadout.receipts[3].transcript = "";
+  }
+  if (sample === "workflow_no_data") postReadout.receipts[0].transcript = "NO DATA\r>";
+  if (sample === "workflow_ecu_missing") {
+    postReadout.receipts[0].transcript = postReadout.receipts[0].transcript.replace(/^7E9[^\r]*\r/m, "");
   }
   return { scope, context, beforeReadout: readout(1, false), clearStartedAt: stamp(7), clearCompletedAt: stamp(8),
     clearWindowSnapshot: clear.finish(clear.attemptToken, connectionToken, sample === "workflow_unknown" ? "timeout" : "complete").snapshot,

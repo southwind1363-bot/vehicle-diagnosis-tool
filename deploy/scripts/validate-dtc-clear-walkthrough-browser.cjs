@@ -52,12 +52,13 @@ module.exports = async (browser, output) => {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         await page.screenshot({ path: path.join(output, `dtc-clear-${scenario}-${width}.png`), fullPage: true });
       }
-      for (const scenario of ['result_unknown', 'reread_failed']) {
+      for (const [scenario, message] of [['result_unknown', /結果不明/], ['reread_failed', /再読取が完了していません/],
+        ['no_data', /NO DATA.*DTCゼロ件の証明にはならず/], ['ecu_missing', /対象ECU 7E9の記録が欠け/]]) {
         await page.selectOption('#scenario', scenario);
         assert.equal(await page.locator('#history li').count(), 0);
         for (const step of steps) await page.locator('#' + step).click();
         assert.equal(await page.locator('#comparison').innerText(), '');
-        assert.match(await page.locator('#status').innerText(), scenario === 'result_unknown' ? /結果不明/ : /再読取が完了していません/);
+        assert.match(await page.locator('#status').innerText(), message);
         assert.match(await page.locator('#status').innerText(), /自動再/);
         assert.equal(await page.locator('#followup').isVisible(), true);
         assert.deepEqual(await page.locator('#followup-items li').allTextContents(), ['保存DTC', '保留DTC', '永久DTC', 'レディネス']);

@@ -3,6 +3,7 @@ import { createDtcClearBrowserPreviewSession } from "./dtc-clear-browser-preview
 
 export function createDtcClearWalkthrough(api, scenario = "normal") {
   const samples = { normal: "workflow", result_unknown: "workflow_unknown", reread_failed: "workflow_reread_failed",
+    no_data: "workflow_no_data", ecu_missing: "workflow_ecu_missing",
     pre_record_missing: "workflow", recovery_missing: "workflow", applicability_missing: "workflow" };
   if (!Object.hasOwn(samples, scenario)) throw new TypeError("unknown_walkthrough_scenario");
   let blockedReason = null;
@@ -68,8 +69,8 @@ export function createDtcClearWalkthrough(api, scenario = "normal") {
         blockedReason = result.reason || difference.reason;
         release();
         stage = scenario === "result_unknown" && blockedReason === "clear_evaluation_incomplete" ? "result_unknown"
-          : scenario === "reread_failed" && blockedReason === "post_fixture_scope_incomplete" ? "reread_failed" : "unavailable";
-        if (["result_unknown", "reread_failed"].includes(stage)) followupPlan = plan;
+          : ["reread_failed", "no_data", "ecu_missing"].includes(scenario) && blockedReason === "post_fixture_scope_incomplete" ? scenario : "unavailable";
+        if (["result_unknown", "reread_failed", "no_data", "ecu_missing"].includes(stage)) followupPlan = plan;
         record();
         return false;
       }
