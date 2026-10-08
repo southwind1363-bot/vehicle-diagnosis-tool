@@ -12,6 +12,11 @@ export function formatSingleReadoutReceiptPreview(result) {
       const row = semantics.readouts[index], receipt = raw.readouts[index];
       return row?.command === command && row.intent === intents[index] && row.ordinal === index + 1
         && typeof row.observation === "string" && strings(row.blockerIds)
+        // Known positive classifications belong to their matching readout kind.
+        // Unknown classifications still render as unknown, never as positive.
+        && (command === "0101"
+          ? !["source_positive_empty_observed", "source_positive_nonempty_observed"].includes(row.observation)
+          : row.observation !== "source_positive_reported")
         && receipt?.command === command && strings(receipt.errorCodes)
         && typeof receipt.noDataReported === "boolean" && typeof receipt.negativeResponseObserved === "boolean";
     })) {

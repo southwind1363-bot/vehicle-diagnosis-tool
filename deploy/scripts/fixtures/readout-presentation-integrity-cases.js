@@ -24,6 +24,12 @@ export function runReadoutPresentationIntegrityCases(api) {
     value => { value.summary.rawTranscriptValidation.readouts[0].negativeResponseObserved = null; },
     value => { value.summary.rawTranscriptValidation.readouts[0].errorCodes = [undefined]; }
   ];
+  for (const index of [0, 1, 2]) {
+    mutations.push(value => { value.summary.rawTranscriptValidation.semanticObservation.readouts[index].observation = "source_positive_reported"; });
+  }
+  for (const observation of ["source_positive_empty_observed", "source_positive_nonempty_observed"]) {
+    mutations.push(value => { value.summary.rawTranscriptValidation.semanticObservation.readouts[3].observation = observation; });
+  }
   const inputs = mutations.map(mutate => { const value = JSON.parse(JSON.stringify(base)); mutate(value); return value; });
   inputs.push(null, undefined, { ok: true }, { ok: true, summary: {} });
   return inputs.map(input => {

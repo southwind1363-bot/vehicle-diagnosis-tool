@@ -299,12 +299,12 @@ console.log("Negative responses: positive/negative mixture and negative-only rea
   assert.match(text, /正応答 3、正応答未確認 0、判定保留 0、分類不明 1/);
   assert.equal(JSON.stringify(result), before);
   const integrityCases = runReadoutPresentationIntegrityCases(api);
-  assert.equal(integrityCases.length, 20);
+  assert.equal(integrityCases.length, 25);
   for (const entry of integrityCases) {
     assert.deepEqual(entry.result, { ok: false, reason: 'semantic_observation_unavailable', text: null });
     assert.equal(entry.frozen, true); assert.equal(entry.unchanged, true);
   }
-  console.log("Readout presentation integrity: 20 malformed/misaligned summaries rejected without partial display");
+  console.log("Readout presentation integrity: 25 malformed/misaligned summaries rejected without partial display");
 }
 
 for (const [scenario, expected] of Object.entries({
