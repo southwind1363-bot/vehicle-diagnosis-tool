@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-08 R2共通所有者を単回画面へ接続: single-readout-run-preview-sessionの直接receipt runをreadonly-development-sessionへ置換。readで取得し、表示閉鎖/条件変更/pagehideでは共通所有者をdisposeする。設定用callbackはfalse/例外に固定してこの画面から設定準備を開始せず、profileは宣言された模擬値のまま。固定bundle manifestとブラウザー試験の許可module一覧へ依存5moduleを明示追加。既存9sample/失敗条件の本文一致と取消・旧結果隔離・142ブラウザー項目、共通所有者36ケースを確認。通常本体/実transportへの接続ではなく、本体3.13.633・ZIP・保存形式・車両通信は不変。
+
 2026-10-08 R2共通所有者の終了処理: readonly-development-sessionに一方向のdisposeを追加。終了後は両操作をdevelopment_session_disposedで拒否し、処理中なら取消を委譲するがactive参照は元Promiseのsettleまで保持。遅着結果はsummaryなしで拒否し、inspectのdisposed/pending/operationで所有者終了と内部待機を区別する。開始前/4処理位置/正常完了後×両操作の12ケースを追加し計36ケースに合格。二重終了・後続callback0・終了後再開拒否・既に返却済みsnapshotは撤回できない境界を確認。物理切断やtransport停止の証明ではなく、通常画面には未接続。本体3.13.633・ZIP・保存形式・通信許可は不変。
 
 2026-10-08 R2読取/設定準備の共通所有者: readonly-development-sessionが既存receipt runとsettings preparation runを私有し、両方向の同時開始をdevelopment_operation_busyで拒否。取消中も元Promiseのsettleまで所有を保持し、勝手なキュー実行/再開はしない。idle/running/cancellingと操作種別のみを非実行snapshotで公開。両操作×正常/取消/例外×4位置の24ケースで、待機中のreader/失効/世代更新呼出数不変、後続停止、明示的な反対操作の開始を確認しserial CIへ登録。宣言profileは模擬入力のままで、設定準備成功によるprofile認定や実送信許可は付与しない。通常画面/transportには未接続。本体3.13.633・ZIP・保存形式は不変。

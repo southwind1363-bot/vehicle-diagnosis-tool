@@ -1,17 +1,17 @@
 // Fixed asynchronous sample acquisition. The context and bytes are artificial; no transport.
 import { createSingleReadoutSample } from "./single-readout-sample.js";
-import { createReadOnlyReceiptRun } from "./readonly-receipt-run.js";
+import { createReadOnlyDevelopmentSession } from "./readonly-development-session.js";
 import { formatSingleReadoutReceiptPreview } from "./single-readout-receipt-preview.js";
 
 export function createSingleReadoutRunPreviewSession(api, scenario = "normal") {
   const sample = createSingleReadoutSample(["failure", "clock_failure", "disconnect", "settings_changed"].includes(scenario) ? "normal" : scenario);
   const context = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
   let disposed = false, display = null, clockReads = 0;
-  const runner = createReadOnlyReceiptRun(() => context, api, sample.profile, () => {
+  const runner = createReadOnlyDevelopmentSession({ readContext: () => context, api, profile: sample.profile, readClock: () => {
     clockReads++;
     // Fail before the second command; never substitute a timestamp or retry.
     return scenario === "clock_failure" && clockReads === 3 ? NaN : Math.floor(performance.now());
-  }, async (command, append) => {
+  }, readCommand: async (command, append) => {
     const receipt = sample.receipts.find(item => item.command === command);
     if (scenario === "failure" && command === "07") {
       await Promise.resolve();
@@ -29,11 +29,15 @@ export function createSingleReadoutRunPreviewSession(api, scenario = "normal") {
       if (disposed || !append(receipt.transcript.slice(offset, offset + 7))) return "cancelled";
     }
     return "complete";
+  },
+    // This readout-only view never prepares settings or grants a profile.
+    invalidateReceipts: () => false, beginSettingsGeneration: () => false,
+    readResponse: () => { throw new Error("settings_unavailable_in_readout_preview"); }
   });
-  const ready = runner.run().then(result => { if (!disposed) display = formatSingleReadoutReceiptPreview(result); });
+  const ready = runner.read().then(result => { if (!disposed) display = formatSingleReadoutReceiptPreview(result); });
   return Object.freeze({
     ready,
     inspect() { return display || Object.freeze({ ok: false, reason: disposed ? "scope_invalidated" : "readout_pending", text: null }); },
-    dispose() { disposed = true; display = null; context.connected = false; runner.cancel(); }
+    dispose() { disposed = true; display = null; context.connected = false; runner.dispose(); }
   });
 }

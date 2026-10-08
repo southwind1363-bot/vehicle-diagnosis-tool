@@ -26,7 +26,10 @@ module.exports = async function validateDtcClearBrowserParity(context) {
     'dtc-clear-browser-sample.js', 'dtc-clear-browser-preview-session.js', 'monitor-preview-controller.js', 'monitor-preview-view.js',
     'readonly-receipt-owner.js', 'readonly-receipt-capture.js', 'readonly-capture-browser-cases.js', 'readonly-receipt-raw-validation.js', 'single-readout-preview-session.js', 'single-readout-preview-view.js',
     'single-readout-receipt-preview.js', 'single-readout-sample.js', 'readonly-receipt-session.js', 'readonly-timed-receipt-session.js',
-    'readonly-receipt-run.js', 'single-readout-run-preview-session.js']) {
+    'readonly-receipt-run.js', 'single-readout-run-preview-session.js',
+    'readonly-development-session.js', 'readonly-settings-preparation.js',
+    'readonly-settings-preparation-session.js', 'readonly-settings-transition.js',
+    'readonly-settings-preparation-run.js']) {
     assets.set('/' + name, fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8'));
   }
   assets.set('/index.html', '<!doctype html><html lang="ja"><meta charset="utf-8"><title>固定receipt照合試験</title><script src="/runtime.js"></script><script type="module">import {runDtcClearBrowserCases} from "./dtc-clear-browser-cases.js"; window.runFixtureCases = runDtcClearBrowserCases;</script></html>');
