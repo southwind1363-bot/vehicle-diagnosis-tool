@@ -116,7 +116,7 @@ module.exports = async function validateInteractiveMonitor(context, output, kind
         await show.click(); await page.clock.runFor(500);
         assert.equal(await page.locator('pre').textContent(), expected, 'Late acquisition failure cannot overwrite a new result');
       }
-      for (const name of ['normal', 'compact', 'no_data', 'conflict', 'missing_prompt', 'codes_present', 'mixed_sources']) {
+      for (const name of ['normal', 'compact', 'no_data', 'conflict', 'missing_prompt', 'codes_present', 'mixed_sources', 'mixed_conflict']) {
         // Switch during a pending read: it must close immediately and never auto-start.
         await scenario.selectOption('normal');
         await show.click();

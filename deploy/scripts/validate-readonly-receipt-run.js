@@ -219,3 +219,35 @@ for (const scenario of ["codes_present", "mixed_sources"]) {
   assert.equal(acquired.inspect().text, null);
 }
 console.log("Single-readout acquisition: nonempty and mixed-source samples preserve per-readout observations and unknown coverage");
+
+{
+  const sample = createSingleReadoutSample("mixed_conflict");
+  const receipts = sample.receipts.map(row => ({ ...row, profile: sample.profile, completion: "complete" }));
+  // A valid 7E8 response must not conceal contradictory payloads from 7E9.
+  // Reverse frame arrival order as well: neither first nor last response wins.
+  for (const reversed of [false, true]) {
+    const rows = receipts.map(row => ({ ...row, transcript: reversed
+      ? row.transcript.slice(0, -1).split("\r").filter(Boolean).reverse().join("\r") + "\r>"
+      : row.transcript }));
+    const result = api.evaluateSingleReadoutRawReceipts({ receipts: rows });
+    assert.deepEqual(Array.from(result.readouts, row => row.observation),
+      ["indeterminate", "source_positive_empty_observed", "missing_or_unproven", "indeterminate"]);
+    assert(result.readouts[0].blockerIds.includes("dtc_payload_conflict"));
+    assert(result.readouts[3].blockerIds.includes("readiness_payload_conflict"));
+    assert.equal(result.readoutCoverageComplete, false);
+    assert.equal(result.executionEnabled, false);
+  }
+  const acquired = createSingleReadoutRunPreviewSession(api, "mixed_conflict");
+  const previous = createSingleReadoutPreviewSession(api, "mixed_conflict");
+  try {
+    await acquired.ready;
+    assert.deepEqual(acquired.inspect(), previous.inspect());
+    const text = acquired.inspect().text;
+    assert.match(text, /保存DTC: 判定保留/);
+    assert.match(text, /readiness: 判定保留/);
+    assert.match(text, /保留DTC: 報告元からコード0件の応答/);
+    assert.match(text, /恒久DTC: 正応答を確認できません/);
+    assert.doesNotMatch(text, /保存DTC: 報告元からコード0件|readiness応答あり/);
+  } finally { acquired.dispose(); previous.dispose(); }
+}
+console.log("Mixed-source conflicts: DTC/readiness remain indeterminate in both arrival orders despite another valid ECU");
