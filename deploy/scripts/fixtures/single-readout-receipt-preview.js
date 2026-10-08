@@ -14,10 +14,19 @@ export function formatSingleReadoutReceiptPreview(result) {
     missing_or_unproven: "正応答を確認できません",
     indeterminate: "判定保留（応答の矛盾・不足または受信品質を確認してください）"
   };
+  const counts = { positive: 0, missing: 0, held: 0, unknown: 0 };
+  for (const row of semantics.readouts) {
+    if (["source_positive_empty_observed", "source_positive_nonempty_observed", "source_positive_reported"].includes(row.observation)) counts.positive++;
+    else if (row.observation === "missing_or_unproven") counts.missing++;
+    else if (row.observation === "indeterminate") counts.held++;
+    else counts.unknown++;
+  }
   const lines = ["模擬の一回分の記録（実車の読取結果ではありません）",
     "取得元・対象車両・ECUの網羅性は未確認です。消去前後の比較ではありません。",
     "表示文章は実行許可に使えません。車両送信なし。",
-    `応答形式: ${raw.status === "parsed" ? "固定profileで解析済み（内容や実車適合の保証ではありません）" : "確認できません"}`];
+    `応答形式: ${raw.status === "parsed" ? "固定profileで解析済み（内容や実車適合の保証ではありません）" : "確認できません"}`,
+    `項目別の応答観測（全4項目）: 正応答 ${counts.positive}、正応答未確認 ${counts.missing}、判定保留 ${counts.held}、分類不明 ${counts.unknown}`,
+    "正応答は故障なし・修理完了・対象ECUの網羅を証明するものではありません。"];
   semantics.readouts.forEach((row, index) => {
     lines.push(`${titles[index]}: ${Object.hasOwn(labels, row.observation) ? labels[row.observation] : "確認できません"}`);
     const receipt = raw.readouts[index];

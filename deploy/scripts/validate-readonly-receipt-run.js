@@ -289,10 +289,26 @@ console.log("Negative responses: positive/negative mixture and negative-only rea
   const raw = result.summary.rawTranscriptValidation;
   raw.readouts[0].errorCodes = ["missing_prompt", "missing_prompt", "private_unknown_error", "<script>private</script>"];
   raw.semanticObservation.readouts[0].blockerIds.push("private_unknown_blocker");
+  raw.semanticObservation.readouts[0].observation = "private_unknown_observation";
   const before = JSON.stringify(result);
   const text = formatSingleReadoutReceiptPreview(result).text;
   assert.equal(text.split("確認点: 応答の終端記号を確認できません。").length - 1, 1);
   assert.equal(text.split("確認点: 応答形式に未確認の問題があります。").length - 1, 1);
   assert.doesNotMatch(text, /private|<script>/);
+  assert.match(text, /正応答 3、正応答未確認 0、判定保留 0、分類不明 1/);
   assert.equal(JSON.stringify(result), before);
 }
+
+for (const [scenario, expected] of Object.entries({
+  normal: [4, 0, 0], compact: [4, 0, 0], codes_present: [4, 0, 0],
+  mixed_sources: [3, 1, 0], mixed_conflict: [1, 1, 2], no_data: [0, 4, 0],
+  negative_response: [0, 0, 4], conflict: [3, 0, 1], missing_prompt: [3, 0, 1]
+})) {
+  const session = createSingleReadoutPreviewSession(api, scenario);
+  try {
+    const text = session.inspect().text;
+    assert(text.includes(`正応答 ${expected[0]}、正応答未確認 ${expected[1]}、判定保留 ${expected[2]}、分類不明 0`), scenario);
+    assert.match(text, /正応答は故障なし・修理完了・対象ECUの網羅を証明するものではありません/);
+  } finally { session.dispose(); }
+}
+console.log("Single-readout overview: 9 fixed samples and unknown classification preserve distinct observation counts");
