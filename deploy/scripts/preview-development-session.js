@@ -52,7 +52,18 @@ const execute = async kind => {
   paint(kind === 'settings' ? '模擬設定の応答を確認中' : '模擬記録を取得中');
   const result = await promise;
   if (ended || current !== owner) return;
-  if (!result.ok) { paint('模擬操作を中止しました。再開はボタンで選んでください。'); return; }
+  if (!result.ok) {
+    let message = '模擬操作を完了できませんでした。';
+    switch (result.reason) {
+      case 'readout_cancelled': case 'settings_preparation_cancelled':
+        message = '模擬操作を取り消しました。'; break;
+      case 'receipt_incomplete': case 'preparation_response_incomplete': case 'preparation_protocol_incomplete':
+        message = '模擬応答の取得が完了しませんでした。途中の記録は表示しません。'; break;
+      case 'readout_failed': case 'settings_preparation_failed':
+        message = '模擬処理でエラーが発生しました。結果は表示しません。'; break;
+    }
+    paint(message + ' 再試行は操作ボタンで選んでください。'); return;
+  }
   output.textContent = kind === 'settings'
     ? '模擬設定の応答確認が終了しました。実機設定・復元・通信形式は未確認です。読み取りは自動開始しません。'
     : formatSingleReadoutReceiptPreview(result).text;
