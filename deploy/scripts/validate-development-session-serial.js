@@ -11,13 +11,14 @@ const commands = ["03", "07", "0A", "0101"];
 const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 let cases = 0;
-for (const finish of ["complete", "cancel", "dispose", "timeout"]) {
+const lifecycleEvents = ["pagehide", "reset", "reinitialize", "disconnect"];
+for (const finish of ["complete", "cancel", "dispose", "timeout", ...lifecycleEvents]) {
   for (const at of [0, 1, 2, 3]) {
     const c = client(), gate = deferred(), reached = deferred();
     const replies = Object.fromEntries(commands.map((command, index) =>
       [command, finish === "timeout" && index === at ? "NO DATA\r" : "NO DATA\r>"]));
     const wire = attachWire(c, 7, replies);
-    let owner, sink = null, oldAppend, ticks = 0, settingsCalls = 0;
+    let owner, sink = null, oldAppend, disconnect, ticks = 0, settingsCalls = 0;
     try {
       await c.context.initializeElmDeveloperAdapter();
       const state = c.context.obdDevSession;
@@ -59,6 +60,18 @@ for (const finish of ["complete", "cancel", "dispose", "timeout"]) {
       assert.equal(settingsCalls, 0);
       if (finish === "cancel") assert.equal(owner.cancel(), true);
       if (finish === "dispose") owner.dispose();
+      if (finish === "pagehide") c.pagehide();
+      if (finish === "reset") c.context.resetWebSerialConnectionAttemptMetadata();
+      if (finish === "reinitialize") {
+        await assert.rejects(c.context.initializeElmDeveloperAdapter(), /elm_write_busy/);
+      }
+      if (finish === "disconnect") disconnect = c.context.disconnectObdDeveloperVci({ reason: "device_disconnected" });
+      if (lifecycleEvents.includes(finish)) {
+        assert.equal(oldAppend("late>"), false, "Changed lifecycle invalidates the active capture");
+        assert.equal(owner.inspect().pending, true);
+        assert.equal((await owner.read()).reason, "development_operation_busy");
+        assert.equal((await owner.prepareSettings()).reason, "development_operation_busy");
+      }
       if (["cancel", "dispose"].includes(finish)) {
         assert.equal(oldAppend("late>"), false);
         assert.equal(owner.inspect().pending, true, "Cancellation is not transport completion");
@@ -71,6 +84,7 @@ for (const finish of ["complete", "cancel", "dispose", "timeout"]) {
       // Let the already pending synthetic write finish; cancellation cannot retract it.
       gate.resolve();
       const result = await pending;
+      if (disconnect) await disconnect;
       assert.equal(result.ok, finish === "complete");
       if (finish !== "complete") assert.equal(result.summary, null);
       else {
@@ -90,8 +104,25 @@ for (const finish of ["complete", "cancel", "dispose", "timeout"]) {
       for (const command of ["ATCAF1", "ATD0", "ATCEA", "04"]) {
         assert.equal(c.context.isAllowedObdDeveloperCommand(command), false);
       }
+      if (lifecycleEvents.includes(finish)) {
+        const expiredAppend = oldAppend;
+        assert.equal((await owner.read()).ok, false, "No new capture before valid settings context");
+        assert.deepEqual(wire.writes, finishedWrites, "Invalid context must fail before send");
+        if (finish !== "disconnect") {
+          // Explicit new initialization on the synthetic wire; never auto-retry.
+          await c.context.initializeElmDeveloperAdapter();
+          assert.equal(expiredAppend("late>"), false, "New settings cannot revive the previous receipt");
+          assert.equal(state.settingsObservation.owner.inspect(state.settingsObservation.ticket).summary.profile, null);
+          assert.equal((await owner.read()).ok, true);
+          assert.deepEqual(wire.writes, [...finishedWrites, ...initialization.map(command => command + "\r"), ...commands.map(command => command + "\r")]);
+          assert.equal(state.lastSession, retained);
+        } else {
+          assert.equal(state.port, null);
+          assert.equal(state.connectionState, "disconnected");
+        }
+      }
       cases++;
     } finally { gate.resolve(); owner?.dispose(); await wire.close(); }
   }
 }
-console.log(`Development session / production serial functions: ${cases} completion/cancel/dispose/timeout paths passed; synthetic wire only`);
+console.log(`Development session / production serial functions: ${cases} completion/cancel/dispose/timeout/lifecycle paths passed; synthetic wire only`);
