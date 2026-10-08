@@ -1,9 +1,20 @@
 // Presentation only: trusted derived receipt summaries, never execution authority.
 export function formatSingleReadoutReceiptPreview(result) {
-  if (!result.ok) return Object.freeze({ ok: false, reason: result.reason, text: null });
-  const summary = result.summary, raw = summary.rawTranscriptValidation;
+  if (!result || result.ok !== true) return Object.freeze({ ok: false, reason: result?.reason || "semantic_observation_unavailable", text: null });
+  const summary = result.summary, raw = summary?.rawTranscriptValidation;
   const semantics = raw?.semanticObservation;
-  if (summary.status !== "finished" || !semantics || semantics.readouts.length !== 4) {
+  const commands = ["03", "07", "0A", "0101"];
+  const intents = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_readiness"];
+  const strings = value => Array.isArray(value) && Array.from(value).every(item => typeof item === "string");
+  if (summary?.status !== "finished" || !Array.isArray(semantics?.readouts) || semantics.readouts.length !== 4
+    || !Array.isArray(raw?.readouts) || raw.readouts.length !== 4
+    || !commands.every((command, index) => {
+      const row = semantics.readouts[index], receipt = raw.readouts[index];
+      return row?.command === command && row.intent === intents[index] && row.ordinal === index + 1
+        && typeof row.observation === "string" && strings(row.blockerIds)
+        && receipt?.command === command && strings(receipt.errorCodes)
+        && typeof receipt.noDataReported === "boolean" && typeof receipt.negativeResponseObserved === "boolean";
+    })) {
     return Object.freeze({ ok: false, reason: "semantic_observation_unavailable", text: null });
   }
   const titles = ["保存DTC", "保留DTC", "恒久DTC", "readiness"];

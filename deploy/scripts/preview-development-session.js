@@ -91,9 +91,12 @@ const execute = async kind => {
     }
     paint(message + ' 再試行は操作ボタンで選んでください。'); return;
   }
-  output.textContent = kind === 'settings'
-    ? '模擬設定の応答確認が終了しました。実機設定・復元・通信形式は未確認です。読み取りは自動開始しません。'
-    : formatSingleReadoutReceiptPreview(result).text;
+  if (kind === 'settings') output.textContent = '模擬設定の応答確認が終了しました。実機設定・復元・通信形式は未確認です。読み取りは自動開始しません。';
+  else {
+    const display = formatSingleReadoutReceiptPreview(result);
+    if (!display.ok) { paint('取得結果の項目構成を確認できません。記録は表示しません。'); return; }
+    output.textContent = display.text;
+  }
   paint('模擬操作が終了しました');
 };
 buttons.prepare.addEventListener('click', () => { void execute('settings'); });
