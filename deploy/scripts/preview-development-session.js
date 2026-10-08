@@ -1,0 +1,76 @@
+// Offline, fixed-data operation lab. No transport, saved records or execution authority.
+import { createHash } from "node:crypto";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createMonitorPreviewBrowserSource } from "./fixtures/monitor-preview-browser-source.js";
+
+export function createDevelopmentSessionPreview() {
+  const script = `(() => { "use strict";
+${createMonitorPreviewBrowserSource("single")}
+const buttons = Object.fromEntries(['prepare','read','cancel','end','restart'].map(id => [id, document.getElementById(id)]));
+const status = document.getElementById('status'), output = document.getElementById('output');
+const createOwner = () => {
+  const context = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+  const sample = createSingleReadoutSample('normal');
+  const wait = () => new Promise(resolve => setTimeout(resolve, 120));
+  return createReadOnlyDevelopmentSession({ readContext: () => context, api: fixtureApi, profile: sample.profile,
+    readClock: () => Math.floor(performance.now()),
+    async readCommand(command, append) { await wait(); return append(sample.receipts.find(row => row.command === command).transcript) ? 'complete' : 'cancelled'; },
+    invalidateReceipts: () => true,
+    beginSettingsGeneration() { context.settingsTicket = {}; return true; },
+    async readResponse(command) { await wait(); return { completion: 'complete', response: command === 'ATDPN' ? 'A6' : 'OK' }; }
+  });
+};
+let owner = createOwner(), ended = false;
+const paint = message => {
+  const state = owner.inspect();
+  buttons.prepare.disabled = buttons.read.disabled = ended || state.pending;
+  buttons.cancel.disabled = ended || !state.pending || state.status === 'cancelling';
+  buttons.end.disabled = ended;
+  buttons.restart.hidden = !ended;
+  status.textContent = message;
+};
+const execute = async kind => {
+  if (ended || owner.inspect().pending) return;
+  const current = owner;
+  output.textContent = '';
+  const promise = kind === 'settings' ? current.prepareSettings() : current.read();
+  paint(kind === 'settings' ? '模擬設定の応答を確認中' : '模擬記録を取得中');
+  const result = await promise;
+  if (ended || current !== owner) return;
+  if (!result.ok) { paint('模擬操作を中止しました。再開はボタンで選んでください。'); return; }
+  output.textContent = kind === 'settings'
+    ? '模擬設定の応答確認が終了しました。実機設定・復元・通信形式は未確認です。読み取りは自動開始しません。'
+    : formatSingleReadoutReceiptPreview(result).text;
+  paint('模擬操作が終了しました');
+};
+buttons.prepare.addEventListener('click', () => { void execute('settings'); });
+buttons.read.addEventListener('click', () => { void execute('readout'); });
+buttons.cancel.addEventListener('click', () => {
+  if (owner.cancel()) { output.textContent = ''; paint('取消済み。模擬処理が戻るのを待っています。'); }
+});
+const end = () => { ended = true; owner.dispose(); output.textContent = ''; paint('この模擬セッションは終了しました'); };
+buttons.end.addEventListener('click', end);
+buttons.restart.addEventListener('click', () => {
+  if (!ended) return;
+  owner = createOwner(); ended = false; output.textContent = ''; paint('操作を選んでください'); buttons.prepare.focus();
+});
+window.addEventListener('pagehide', end);
+window.addEventListener('pageshow', event => { if (event.persisted) end(); });
+paint('操作を選んでください');
+})();`.replace(/\r\n?/g, "\n");
+  const hash = createHash("sha256").update(script).digest("base64");
+  return `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>設定準備と読取の模擬操作 — 開発用見本</title>
+<style>:root{color-scheme:dark light;font-family:system-ui,sans-serif;background:#101821;color:#eef3f8}*{box-sizing:border-box}body{margin:0;line-height:1.8}main{max-width:960px;margin:auto;padding:24px 16px}h1{font-size:1.6rem}.notice{border:1px solid #71849a;padding:16px;border-radius:12px}.controls{display:flex;flex-wrap:wrap;gap:12px}button{font:inherit;min-height:48px;padding:12px 20px;border:1px solid #8abfe8;border-radius:8px;background:#254968;color:white}button:disabled{opacity:.55}button:focus-visible{outline:3px solid #e8bc67;outline-offset:3px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}@media(prefers-color-scheme:light){:root{background:#f4f7fa;color:#172431}}</style>
+<main><h1>設定準備と読取の模擬操作</h1>
+<p class="notice">開発用の固定データです。車両通信は行いません。設定準備の成功は、実機の設定成立や読取許可を意味しません。読取も人工データの表示です。</p>
+<p>操作中は別の操作を開始できません。取消後は処理が戻るまで待ちます。「終了」後は新しい模擬セッションを明示的に開始してください。</p>
+<div class="controls"><button id="prepare">模擬設定を確認</button><button id="read">模擬記録を取得</button><button id="cancel">操作を取り消す</button><button id="end">セッションを終了</button><button id="restart" hidden>新しい模擬セッション</button></div>
+<p id="status" role="status" aria-live="polite"></p><pre id="output"></pre><noscript>この模擬操作にはJavaScriptが必要です。</noscript></main><script>${script}</script></html>\n`;
+}
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  if (process.argv.length !== 2) { console.error("固定の模擬操作専用です。引数は指定できません。"); process.exitCode = 2; }
+  else process.stdout.write(createDevelopmentSessionPreview());
+}
