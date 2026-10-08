@@ -23,6 +23,9 @@ module.exports = async (context, output) => {
       const prepare = page.locator('#prepare'), read = page.locator('#read'), cancel = page.locator('#cancel');
       const end = page.locator('#end'), restart = page.locator('#restart'), result = page.locator('#output');
       const showResult = page.getByRole('button', { name: '結果へ移動', exact: true });
+      const backControls = page.locator('#back-controls');
+      assert(await backControls.isHidden());
+      assert(await backControls.isDisabled());
       assert(await showResult.isDisabled());
       assert.equal(await result.getAttribute('aria-label'), '模擬操作の結果');
       const checkResultNavigation = async () => {
@@ -32,6 +35,13 @@ module.exports = async (context, output) => {
         await showResult.focus(); await page.keyboard.press('Enter');
         assert.equal(await page.evaluate(() => document.activeElement.id), 'output');
         assert.equal(await result.textContent(), before, 'Navigation does not reacquire or replace the result');
+        assert.equal(await page.locator('#status').innerText(), message);
+        assert(await read.isEnabled());
+        assert(await backControls.isVisible());
+        await backControls.focus(); await page.keyboard.press('Enter');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'scenario');
+        await page.clock.runFor(600);
+        assert.equal(await result.textContent(), before, 'Returning to controls must not start an acquisition');
         assert.equal(await page.locator('#status').innerText(), message);
         assert(await read.isEnabled());
       };
@@ -45,6 +55,8 @@ module.exports = async (context, output) => {
           assert.equal(await progress.innerText(), `${index + 1}/4：${labels[index]}（模擬応答待ち）`);
           assert.equal(await result.textContent(), '', 'Progress does not publish partial results');
           assert(await showResult.isDisabled(), 'Pending acquisition has no navigable result');
+          assert(await backControls.isHidden());
+          assert(await backControls.isDisabled());
           await page.clock.runFor(120);
         }
         assert.equal(await progress.textContent(), '', 'Settled operations clear progress');
@@ -83,6 +95,8 @@ module.exports = async (context, output) => {
         await button.click(); await page.clock.runFor(150);
         await end.focus(); await page.keyboard.press('Enter');
         assert(await showResult.isDisabled());
+        assert(await backControls.isHidden());
+        await backControls.dispatchEvent('click');
         assert.equal(await page.evaluate(() => document.activeElement.id), 'restart');
         assert.equal(await progress.textContent(), '');
         assert(await prepare.isDisabled()); assert(await read.isDisabled());
@@ -171,6 +185,8 @@ module.exports = async (context, output) => {
         assert.equal(await page.locator('#status').innerText(), '模擬記録を取得中');
         assert(await showResult.isDisabled());
         await showResult.dispatchEvent('click');
+        await backControls.dispatchEvent('click');
+        assert.notEqual(await page.evaluate(() => document.activeElement.id), 'scenario', 'Hidden return control rejects synthetic clicks');
         assert.notEqual(await page.evaluate(() => document.activeElement.id), 'output', 'Disabled navigation also rejects synthetic clicks');
         await page.clock.runFor(150); await cancel.click();
         assert.equal(await result.textContent(), '');
