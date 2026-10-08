@@ -132,11 +132,15 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
           check(controller.inspect().status === 'unavailable' && controller.inspect().text === null, 'malformed result unavailable');
           check(root.querySelector('pre').textContent === '' && root.querySelector('pre').hidden, 'malformed result never displayed');
           check(root.querySelector('[role=status]').textContent === '記録を確認できません', 'malformed result status');
+          check(root.querySelector('.receipt-failure-reason').textContent === '取得結果の項目構成を確認できません。記録は表示しません。' && !root.querySelector('.receipt-failure-reason').hidden, 'malformed result explains presentation failure');
           check(!root.textContent.includes('private_') && !root.textContent.includes('semantic_observation_unavailable'), 'internal identifiers stay private');
           check(rejected.inspect().text === null && rejected.inspect().reason === 'scope_invalidated', 'rejected owner disposed');
           check(['executionEnabled', 'vehicleCommandEnabled', 'wouldTransmit', 'canExecute'].every(key => controller.inspect()[key] === false), 'malformed result grants no authority');
           mode = 'normal';
-          check(await controller.read() && root.querySelector('pre').textContent === expected.normal, 'explicit acquisition recovers after malformed result');
+          const recovery = controller.read();
+          check(root.querySelector('.receipt-failure-reason').textContent === '' && root.querySelector('.receipt-failure-reason').hidden, 'retry immediately clears previous explanation');
+          check(await recovery && root.querySelector('pre').textContent === expected.normal, 'explicit acquisition recovers after malformed result');
+          check(root.querySelector('.receipt-failure-reason').textContent === '' && root.querySelector('.receipt-failure-reason').hidden, 'recovered result has no stale explanation');
           check(root.querySelector('[role=status]').textContent === '固定の模擬記録を表示中', 'recovery clears failure status');
         }
       } finally { controller.invalidate(); attached.dispose(); root.remove(); }

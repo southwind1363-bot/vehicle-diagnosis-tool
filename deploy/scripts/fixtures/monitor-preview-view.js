@@ -38,7 +38,8 @@ export function attachMonitorPreviewView(container, review, copy = {}) {
     const reasons = {
       receipt_incomplete: "応答の取得が完了しませんでした。途中の記録は表示しません。",
       receipt_clock_unavailable: "取得時刻を確認できませんでした。記録は表示しません。",
-      receipt_context_changed: "取得中に接続または設定が変わりました。以前の条件の記録は表示しません。"
+      receipt_context_changed: "取得中に接続または設定が変わりました。以前の条件の記録は表示しません。",
+      semantic_observation_unavailable: "取得結果の項目構成を確認できません。記録は表示しません。"
     };
     if (known && snapshot.status === "unavailable" && Object.hasOwn(reasons, snapshot.failureReason)) {
       failure.textContent = reasons[snapshot.failureReason];
