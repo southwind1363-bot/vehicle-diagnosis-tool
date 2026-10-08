@@ -65,12 +65,16 @@ module.exports = async (context, output) => {
         await page.clock.runFor(1000);
         assert.equal(await result.textContent(), '');
         await button.click(); await page.clock.runFor(150);
-        await end.click();
+        await end.focus(); await page.keyboard.press('Enter');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'restart');
         assert.equal(await progress.textContent(), '');
         assert(await prepare.isDisabled()); assert(await read.isDisabled());
         assert.equal(await result.textContent(), '');
-        await restart.click();
+        await page.keyboard.press('Enter');
         assert.equal(await page.evaluate(() => document.activeElement.id), 'prepare');
+        await page.clock.runFor(600);
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'prepare', 'Old completion must not move focus');
+        assert.equal(await result.textContent(), '', 'Keyboard restart does not start acquisition');
         await read.click(); await page.clock.runFor(600);
         assert.match(await result.innerText(), /模擬の一回分の記録/, 'Old completion cannot replace the new session');
       }
@@ -185,11 +189,13 @@ module.exports = async (context, output) => {
             assert.match(stopped, /模擬接続または設定条件が変わった/);
             assert(await read.isDisabled()); assert(await prepare.isDisabled());
             assert(await scenario.isDisabled()); assert(await restart.isVisible());
+            assert.equal(await page.evaluate(() => document.activeElement.id), 'restart');
             await read.dispatchEvent('click'); await prepare.dispatchEvent('click');
             await page.clock.runFor(1000);
             assert.equal(await page.locator('#status').innerText(), stopped);
             assert.equal(await result.textContent(), '');
-            await restart.click();
+            await page.keyboard.press('Enter');
+            assert.equal(await page.evaluate(() => document.activeElement.id), 'prepare');
             assert.equal(await result.textContent(), '', 'Restart never starts a read automatically');
             await scenario.selectOption('normal');
             await button.click(); await page.clock.runFor(600);
@@ -210,6 +216,7 @@ module.exports = async (context, output) => {
       assert(await sampleChoice.isDisabled());
       await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
       assert(await read.isDisabled());
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'restart', 'History restore offers explicit keyboard restart');
       await page.evaluate(() => { const script = document.createElement('script'); script.textContent = 'window.unapproved = true'; document.body.append(script); });
       assert.equal(await page.evaluate(() => window.unapproved), undefined);
       assert.equal(await page.evaluate(() => typeof window.ObdReadOnly), 'undefined');

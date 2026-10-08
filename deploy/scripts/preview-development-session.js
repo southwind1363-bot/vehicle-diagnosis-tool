@@ -76,7 +76,8 @@ const execute = async kind => {
   if (!result.ok) {
     if (['receipt_context_changed', 'preparation_context_changed'].includes(result.reason)) {
       ended = true; current.dispose();
-      paint('模擬接続または設定条件が変わったため終了しました。以前の応答は採用しません。新しい模擬セッションを開始してください。'); return;
+      paint('模擬接続または設定条件が変わったため終了しました。以前の応答は採用しません。新しい模擬セッションを開始してください。');
+      buttons.restart.focus(); return;
     }
     let message = '模擬操作を完了できませんでした。';
     switch (result.reason) {
@@ -112,14 +113,17 @@ failurePosition.addEventListener('change', changeConditions);
 buttons.cancel.addEventListener('click', () => {
   if (owner.cancel()) { output.textContent = ''; paint('取消済み。模擬処理が戻るのを待っています。'); }
 });
-const end = () => { ended = true; owner.dispose(); output.textContent = ''; paint('この模擬セッションは終了しました'); };
-buttons.end.addEventListener('click', end);
+const end = (focusRestart = false) => {
+  ended = true; owner.dispose(); output.textContent = ''; paint('この模擬セッションは終了しました');
+  if (focusRestart) buttons.restart.focus();
+};
+buttons.end.addEventListener('click', () => end(true));
 buttons.restart.addEventListener('click', () => {
   if (!ended) return;
   owner = createOwner(); ended = false; output.textContent = ''; paint('操作を選んでください'); buttons.prepare.focus();
 });
-window.addEventListener('pagehide', end);
-window.addEventListener('pageshow', event => { if (event.persisted) end(); });
+window.addEventListener('pagehide', () => end());
+window.addEventListener('pageshow', event => { if (event.persisted) end(true); });
 paint('操作を選んでください');
 })();`.replace(/\r\n?/g, "\n");
   const hash = createHash("sha256").update(script).digest("base64");
