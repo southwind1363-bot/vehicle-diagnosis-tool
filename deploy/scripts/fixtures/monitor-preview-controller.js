@@ -57,13 +57,19 @@ export function createSimulatedReviewController(createSession, waitForPresentati
       publish(state("reading"));
       if (ticket !== attempt) return false;
       try {
-        owned = createSession();
+        const session = createSession();
+        if (ticket !== attempt) { session.dispose(); return false; }
+        owned = session;
         // The scheduler's return value is never interpreted as evidence or display data.
         await waitForPresentation();
         if (ticket !== attempt) return false;
         const inspected = owned.inspect();
         if (!inspected.ok) throw new Error("preview_unavailable");
-        publish(state("ready", inspected.text));
+        const ready = state("ready", inspected.text);
+        // Session callbacks may invalidate or replace this attempt synchronously.
+        // Never publish the old result after returning from those callbacks.
+        if (ticket !== attempt) return false;
+        publish(ready);
         return ticket === attempt;
       } catch {
         if (ticket !== attempt) return false;

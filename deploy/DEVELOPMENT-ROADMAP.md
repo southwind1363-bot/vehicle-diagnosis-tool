@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-08 R2表示直前の取消後再表示を修正: 模擬reviewのinspect内でinvalidateするとreadはfalseでもready/stale本文が復活する経路を再現。factory返却時の試行照合と、結果snapshot構築後・公開前の再照合を追加。旧factoryが返したsessionは破棄し、新所有者を上書きしない。factory/inspect/text取得×取消/新取得の6経路をNodeとChromiumで検証し、旧本文の通知0回・新本文保持・各所有者の一回だけの破棄を確認。ブラウザーの単回表示91項目と既存の前後比較/履歴復帰も検証。本体3.13.633・ZIP・保存形式・車両通信は不変。人工callbackによる開発用表示制御の検証であり実車試験ではない。
+
 2026-10-08 R2一取得の接続失効を画面接続: 単回操作HTMLへ保留DTC受信途中の切断/設定世代交換を追加。既存receipt sessionがreceipt_context_changedで拒否し、途中記録を表示せず自動再試行もしない。port/reader/writer/settingsTicket/revision/connected/unlockedの7変更×4取得位置×受信途中/最終chunk後の56ケースで、完成記録parser未呼出・後続command停止・遅着拒否を確認。Chromiumでも旧失敗から正常条件への切替と表示隔離を検証。人工接続の寿命検査であり実切断/実車の検証ではない。本体3.13.633・ZIP・保存形式・通常通信は不変。
 
 2026-10-08 R2一取得の途中失敗を画面接続: 単回操作HTMLのfailureを表示待ちtimerの拒否から、保存DTC後の保留DTC途中timeoutへ切替え、2コマンド目開始時の時計検査失敗も追加。既存runnerがreceipt_incomplete/receipt_clock_unavailableを返し、未完了の結果は本文なしで表示不可となる。完成記録用parserが呼ばれないこと、終了後の失効、自動再試行なし、失敗待ちから正常への条件切替と遅着隔離をNode/Chromiumで確認。前後比較版の模擬表示失敗は維持。応答と時計異常は人工条件であり実機の障害試験ではない。本体3.13.633・ZIP・保存形式・通常車両通信は不変。

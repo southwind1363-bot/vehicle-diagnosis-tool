@@ -24,6 +24,36 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
     const { createSimulatedReviewController } = await import('./monitor-preview-controller.js');
     let checks = 0, scenario = 'normal';
     const check = (condition, name) => { if (!condition) throw new Error(name); checks++; };
+    for (const phase of ['factory', 'inspect', 'text']) {
+      for (const replace of [false, true]) {
+        let controller, newer, calls = 0;
+        const disposed = [], published = [];
+        const cancel = () => { controller.invalidate(); if (replace) newer = controller.read(); };
+        controller = createSimulatedReviewController(() => {
+          const id = ++calls;
+          const session = {
+            inspect() {
+              if (id === 1 && phase === 'inspect') cancel();
+              return { ok: true, get text() {
+                if (id === 1 && phase === 'text') cancel();
+                return id === 1 ? 'stale' : 'fresh';
+              } };
+            },
+            dispose() { disposed.push(id); }
+          };
+          if (id === 1 && phase === 'factory') cancel();
+          return session;
+        });
+        controller.subscribe(value => published.push(value.text));
+        check(await controller.read() === false, 'callback cancellation rejects old read');
+        if (replace) check(await newer && controller.inspect().text === 'fresh', 'newer result survives callback replacement');
+        else check(controller.inspect().status === 'invalidated' && controller.inspect().text === null, 'cancelled text stays hidden');
+        check(!published.includes('stale'), 'old result never published');
+        check(disposed.join(',') === '1', 'old callback cannot dispose new owner');
+        controller.invalidate();
+        check(disposed.join(',') === (replace ? '1,2' : '1'), 'each owner released once');
+      }
+    }
     for (const [scenario, text] of Object.entries(expected)) {
       const session = createSingleReadoutRunPreviewSession(window.ObdReadOnly, scenario);
       check(!session.inspect().ok, 'acquisition is initially pending');

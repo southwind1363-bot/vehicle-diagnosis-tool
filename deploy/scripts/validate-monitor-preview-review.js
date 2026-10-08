@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createMonitorPairPreview, createMonitorPairPreviewSession } from "./preview-dtc-clear-monitor-pairs.js";
 import { createMonitorPreviewReview } from "./fixtures/monitor-preview-review.js";
+import { createSimulatedReviewController } from "./fixtures/monitor-preview-controller.js";
 
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 const expected = createMonitorPairPreview();
@@ -135,4 +136,43 @@ assert.equal(await failedReady.read(), false);
 assert.equal(lastText, null);
 assert.equal(failedReady.inspect().status, "unavailable");
 failedReady.invalidate();
-console.log("Monitor preview lifecycle: ownership, late completions, synchronous notification, unsubscribe and observer failure passed");
+// Invalidation inside a trusted factory/inspection must not resurrect ready text
+// or overwrite a newer session. Include property access when copying the result.
+for (const phase of ["factory", "inspect", "text"]) {
+  for (const replace of [false, true]) {
+    let controller, newer, calls = 0, scheduled = 0;
+    const disposed = [], statuses = [];
+    const cancel = () => { controller.invalidate(); if (replace) newer = controller.read(); };
+    controller = createSimulatedReviewController(() => {
+      const id = ++calls;
+      const session = {
+        inspect() {
+          if (id === 1 && phase === "inspect") cancel();
+          return { ok: true, get text() {
+            if (id === 1 && phase === "text") cancel();
+            return id === 1 ? "stale" : "fresh";
+          } };
+        },
+        dispose() { disposed.push(id); }
+      };
+      if (id === 1 && phase === "factory") cancel();
+      return session;
+    }, () => { scheduled++; });
+    controller.subscribe(value => statuses.push([value.status, value.text]));
+    assert.equal(await controller.read(), false, `${phase}/${replace}`);
+    if (replace) {
+      assert.equal(await newer, true);
+      assert.equal(controller.inspect().text, "fresh");
+      assert.equal(calls, 2);
+    } else {
+      assert.equal(controller.inspect().status, "invalidated");
+      assert.equal(controller.inspect().text, null);
+    }
+    assert(!statuses.some(([, text]) => text === "stale"));
+    assert.deepEqual(disposed, [1], "Old cleanup must not dispose the replacement");
+    assert.equal(scheduled, (phase === "factory" ? 0 : 1) + Number(replace));
+    controller.invalidate();
+    assert.deepEqual(disposed, replace ? [1, 2] : [1]);
+  }
+}
+console.log("Monitor preview lifecycle: ownership, callback invalidation/replacement, late completions, synchronous notification, unsubscribe and observer failure passed");
