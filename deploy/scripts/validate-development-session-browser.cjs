@@ -2,8 +2,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const vm = require('node:vm');
 module.exports = async (context, output) => {
   const { createDevelopmentSessionPreview } = await import('./preview-development-session.js');
+  const { createSingleReadoutPreviewSession } = await import('./fixtures/single-readout-preview-session.js');
+  const runtime = vm.createContext({ window: {} });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../obd-readonly.js'), 'utf8'), runtime);
   const file = path.join(output, 'development-session.html');
   fs.writeFileSync(file, createDevelopmentSessionPreview());
   const page = await context.newPage(), errors = [], external = [];
@@ -19,6 +23,7 @@ module.exports = async (context, output) => {
       const prepare = page.locator('#prepare'), read = page.locator('#read'), cancel = page.locator('#cancel');
       const end = page.locator('#end'), restart = page.locator('#restart'), result = page.locator('#output');
       const scenario = page.locator('#scenario');
+      const sampleChoice = page.locator('#sample');
       const progress = page.locator('#progress');
       const checkSteps = async labels => {
         for (let index = 0; index < labels.length; index++) {
@@ -106,9 +111,37 @@ module.exports = async (context, output) => {
       }
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({ path: path.join(output, `${width}-development-session.png`), fullPage: true });
+      for (const sample of ['normal', 'codes_present', 'mixed_sources', 'mixed_conflict', 'no_data']) {
+        await sampleChoice.selectOption(sample);
+        assert.equal(await result.textContent(), '', 'Sample changes discard the previous display');
+        assert.equal(await progress.textContent(), '');
+        await prepare.click(); await page.clock.runFor(600);
+        assert.match(await result.innerText(), /実機設定・復元・通信形式は未確認/);
+        await read.click();
+        assert(await sampleChoice.isDisabled());
+        await page.evaluate(() => {
+          const select = document.getElementById('sample');
+          select.value = select.value === 'normal' ? 'no_data' : 'normal';
+          select.dispatchEvent(new Event('change'));
+        });
+        assert.equal(await sampleChoice.inputValue(), sample, 'A pending capture keeps its original sample');
+        await page.clock.runFor(600);
+        const baseline = createSingleReadoutPreviewSession(runtime.window.ObdReadOnly, sample);
+        try { assert.equal(await result.innerText(), baseline.inspect().text, `${width}/${sample}: semantic output matches existing evaluator`); }
+        finally { baseline.dispose(); }
+        assert.equal(await progress.textContent(), '');
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      }
+      await page.evaluate(() => {
+        const select = document.getElementById('sample');
+        select.add(new Option('unsupported', 'unknown')); select.value = 'unknown'; select.dispatchEvent(new Event('change'));
+      });
+      assert.equal(await sampleChoice.inputValue(), 'no_data', 'Unknown samples are refused');
+      await page.screenshot({ path: path.join(output, `${width}-development-session-samples.png`), fullPage: true });
       await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
       assert.equal(await result.textContent(), '');
       assert(await restart.isVisible()); assert(await read.isDisabled());
+      assert(await sampleChoice.isDisabled());
       await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
       assert(await read.isDisabled());
       await page.evaluate(() => { const script = document.createElement('script'); script.textContent = 'window.unapproved = true'; document.body.append(script); });

@@ -11,10 +11,12 @@ const buttons = Object.fromEntries(['prepare','read','cancel','end','restart'].m
 const status = document.getElementById('status'), output = document.getElementById('output');
 const progress = document.getElementById('progress');
 const scenario = document.getElementById('scenario');
-let selectedScenario = 'normal';
+const sampleChoice = document.getElementById('sample');
+const sampleNames = ['normal', 'codes_present', 'mixed_sources', 'mixed_conflict', 'no_data'];
+let selectedScenario = 'normal', selectedSample = 'normal';
 const createOwner = (failure = selectedScenario) => {
   const context = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
-  const sample = createSingleReadoutSample('normal');
+  const sample = createSingleReadoutSample(selectedSample);
   const wait = () => new Promise(resolve => setTimeout(resolve, 120));
   const report = (command, steps) => {
     if (ended || owner !== session || session.inspect().status !== 'running') return;
@@ -49,6 +51,7 @@ const paint = message => {
   if (ended || state.status !== 'running') progress.textContent = '';
   buttons.prepare.disabled = buttons.read.disabled = ended || state.pending;
   scenario.disabled = ended || state.pending;
+  sampleChoice.disabled = ended || state.pending;
   buttons.cancel.disabled = ended || !state.pending || state.status === 'cancelling';
   buttons.end.disabled = ended;
   buttons.restart.hidden = !ended;
@@ -82,14 +85,17 @@ const execute = async kind => {
 };
 buttons.prepare.addEventListener('click', () => { void execute('settings'); });
 buttons.read.addEventListener('click', () => { void execute('readout'); });
-scenario.addEventListener('change', () => {
-  if (ended || owner.inspect().pending || !['normal', 'incomplete', 'exception'].includes(scenario.value)) {
-    scenario.value = selectedScenario; return;
+const changeConditions = () => {
+  if (ended || owner.inspect().pending || !['normal', 'incomplete', 'exception'].includes(scenario.value) || !sampleNames.includes(sampleChoice.value)) {
+    scenario.value = selectedScenario; sampleChoice.value = selectedSample; return;
   }
   selectedScenario = scenario.value;
+  selectedSample = sampleChoice.value;
   owner.dispose(); owner = createOwner(); output.textContent = '';
   paint('模擬条件を変更しました。操作を選んでください');
-});
+};
+scenario.addEventListener('change', changeConditions);
+sampleChoice.addEventListener('change', changeConditions);
 buttons.cancel.addEventListener('click', () => {
   if (owner.cancel()) { output.textContent = ''; paint('取消済み。模擬処理が戻るのを待っています。'); }
 });
@@ -112,6 +118,8 @@ paint('操作を選んでください');
 <p class="notice">開発用の固定データです。車両通信は行いません。設定準備の成功は、実機の設定成立や読取許可を意味しません。読取も人工データの表示です。</p>
 <p>操作中は別の操作を開始できません。取消後は処理が戻るまで待ちます。「終了」後は新しい模擬セッションを明示的に開始してください。</p>
 <p><label for="scenario">模擬応答の条件</label> <select id="scenario" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">正常な固定応答</option><option value="incomplete">途中で応答が未完了</option><option value="exception">途中で模擬処理が失敗</option></select></p>
+<p><label for="sample">読取内容の見本</label> <select id="sample" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">コード0件の応答</option><option value="codes_present">故障コードあり</option><option value="mixed_sources">複数ECUの応答</option><option value="mixed_conflict">同一ECU内の応答矛盾</option><option value="no_data">NO DATAの応答</option></select></p>
+<p>内容の見本は読取だけに適用します。NO DATAや応答矛盾を故障コード0件とは判定しません。</p>
 <p>失敗例は2番目の応答で停止します。条件を変えると表示済みの結果を消去します。再試行は自動では行いません。</p>
 <div class="controls"><button id="prepare">模擬設定を確認</button><button id="read">模擬記録を取得</button><button id="cancel">操作を取り消す</button><button id="end">セッションを終了</button><button id="restart" hidden>新しい模擬セッション</button></div>
 <p id="status" role="status" aria-live="polite"></p><p id="progress" role="status" aria-live="polite"></p><pre id="output"></pre><noscript>この模擬操作にはJavaScriptが必要です。</noscript></main><script>${script}</script></html>\n`;
