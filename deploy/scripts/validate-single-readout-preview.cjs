@@ -97,6 +97,50 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
         check(await controller.read() && root.querySelector('pre').textContent === 'fresh', 'explicit read recovers');
       } finally { controller.invalidate(); attached.dispose(); root.remove(); }
     }
+    // Corrupt only the observer's returned copy, after real fixed-sample acquisition.
+    // A rejected presentation must retire the owner and clear a previously good DOM.
+    {
+      let mode = 'normal', active, observed = 0;
+      const malformedApi = { ...window.ObdReadOnly,
+        evaluateSingleReadoutRawReceipts(input) {
+          const result = window.ObdReadOnly.evaluateSingleReadoutRawReceipts(input);
+          const readouts = result.readouts.map(row => ({ ...row }));
+          if (mode === 'reverse') readouts.reverse();
+          if (mode === 'missing') readouts.pop();
+          if (mode === 'intent') readouts[0].intent = 'private_invalid_intent';
+          if (mode === 'ordinal') readouts[0].ordinal = 2;
+          observed++;
+          return { ...result, readouts };
+        }
+      };
+      const controller = createSimulatedReviewController(() => {
+        active = createSingleReadoutRunPreviewSession(mode === 'normal' ? window.ObdReadOnly : malformedApi);
+        return active;
+      }, () => active.ready);
+      const root = document.createElement('main'); document.body.append(root);
+      const attached = attachSingleReadoutPreviewView(root, controller);
+      try {
+        for (const corruption of ['reverse', 'missing', 'intent', 'ordinal']) {
+          mode = 'normal';
+          check(await controller.read() && root.querySelector('pre').textContent === expected.normal, 'good baseline before malformed acquisition');
+          const previous = active, before = observed;
+          mode = corruption;
+          const pending = controller.read(), rejected = active;
+          check(previous.inspect().text === null, 'previous acquisition retired');
+          check(root.querySelector('pre').textContent === '' && root.querySelector('pre').hidden, 'old DOM cleared before malformed completion');
+          check(await pending === false && observed === before + 1, 'malformed observer actually reached and rejected');
+          check(controller.inspect().status === 'unavailable' && controller.inspect().text === null, 'malformed result unavailable');
+          check(root.querySelector('pre').textContent === '' && root.querySelector('pre').hidden, 'malformed result never displayed');
+          check(root.querySelector('[role=status]').textContent === '記録を確認できません', 'malformed result status');
+          check(!root.textContent.includes('private_') && !root.textContent.includes('semantic_observation_unavailable'), 'internal identifiers stay private');
+          check(rejected.inspect().text === null && rejected.inspect().reason === 'scope_invalidated', 'rejected owner disposed');
+          check(['executionEnabled', 'vehicleCommandEnabled', 'wouldTransmit', 'canExecute'].every(key => controller.inspect()[key] === false), 'malformed result grants no authority');
+          mode = 'normal';
+          check(await controller.read() && root.querySelector('pre').textContent === expected.normal, 'explicit acquisition recovers after malformed result');
+          check(root.querySelector('[role=status]').textContent === '固定の模擬記録を表示中', 'recovery clears failure status');
+        }
+      } finally { controller.invalidate(); attached.dispose(); root.remove(); }
+    }
     const sessions = [], gates = [];
     const review = createSimulatedReviewController(() => {
       const session = createSingleReadoutPreviewSession(window.ObdReadOnly, scenario);
