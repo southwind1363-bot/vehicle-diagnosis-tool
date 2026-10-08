@@ -105,7 +105,7 @@ module.exports = async (context, output) => {
           await button.click();
           assert.match(await page.locator('#status').innerText(), /確認中|取得中/);
           await page.clock.runFor(600);
-          assert.equal(await page.locator('#status').innerText(), '模擬操作が終了しました');
+          assert.equal(await page.locator('#status').innerText(), button === prepare ? '模擬操作が終了しました' : '模擬記録の取得が終了しました。4項目で正応答を観測しましたが、故障なし・修理完了の判定ではありません。');
           assert.match(await result.innerText(), button === prepare ? /実機設定・復元・通信形式は未確認/ : /模擬の一回分の記録/);
           await scenario.selectOption(failure);
           await button.click(); await page.clock.runFor(150); await end.click();
@@ -137,6 +137,9 @@ module.exports = async (context, output) => {
         const baseline = createSingleReadoutPreviewSession(runtime.window.ObdReadOnly, sample);
         try { assert.equal(await result.innerText(), baseline.inspect().text, `${width}/${sample}: semantic output matches existing evaluator`); }
         finally { baseline.dispose(); }
+        assert.equal(await page.locator('#status').innerText(), ['normal', 'codes_present', 'compact'].includes(sample)
+          ? '模擬記録の取得が終了しました。4項目で正応答を観測しましたが、故障なし・修理完了の判定ではありません。'
+          : '模擬記録の取得が終了しました。正応答未確認・判定保留・分類不明の項目があります。本文で各項目の内容を確認してください。', `${width}/${sample}: acquisition completion preserves uncertainty`);
         assert.equal(await progress.textContent(), '');
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         const completeText = await result.innerText();

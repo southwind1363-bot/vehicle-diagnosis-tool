@@ -96,6 +96,12 @@ const execute = async kind => {
     const display = formatSingleReadoutReceiptPreview(result);
     if (!display.ok) { paint('取得結果の項目構成を確認できません。記録は表示しません。'); return; }
     output.textContent = display.text;
+    const positive = ['source_positive_empty_observed', 'source_positive_nonempty_observed', 'source_positive_reported'];
+    const allPositive = result.summary.rawTranscriptValidation.semanticObservation.readouts.every(row => positive.includes(row.observation));
+    paint(allPositive
+      ? '模擬記録の取得が終了しました。4項目で正応答を観測しましたが、故障なし・修理完了の判定ではありません。'
+      : '模擬記録の取得が終了しました。正応答未確認・判定保留・分類不明の項目があります。本文で各項目の内容を確認してください。');
+    return;
   }
   paint('模擬操作が終了しました');
 };

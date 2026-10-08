@@ -52,7 +52,7 @@ module.exports = async (chromium, output) => {
                 assert.match(waiting.progress, /^1\/4：/);
               } else {
                 await page.locator('#' + operation).click();
-                await page.waitForFunction(() => document.getElementById('status').textContent === '模擬操作が終了しました');
+                await page.waitForFunction(() => document.getElementById('status').textContent === '模擬操作が終了しました' || document.getElementById('status').textContent.startsWith('模擬記録の取得が終了しました。'));
                 assert.notEqual(await page.locator('#output').textContent(), '');
               }
               const before = await page.evaluate(() => window.historyProbe.documentId);
@@ -79,7 +79,7 @@ module.exports = async (chromium, output) => {
               assert.equal(await page.locator('#output').textContent(), '', 'History restore/restart must not acquire automatically');
               if (phase === 'pending') await page.selectOption('#sample', 'codes_present');
               await page.locator('#read').click();
-              await page.waitForFunction(() => document.getElementById('status').textContent === '模擬操作が終了しました');
+              await page.waitForFunction(() => document.getElementById('status').textContent === '模擬操作が終了しました' || document.getElementById('status').textContent.startsWith('模擬記録の取得が終了しました。'));
               assert.match(await page.locator('#output').innerText(), phase === 'pending' ? /故障コードを含む応答/ : /NO DATA報告あり/, 'Current selection must match acquired data');
               const fresh = await page.locator('#output').textContent();
               await page.evaluate(async () => {
@@ -89,7 +89,9 @@ module.exports = async (chromium, output) => {
               });
               assert.equal(await page.locator('#output').textContent(), fresh, 'Old pending responses must not replace the fresh result');
               assert.equal(await page.locator('#progress').textContent(), '');
-              assert.equal(await page.locator('#status').innerText(), '模擬操作が終了しました');
+              assert.equal(await page.locator('#status').innerText(), phase === 'pending'
+                ? '模擬記録の取得が終了しました。4項目で正応答を観測しましたが、故障なし・修理完了の判定ではありません。'
+                : '模擬記録の取得が終了しました。正応答未確認・判定保留・分類不明の項目があります。本文で各項目の内容を確認してください。');
               evidence.push({ browserVersion: browser.version(), width, phase, operation, cacheEnabled, pendingBeforeRelease: probe.pendingCount,
                 persisted: probe.shown.at(-1), sameDocument: probe.documentId === before });
             }
