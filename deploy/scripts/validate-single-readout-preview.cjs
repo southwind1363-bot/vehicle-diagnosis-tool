@@ -64,6 +64,34 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
       pending.dispose(); await pending.ready;
       check(!pending.inspect().ok && pending.inspect().text === null, 'cancelled acquisition cannot publish late text');
     }
+    // A failing cleanup must clear an attached view, contain its private error,
+    // and forbid recursive reads without preventing a later explicit read.
+    {
+      let controller, calls = 0, nested;
+      controller = createSimulatedReviewController(() => {
+        const id = ++calls;
+        return {
+          inspect() { return { ok: true, text: id === 1 ? 'old' : 'fresh' }; },
+          dispose() {
+            if (id !== 1) return;
+            controller.invalidate(); nested = controller.read();
+            throw new Error('private_cleanup_detail');
+          }
+        };
+      });
+      const root = document.createElement('main'); document.body.append(root);
+      const attached = attachSingleReadoutPreviewView(root, controller);
+      try {
+        check(await controller.read(), 'initial cleanup fixture ready');
+        check(root.querySelector('pre').textContent === 'old', 'initial text visible');
+        controller.invalidate();
+        check(await nested === false && calls === 1, 'no reentrant acquisition');
+        check(root.querySelector('pre').textContent === '' && root.querySelector('pre').hidden, 'cleanup failure clears DOM');
+        check(root.querySelector('[role=status]').textContent === '記録を確認できません', 'cleanup failure status');
+        check(!root.textContent.includes('private_'), 'cleanup error is private');
+        check(await controller.read() && root.querySelector('pre').textContent === 'fresh', 'explicit read recovers');
+      } finally { controller.invalidate(); attached.dispose(); root.remove(); }
+    }
     const sessions = [], gates = [];
     const review = createSimulatedReviewController(() => {
       const session = createSingleReadoutPreviewSession(window.ObdReadOnly, scenario);

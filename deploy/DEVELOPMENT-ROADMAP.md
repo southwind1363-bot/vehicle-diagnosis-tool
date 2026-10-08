@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-08 R2表示終了時の例外処理を修正: session.disposeの例外でinvalidateがthrowしready本文を残す経路を再現。所有参照を先に外し、後始末の例外を非公開で捕捉してunavailable/本文なしへ遷移。後始末中の再入read/invalidateを抑止し、失敗したrefreshは新sessionを自動開始しない。終了/refresh/scheduler失敗/observer失敗の4経路で一回だけの破棄・自動再試行なし・後の明示再取得をNodeで検証。Chromiumで実DOMの消去/非表示/日本語案内を確認し、単回表示98項目と既存回帰試験に合格。開発用表示の後始末であり物理通信の終了確認ではない。本体3.13.633・ZIP・保存形式・車両通信は不変。
+
 2026-10-08 R2表示直前の取消後再表示を修正: 模擬reviewのinspect内でinvalidateするとreadはfalseでもready/stale本文が復活する経路を再現。factory返却時の試行照合と、結果snapshot構築後・公開前の再照合を追加。旧factoryが返したsessionは破棄し、新所有者を上書きしない。factory/inspect/text取得×取消/新取得の6経路をNodeとChromiumで検証し、旧本文の通知0回・新本文保持・各所有者の一回だけの破棄を確認。ブラウザーの単回表示91項目と既存の前後比較/履歴復帰も検証。本体3.13.633・ZIP・保存形式・車両通信は不変。人工callbackによる開発用表示制御の検証であり実車試験ではない。
 
 2026-10-08 R2一取得の接続失効を画面接続: 単回操作HTMLへ保留DTC受信途中の切断/設定世代交換を追加。既存receipt sessionがreceipt_context_changedで拒否し、途中記録を表示せず自動再試行もしない。port/reader/writer/settingsTicket/revision/connected/unlockedの7変更×4取得位置×受信途中/最終chunk後の56ケースで、完成記録parser未呼出・後続command停止・遅着拒否を確認。Chromiumでも旧失敗から正常条件への切替と表示隔離を検証。人工接続の寿命検査であり実切断/実車の検証ではない。本体3.13.633・ZIP・保存形式・通常通信は不変。

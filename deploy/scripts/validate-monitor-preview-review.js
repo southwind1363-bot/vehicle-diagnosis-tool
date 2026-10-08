@@ -175,4 +175,39 @@ for (const phase of ["factory", "inspect", "text"]) {
     assert.deepEqual(disposed, replace ? [1, 2] : [1]);
   }
 }
-console.log("Monitor preview lifecycle: ownership, callback invalidation/replacement, late completions, synchronous notification, unsubscribe and observer failure passed");
+for (const trigger of ["invalidate", "refresh", "scheduler", "observer"]) {
+  let controller, calls = 0, nested, disposals = 0;
+  const seen = [];
+  controller = createSimulatedReviewController(() => {
+    const id = ++calls;
+    return {
+      inspect() { return { ok: true, text: id === 1 ? "old" : "fresh" }; },
+      dispose() {
+        disposals++;
+        if (id !== 1) return;
+        controller.invalidate();
+        nested = controller.read();
+        throw new Error("private_cleanup_detail");
+      }
+    };
+  }, () => { if (trigger === "scheduler" && calls === 1) throw new Error("private_wait_detail"); });
+  if (trigger === "observer") controller.subscribe(value => {
+    if (value.status === "ready" && calls === 1) throw new Error("private_view_detail");
+  });
+  controller.subscribe(value => seen.push(value));
+  assert.equal(await controller.read(), !["scheduler", "observer"].includes(trigger));
+  if (trigger === "invalidate") controller.invalidate();
+  if (trigger === "refresh") assert.equal(await controller.read(), false);
+  assert.equal(await nested, false, "Cleanup must not recursively acquire");
+  assert.equal(controller.inspect().status, "unavailable");
+  assert.equal(controller.inspect().text, null);
+  assert.equal(disposals, 1, "Detach before disposing to prevent recursive cleanup");
+  assert.equal(calls, 1, "No automatic retry after failed cleanup");
+  assert.equal(seen.at(-1).text, null);
+  assert(!JSON.stringify(seen).includes("private_"));
+  assert.equal(await controller.read(), true, "A later explicit read uses a fresh session");
+  assert.equal(controller.inspect().text, "fresh");
+  controller.invalidate();
+  assert.equal(disposals, 2);
+}
+console.log("Monitor preview lifecycle: callback invalidation, cleanup failure/reentry, late completions, notifications and observer failure passed");

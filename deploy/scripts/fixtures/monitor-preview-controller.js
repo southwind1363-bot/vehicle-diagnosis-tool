@@ -7,7 +7,16 @@ export function createSimulatedReviewController(createSession, waitForPresentati
     provenance: "simulated_only", executionEnabled: false, vehicleCommandEnabled: false,
     wouldTransmit: false, canExecute: false });
   let current = state("empty");
-  const release = () => { owned?.dispose(); owned = null; };
+  let releasing = false;
+  const release = () => {
+    const session = owned;
+    owned = null;
+    if (!session) return true;
+    releasing = true;
+    try { session.dispose(); return true; }
+    catch { return false; }
+    finally { releasing = false; }
+  };
   const listeners = new Set();
   let notifying = false;
   const publish = next => {
@@ -43,15 +52,20 @@ export function createSimulatedReviewController(createSession, waitForPresentati
       return () => listeners.delete(subscription);
     },
     invalidate() {
+      if (releasing) return current;
       if (current.status === "invalidated") return current;
       ticket = null;
-      release();
-      publish(state("invalidated"));
+      const released = release();
+      publish(state(released ? "invalidated" : "unavailable"));
       return current;
     },
     async read() {
-      if (notifying || current.status === "reading") return false;
-      release();
+      if (notifying || releasing || current.status === "reading") return false;
+      if (!release()) {
+        ticket = null;
+        publish(state("unavailable"));
+        return false;
+      }
       const attempt = {};
       ticket = attempt;
       publish(state("reading"));
