@@ -20,7 +20,13 @@ export function formatSingleReadoutReceiptPreview(result) {
     `応答形式: ${raw.status === "parsed" ? "固定profileで解析済み（内容や実車適合の保証ではありません）" : "確認できません"}`];
   semantics.readouts.forEach((row, index) => {
     lines.push(`${titles[index]}: ${Object.hasOwn(labels, row.observation) ? labels[row.observation] : "確認できません"}`);
-    if (raw.readouts[index].noDataReported) lines.push("  NO DATA報告あり。故障コード0件とは判断できません。");
+    const receipt = raw.readouts[index];
+    if (receipt.noDataReported) lines.push("  NO DATA報告あり。故障コード0件とは判断できません。");
+    // Translate only known derived codes. Never expose raw responses or unknown identifiers.
+    if (receipt.errorCodes.includes("missing_prompt")) lines.push("  確認点: 応答の終端記号を確認できません。");
+    if (receipt.errorCodes.some(code => code !== "missing_prompt")) lines.push("  確認点: 応答形式に未確認の問題があります。");
+    if (row.blockerIds.includes("dtc_payload_conflict")) lines.push("  確認点: DTC応答の件数・内容に不整合があります。");
+    if (row.blockerIds.includes("readiness_payload_conflict")) lines.push("  確認点: レディネス応答の長さ・内容に不整合があります。");
     lines.push("  保留: 対象ECUの範囲は未確認");
   });
   return Object.freeze({ ok: true, reason: null, text: lines.join("\n") });

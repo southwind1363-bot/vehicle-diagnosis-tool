@@ -251,3 +251,22 @@ console.log("Single-readout acquisition: nonempty and mixed-source samples prese
   } finally { acquired.dispose(); previous.dispose(); }
 }
 console.log("Mixed-source conflicts: DTC/readiness remain indeterminate in both arrival orders despite another valid ECU");
+
+{
+  const sample = createSingleReadoutSample("normal");
+  let tick = 0;
+  const stable = context();
+  const stableRun = createReadOnlyReceiptRun(() => stable, api, sample.profile, () => tick++, async (command, append) => {
+    append(sample.receipts.find(row => row.command === command).transcript); return "complete";
+  });
+  const result = JSON.parse(JSON.stringify(await stableRun.run()));
+  const raw = result.summary.rawTranscriptValidation;
+  raw.readouts[0].errorCodes = ["missing_prompt", "missing_prompt", "private_unknown_error", "<script>private</script>"];
+  raw.semanticObservation.readouts[0].blockerIds.push("private_unknown_blocker");
+  const before = JSON.stringify(result);
+  const text = formatSingleReadoutReceiptPreview(result).text;
+  assert.equal(text.split("確認点: 応答の終端記号を確認できません。").length - 1, 1);
+  assert.equal(text.split("確認点: 応答形式に未確認の問題があります。").length - 1, 1);
+  assert.doesNotMatch(text, /private|<script>/);
+  assert.equal(JSON.stringify(result), before);
+}

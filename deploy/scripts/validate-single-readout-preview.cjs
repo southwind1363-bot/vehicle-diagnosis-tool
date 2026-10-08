@@ -14,6 +14,11 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
   assert(expected.no_data.includes('NO DATA報告あり'));
   assert(expected.conflict.includes('保存DTC: 判定保留'));
   assert(expected.missing_prompt.includes('応答形式: 確認できません'));
+  assert(expected.missing_prompt.includes('確認点: 応答の終端記号を確認できません。'));
+  assert(expected.mixed_conflict.includes('確認点: DTC応答の件数・内容に不整合があります。'));
+  assert(expected.mixed_conflict.includes('確認点: レディネス応答の長さ・内容に不整合があります。'));
+  assert(!expected.normal.includes('確認点:'));
+  assert(!expected.mixed_sources.includes('不整合があります'));
   assert.throws(() => createSingleReadoutPreviewSession(api, '{}'));
   const grammarOnly = createSingleReadoutPreviewSession({ parseElmReadOnlyRawTranscript: api.parseElmReadOnlyRawTranscript });
   assert.equal(grammarOnly.inspect().reason, 'semantic_observation_unavailable'); grammarOnly.dispose();
