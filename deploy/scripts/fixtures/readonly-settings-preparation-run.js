@@ -32,8 +32,18 @@ export function createReadOnlySettingsPreparationRun(readContext, invalidateRece
           if (record.reason) return stop(record, record.reason);
           const before = transition.inspect(ticket);
           if (!before.ok || record.reason) return stop(record, before.reason || record.reason);
-          const response = await readResponse(command);
+          const incoming = await readResponse(command);
           if (record.reason) return stop(record, record.reason);
+          if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return stop(record, "settings_response_unavailable");
+          const response = {};
+          for (const key of ["completion", "response"]) {
+            const descriptor = Object.getOwnPropertyDescriptor(incoming, key);
+            if (record.reason) return stop(record, record.reason);
+            if (!descriptor || !Object.hasOwn(descriptor, "value") || typeof descriptor.value !== "string") {
+              return stop(record, "settings_response_unavailable");
+            }
+            response[key] = descriptor.value;
+          }
           const accepted = command === "ATDPN"
             ? transition.recordProtocol(ticket, command, response.completion, response.response)
             : transition.record(ticket, command, response.completion, response.response);

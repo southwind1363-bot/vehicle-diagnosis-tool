@@ -75,4 +75,50 @@ for (const cancelAt of [0, 1, 2, 3]) {
   assert.deepEqual(calls.slice(cancelAt + 1), commands);
   cases++;
 }
+for (const kind of ["null", "array", "inherited", "getter", "object_value", "descriptor_cancel"]) {
+  for (const failAt of [0, 1, 2, 3]) {
+    const state = context(), calls = []; let getters = 0, run;
+    run = createReadOnlySettingsPreparationRun(() => state, () => true,
+      () => { state.settingsTicket = {}; return true; }, async command => {
+        const index = calls.length; calls.push(command);
+        if (index !== failAt) return response(command);
+        if (kind === "null") return null;
+        if (kind === "array") return Object.assign([], response(command));
+        if (kind === "inherited") return Object.create(response(command));
+        if (kind === "getter") return {
+          get completion() { getters++; return "complete"; },
+          get response() { getters++; return response(command).response; }
+        };
+        if (kind === "object_value") return { completion: "complete", response: { toString() { getters++; return "OK"; } } };
+        return new Proxy(response(command), { getOwnPropertyDescriptor(target, key) {
+          run.cancel(); return Reflect.getOwnPropertyDescriptor(target, key);
+        } });
+      });
+    const result = await run.run();
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, kind === "descriptor_cancel" ? "settings_preparation_cancelled" : "settings_response_unavailable");
+    assert.equal(result.completedResponseCount, failAt);
+    assert.equal(result.summary, null);
+    assert.equal(getters, 0, "Do not invoke accessors or coerce response values");
+    assert.deepEqual(calls, commands.slice(0, failAt + 1));
+    cases++;
+  }
+}
+for (const field of ["port", "reader", "writer", "settingsTicket", "revision", "connected", "unlocked"]) {
+  for (const failAt of [0, 1, 2, 3]) {
+    const state = context(), calls = [];
+    const run = createReadOnlySettingsPreparationRun(() => state, () => true,
+      () => { state.settingsTicket = {}; return true; }, async command => {
+        const index = calls.length; calls.push(command);
+        if (index === failAt) state[field] = field === "revision" ? 2 : ["connected", "unlocked"].includes(field) ? false : {};
+        return response(command);
+      });
+    const result = await run.run();
+    assert.equal(result.ok, false);
+    assert.equal(result.completedResponseCount, failAt);
+    assert.equal(result.summary, null);
+    assert.deepEqual(calls, commands.slice(0, failAt + 1));
+    cases++;
+  }
+}
 console.log(`Settings preparation run: ${cases} synthetic sequencing/failure/cancellation cases passed; no sender, profile or vehicle authorization`);

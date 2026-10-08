@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-08 R2設定応答のsnapshot検査: completion/responseのgetterが8回実行されても準備成功となる模擬入力を再現。readerのPromise完了後はown data descriptorの文字列だけをcopyし、accessor/継承値/配列/null/非文字列をsettings_response_unavailableで拒否。descriptor観測中の取消も直後に確認し後続を止める。4位置×6不正/取消条件と7接続field×4位置を追加し、準備runは計75ケースに合格。値のgetter/暗黙変換は呼ばず、失敗summaryを返さない。既存serial検証も確認。本体3.13.633・ZIP・保存形式・通常通信は不変。模擬readerの検査であり実アダプターの動作検証ではない。
+
 2026-10-08 R2設定準備の順次制御: readonly-settings-preparation-runを追加。既存transitionの旧receipt失効→設定世代更新→準備開始に続き、信頼済み模擬readerから固定3設定と通信番号の応答を順に既存検査へ渡す。途中の未完了/不正応答/例外/設定参照変更で後続を止め、失敗summaryは返さない。取消は即失効し、readerのPromiseがsettleするまで新runを拒否。23ケースで固定順序、前提失敗時のreader呼出0、全段階の失敗/取消/明示再開を検証しserial CIへ登録。成功でもprofile=null・実行不可・復元未確認を維持する。sender/実設定送信/通常画面接続は追加していない。本体3.13.633・ZIP・保存形式は不変。
 
 2026-10-08 R2取得失敗理由を表示: 開発用review snapshotに限定3理由（未完了/時計確認不可/接続設定変更）だけを保持し、共通DOMへ日本語の補足を表示。未完了の本文は空のまま、未知理由や例外文は公開しない。理由取得後にも試行を照合し、後始末失敗時は汎用unavailableへ戻す。Nodeで許可外理由の非公開と明示再取得時の消去、Chromiumで4失敗条件・再取得中の即消去・正常結果への遅着隔離を確認。既存9sample・142ライフサイクル項目と履歴復帰に合格。本体3.13.633・ZIP・保存形式・車両通信は不変。人工取得の表示改善であり実機の失敗原因診断ではない。
