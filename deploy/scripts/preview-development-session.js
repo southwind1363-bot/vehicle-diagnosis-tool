@@ -9,22 +9,36 @@ export function createDevelopmentSessionPreview() {
 ${createMonitorPreviewBrowserSource("single")}
 const buttons = Object.fromEntries(['prepare','read','cancel','end','restart'].map(id => [id, document.getElementById(id)]));
 const status = document.getElementById('status'), output = document.getElementById('output');
-const createOwner = () => {
+const scenario = document.getElementById('scenario');
+let selectedScenario = 'normal';
+const createOwner = (failure = selectedScenario) => {
   const context = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
   const sample = createSingleReadoutSample('normal');
   const wait = () => new Promise(resolve => setTimeout(resolve, 120));
   return createReadOnlyDevelopmentSession({ readContext: () => context, api: fixtureApi, profile: sample.profile,
     readClock: () => Math.floor(performance.now()),
-    async readCommand(command, append) { await wait(); return append(sample.receipts.find(row => row.command === command).transcript) ? 'complete' : 'cancelled'; },
+    async readCommand(command, append) {
+      await wait();
+      if (command === '07' && failure === 'exception') throw new Error('synthetic_private_failure');
+      const transcript = sample.receipts.find(row => row.command === command).transcript;
+      if (command === '07' && failure === 'incomplete') { append(transcript.slice(0, 7)); return 'timeout'; }
+      return append(transcript) ? 'complete' : 'cancelled';
+    },
     invalidateReceipts: () => true,
     beginSettingsGeneration() { context.settingsTicket = {}; return true; },
-    async readResponse(command) { await wait(); return { completion: 'complete', response: command === 'ATDPN' ? 'A6' : 'OK' }; }
+    async readResponse(command) {
+      await wait();
+      if (command === 'ATD0' && failure === 'exception') throw new Error('synthetic_private_failure');
+      if (command === 'ATD0' && failure === 'incomplete') return { completion: 'timeout', response: 'O' };
+      return { completion: 'complete', response: command === 'ATDPN' ? 'A6' : 'OK' };
+    }
   });
 };
 let owner = createOwner(), ended = false;
 const paint = message => {
   const state = owner.inspect();
   buttons.prepare.disabled = buttons.read.disabled = ended || state.pending;
+  scenario.disabled = ended || state.pending;
   buttons.cancel.disabled = ended || !state.pending || state.status === 'cancelling';
   buttons.end.disabled = ended;
   buttons.restart.hidden = !ended;
@@ -46,6 +60,14 @@ const execute = async kind => {
 };
 buttons.prepare.addEventListener('click', () => { void execute('settings'); });
 buttons.read.addEventListener('click', () => { void execute('readout'); });
+scenario.addEventListener('change', () => {
+  if (ended || owner.inspect().pending || !['normal', 'incomplete', 'exception'].includes(scenario.value)) {
+    scenario.value = selectedScenario; return;
+  }
+  selectedScenario = scenario.value;
+  owner.dispose(); owner = createOwner(); output.textContent = '';
+  paint('模擬条件を変更しました。操作を選んでください');
+});
 buttons.cancel.addEventListener('click', () => {
   if (owner.cancel()) { output.textContent = ''; paint('取消済み。模擬処理が戻るのを待っています。'); }
 });
@@ -67,6 +89,8 @@ paint('操作を選んでください');
 <main><h1>設定準備と読取の模擬操作</h1>
 <p class="notice">開発用の固定データです。車両通信は行いません。設定準備の成功は、実機の設定成立や読取許可を意味しません。読取も人工データの表示です。</p>
 <p>操作中は別の操作を開始できません。取消後は処理が戻るまで待ちます。「終了」後は新しい模擬セッションを明示的に開始してください。</p>
+<p><label for="scenario">模擬応答の条件</label> <select id="scenario" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">正常な固定応答</option><option value="incomplete">途中で応答が未完了</option><option value="exception">途中で模擬処理が失敗</option></select></p>
+<p>失敗例は2番目の応答で停止します。条件を変えると表示済みの結果を消去します。再試行は自動では行いません。</p>
 <div class="controls"><button id="prepare">模擬設定を確認</button><button id="read">模擬記録を取得</button><button id="cancel">操作を取り消す</button><button id="end">セッションを終了</button><button id="restart" hidden>新しい模擬セッション</button></div>
 <p id="status" role="status" aria-live="polite"></p><pre id="output"></pre><noscript>この模擬操作にはJavaScriptが必要です。</noscript></main><script>${script}</script></html>\n`;
 }
