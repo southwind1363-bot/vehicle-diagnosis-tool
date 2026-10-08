@@ -109,12 +109,18 @@ module.exports = async function validateInteractiveMonitor(context, output, kind
         await show.click(); await page.clock.runFor(500);
         assert.equal(await page.locator('#review [role="status"]').innerText(), '記録を確認できません');
         assert.equal(await page.locator('pre').textContent(), '');
+        const reasonText = failure === 'failure' ? '応答の取得が完了しませんでした。途中の記録は表示しません。'
+          : failure === 'clock_failure' ? '取得時刻を確認できませんでした。記録は表示しません。'
+          : '取得中に接続または設定が変わりました。以前の条件の記録は表示しません。';
+        assert.equal(await page.locator('.receipt-failure-reason').innerText(), reasonText);
         await page.clock.runFor(2000);
         assert.equal(await page.locator('pre').textContent(), '');
         await show.click();
+        assert.equal(await page.locator('.receipt-failure-reason').textContent(), '', 'New attempt clears prior failure reason');
         await scenario.selectOption('normal');
         await show.click(); await page.clock.runFor(500);
         assert.equal(await page.locator('pre').textContent(), expected, 'Late acquisition failure cannot overwrite a new result');
+        assert.equal(await page.locator('.receipt-failure-reason').textContent(), '');
       }
       for (const name of ['normal', 'compact', 'no_data', 'conflict', 'missing_prompt', 'codes_present', 'mixed_sources', 'mixed_conflict', 'negative_response']) {
         // Switch during a pending read: it must close immediately and never auto-start.

@@ -3,7 +3,8 @@ export function createSimulatedReviewController(createSession, waitForPresentati
   if (typeof createSession !== "function") throw new TypeError("invalid_preview_factory");
   if (typeof waitForPresentation !== "function") throw new TypeError("invalid_preview_scheduler");
   let ticket = null, owned = null;
-  const state = (status, text = null) => Object.freeze({ status, text,
+  const state = (status, text = null, reason = null) => Object.freeze({ status, text,
+    failureReason: status === "unavailable" && ["receipt_incomplete", "receipt_clock_unavailable", "receipt_context_changed"].includes(reason) ? reason : null,
     provenance: "simulated_only", executionEnabled: false, vehicleCommandEnabled: false,
     wouldTransmit: false, canExecute: false });
   let current = state("empty");
@@ -78,7 +79,13 @@ export function createSimulatedReviewController(createSession, waitForPresentati
         await waitForPresentation();
         if (ticket !== attempt) return false;
         const inspected = owned.inspect();
-        if (!inspected.ok) throw new Error("preview_unavailable");
+        if (!inspected.ok) {
+          const unavailable = state("unavailable", null, inspected.reason);
+          if (ticket !== attempt) return false;
+          const released = release();
+          publish(released ? unavailable : state("unavailable"));
+          return false;
+        }
         const ready = state("ready", inspected.text);
         // Session callbacks may invalidate or replace this attempt synchronously.
         // Never publish the old result after returning from those callbacks.
