@@ -31,6 +31,7 @@ const createOwner = (failure = selectedScenario) => {
       report(command, [['03', '保存DTC'], ['07', '保留DTC'], ['0A', '恒久DTC'], ['0101', 'レディネス']]);
       await wait();
       if (command === ['03', '07', '0A', '0101'][failIndex] && failure === 'disconnect') context.connected = false;
+      if (command === ['03', '07', '0A', '0101'][failIndex] && failure === 'settings_changed') context.settingsTicket = {};
       if (command === ['03', '07', '0A', '0101'][failIndex] && failure === 'exception') throw new Error('synthetic_private_failure');
       const transcript = sample.receipts.find(row => row.command === command).transcript;
       if (command === ['03', '07', '0A', '0101'][failIndex] && failure === 'incomplete') { append(transcript.slice(0, 7)); return 'timeout'; }
@@ -42,6 +43,7 @@ const createOwner = (failure = selectedScenario) => {
       report(command, [['ATCAF1', '応答整形の設定'], ['ATD0', 'データ長表示の設定'], ['ATCEA', '拡張アドレスの設定'], ['ATDPN', '通信番号の確認']]);
       await wait();
       if (command === ['ATCAF1', 'ATD0', 'ATCEA', 'ATDPN'][failIndex] && failure === 'disconnect') context.connected = false;
+      if (command === ['ATCAF1', 'ATD0', 'ATCEA', 'ATDPN'][failIndex] && failure === 'settings_changed') context.settingsTicket = {};
       if (command === ['ATCAF1', 'ATD0', 'ATCEA', 'ATDPN'][failIndex] && failure === 'exception') throw new Error('synthetic_private_failure');
       if (command === ['ATCAF1', 'ATD0', 'ATCEA', 'ATDPN'][failIndex] && failure === 'incomplete') return { completion: 'timeout', response: 'O' };
       return { completion: 'complete', response: command === 'ATDPN' ? 'A6' : 'OK' };
@@ -95,7 +97,7 @@ const execute = async kind => {
 buttons.prepare.addEventListener('click', () => { void execute('settings'); });
 buttons.read.addEventListener('click', () => { void execute('readout'); });
 const changeConditions = () => {
-  if (ended || owner.inspect().pending || !['normal', 'incomplete', 'exception', 'disconnect'].includes(scenario.value) || !sampleNames.includes(sampleChoice.value) || !['1', '2', '3', '4'].includes(failurePosition.value)) {
+  if (ended || owner.inspect().pending || !['normal', 'incomplete', 'exception', 'disconnect', 'settings_changed'].includes(scenario.value) || !sampleNames.includes(sampleChoice.value) || !['1', '2', '3', '4'].includes(failurePosition.value)) {
     scenario.value = selectedScenario; sampleChoice.value = selectedSample; failurePosition.value = selectedPosition; return;
   }
   selectedScenario = scenario.value;
@@ -128,7 +130,7 @@ paint('操作を選んでください');
 <main><h1>設定準備と読取の模擬操作</h1>
 <p class="notice">開発用の固定データです。車両通信は行いません。設定準備の成功は、実機の設定成立や読取許可を意味しません。読取も人工データの表示です。</p>
 <p>操作中は別の操作を開始できません。取消後は処理が戻るまで待ちます。「終了」後は新しい模擬セッションを明示的に開始してください。</p>
-<p><label for="scenario">模擬応答の条件</label> <select id="scenario" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">正常な固定応答</option><option value="incomplete">途中で応答が未完了</option><option value="exception">途中で模擬処理が失敗</option><option value="disconnect">途中で模擬接続が切れる</option></select></p>
+<p><label for="scenario">模擬応答の条件</label> <select id="scenario" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">正常な固定応答</option><option value="incomplete">途中で応答が未完了</option><option value="exception">途中で模擬処理が失敗</option><option value="disconnect">途中で模擬接続が切れる</option><option value="settings_changed">途中で模擬設定が変わる</option></select></p>
 <p><label for="sample">読取内容の見本</label> <select id="sample" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">コード0件の応答</option><option value="codes_present">故障コードあり</option><option value="mixed_sources">複数ECUの応答</option><option value="mixed_conflict">同一ECU内の応答矛盾</option><option value="compact">空白なし形式の応答</option><option value="conflict">保存DTCの応答矛盾</option><option value="missing_prompt">応答終端の欠落</option><option value="negative_response">否定応答</option><option value="no_data">NO DATAの応答</option></select></p>
 <p>内容の見本は読取だけに適用します。NO DATAや応答矛盾を故障コード0件とは判定しません。</p>
 <p>読取処理の終了と、応答内容を診断に使えるかの判定は別です。空白なし形式も宣言済みの模擬条件であり、設定確認から自動認定するものではありません。</p>
