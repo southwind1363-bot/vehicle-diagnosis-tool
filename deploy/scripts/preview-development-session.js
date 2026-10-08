@@ -66,6 +66,7 @@ const paint = message => {
 };
 const execute = async kind => {
   if (ended || owner.inspect().pending) return;
+  syncRestoredConditions();
   const current = owner;
   output.textContent = '';
   progress.textContent = '';
@@ -110,6 +111,10 @@ const changeConditions = () => {
 scenario.addEventListener('change', changeConditions);
 sampleChoice.addEventListener('change', changeConditions);
 failurePosition.addEventListener('change', changeConditions);
+const syncRestoredConditions = () => {
+  if (ended || owner.inspect().pending) return;
+  if (scenario.value !== selectedScenario || sampleChoice.value !== selectedSample || failurePosition.value !== selectedPosition) changeConditions();
+};
 buttons.cancel.addEventListener('click', () => {
   if (owner.cancel()) { output.textContent = ''; paint('取消済み。模擬処理が戻るのを待っています。'); }
 });
@@ -123,7 +128,11 @@ buttons.restart.addEventListener('click', () => {
   owner = createOwner(); ended = false; output.textContent = ''; paint('操作を選んでください'); buttons.prepare.focus();
 });
 window.addEventListener('pagehide', () => end());
-window.addEventListener('pageshow', event => { if (event.persisted) end(true); });
+window.addEventListener('pageshow', event => {
+  if (event.persisted) end(true);
+  // Browsers may restore form values after pageshow without a change event.
+  else setTimeout(syncRestoredConditions, 0);
+});
 paint('操作を選んでください');
 })();`.replace(/\r\n?/g, "\n");
   const hash = createHash("sha256").update(script).digest("base64");

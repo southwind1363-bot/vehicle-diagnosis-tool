@@ -55,4 +55,5 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await browser.close();
   }
   await require('./validate-dtc-clear-history-browser.cjs')(chromium, output);
+  await require('./validate-development-session-history.cjs')(chromium, output);
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -204,6 +204,19 @@ module.exports = async (context, output) => {
         }
       }
       await sampleChoice.selectOption('no_data'); await read.click(); await page.clock.runFor(600);
+      // Emulate silent form restoration after pageshow: no change event is dispatched.
+      await page.evaluate(() => {
+        document.getElementById('scenario').value = 'exception';
+        document.getElementById('sample').value = 'codes_present';
+        document.getElementById('failure-position').value = '4';
+      });
+      await read.click(); await page.clock.runFor(360);
+      assert.match(await progress.innerText(), /^4\/4：/);
+      await page.clock.runFor(120);
+      assert.match(await page.locator('#status').innerText(), /模擬処理でエラーが発生/);
+      assert.equal(await result.textContent(), '');
+      await scenario.selectOption('normal'); await sampleChoice.selectOption('no_data');
+      await read.click(); await page.clock.runFor(600);
       await page.evaluate(() => {
         const select = document.getElementById('sample');
         select.add(new Option('unsupported', 'unknown')); select.value = 'unknown'; select.dispatchEvent(new Event('change'));
