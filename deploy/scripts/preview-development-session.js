@@ -9,15 +9,22 @@ export function createDevelopmentSessionPreview() {
 ${createMonitorPreviewBrowserSource("single")}
 const buttons = Object.fromEntries(['prepare','read','cancel','end','restart'].map(id => [id, document.getElementById(id)]));
 const status = document.getElementById('status'), output = document.getElementById('output');
+const progress = document.getElementById('progress');
 const scenario = document.getElementById('scenario');
 let selectedScenario = 'normal';
 const createOwner = (failure = selectedScenario) => {
   const context = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
   const sample = createSingleReadoutSample('normal');
   const wait = () => new Promise(resolve => setTimeout(resolve, 120));
-  return createReadOnlyDevelopmentSession({ readContext: () => context, api: fixtureApi, profile: sample.profile,
+  const report = (command, steps) => {
+    if (ended || owner !== session || session.inspect().status !== 'running') return;
+    const index = steps.findIndex(step => step[0] === command);
+    if (index >= 0) progress.textContent = (index + 1) + '/4：' + steps[index][1] + '（模擬応答待ち）';
+  };
+  const session = createReadOnlyDevelopmentSession({ readContext: () => context, api: fixtureApi, profile: sample.profile,
     readClock: () => Math.floor(performance.now()),
     async readCommand(command, append) {
+      report(command, [['03', '保存DTC'], ['07', '保留DTC'], ['0A', '恒久DTC'], ['0101', 'レディネス']]);
       await wait();
       if (command === '07' && failure === 'exception') throw new Error('synthetic_private_failure');
       const transcript = sample.receipts.find(row => row.command === command).transcript;
@@ -27,16 +34,19 @@ const createOwner = (failure = selectedScenario) => {
     invalidateReceipts: () => true,
     beginSettingsGeneration() { context.settingsTicket = {}; return true; },
     async readResponse(command) {
+      report(command, [['ATCAF1', '応答整形の設定'], ['ATD0', 'データ長表示の設定'], ['ATCEA', '拡張アドレスの設定'], ['ATDPN', '通信番号の確認']]);
       await wait();
       if (command === 'ATD0' && failure === 'exception') throw new Error('synthetic_private_failure');
       if (command === 'ATD0' && failure === 'incomplete') return { completion: 'timeout', response: 'O' };
       return { completion: 'complete', response: command === 'ATDPN' ? 'A6' : 'OK' };
     }
   });
+  return session;
 };
 let owner = createOwner(), ended = false;
 const paint = message => {
   const state = owner.inspect();
+  if (ended || state.status !== 'running') progress.textContent = '';
   buttons.prepare.disabled = buttons.read.disabled = ended || state.pending;
   scenario.disabled = ended || state.pending;
   buttons.cancel.disabled = ended || !state.pending || state.status === 'cancelling';
@@ -48,6 +58,7 @@ const execute = async kind => {
   if (ended || owner.inspect().pending) return;
   const current = owner;
   output.textContent = '';
+  progress.textContent = '';
   const promise = kind === 'settings' ? current.prepareSettings() : current.read();
   paint(kind === 'settings' ? '模擬設定の応答を確認中' : '模擬記録を取得中');
   const result = await promise;
@@ -103,7 +114,7 @@ paint('操作を選んでください');
 <p><label for="scenario">模擬応答の条件</label> <select id="scenario" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">正常な固定応答</option><option value="incomplete">途中で応答が未完了</option><option value="exception">途中で模擬処理が失敗</option></select></p>
 <p>失敗例は2番目の応答で停止します。条件を変えると表示済みの結果を消去します。再試行は自動では行いません。</p>
 <div class="controls"><button id="prepare">模擬設定を確認</button><button id="read">模擬記録を取得</button><button id="cancel">操作を取り消す</button><button id="end">セッションを終了</button><button id="restart" hidden>新しい模擬セッション</button></div>
-<p id="status" role="status" aria-live="polite"></p><pre id="output"></pre><noscript>この模擬操作にはJavaScriptが必要です。</noscript></main><script>${script}</script></html>\n`;
+<p id="status" role="status" aria-live="polite"></p><p id="progress" role="status" aria-live="polite"></p><pre id="output"></pre><noscript>この模擬操作にはJavaScriptが必要です。</noscript></main><script>${script}</script></html>\n`;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.length !== 2) { console.error("固定の模擬操作専用です。引数は指定できません。"); process.exitCode = 2; }

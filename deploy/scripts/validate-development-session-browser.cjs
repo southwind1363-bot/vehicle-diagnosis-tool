@@ -19,28 +19,39 @@ module.exports = async (context, output) => {
       const prepare = page.locator('#prepare'), read = page.locator('#read'), cancel = page.locator('#cancel');
       const end = page.locator('#end'), restart = page.locator('#restart'), result = page.locator('#output');
       const scenario = page.locator('#scenario');
+      const progress = page.locator('#progress');
+      const checkSteps = async labels => {
+        for (let index = 0; index < labels.length; index++) {
+          assert.equal(await progress.innerText(), `${index + 1}/4：${labels[index]}（模擬応答待ち）`);
+          assert.equal(await result.textContent(), '', 'Progress does not publish partial results');
+          await page.clock.runFor(120);
+        }
+        assert.equal(await progress.textContent(), '', 'Settled operations clear progress');
+      };
       assert(await cancel.isDisabled());
       await prepare.focus(); await page.keyboard.press('Enter');
       assert(await prepare.isDisabled()); assert(await read.isDisabled());
       await read.dispatchEvent('click');
       assert.equal(await page.locator('#status').innerText(), '模擬設定の応答を確認中');
-      await page.clock.runFor(600);
+      await checkSteps(['応答整形の設定', 'データ長表示の設定', '拡張アドレスの設定', '通信番号の確認']);
       assert.match(await result.innerText(), /実機設定・復元・通信形式は未確認/);
       const settingsText = await result.innerText();
       await page.clock.runFor(2000);
       assert.equal(await result.innerText(), settingsText, 'Settings must not auto-start readout');
       await read.click(); assert.equal(await result.textContent(), '');
-      await page.clock.runFor(600);
+      await checkSteps(['保存DTC', '保留DTC', '恒久DTC', 'レディネス']);
       assert.match(await result.innerText(), /模擬の一回分の記録/);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({ path: path.join(output, `${width}-development-session.png`), fullPage: true });
       for (const button of [prepare, read]) {
         await button.click(); await page.clock.runFor(150);
         await cancel.click();
+        assert.equal(await progress.textContent(), '');
         assert(await prepare.isDisabled()); assert(await read.isDisabled());
         assert.equal(await result.textContent(), '');
         assert.match(await page.locator('#status').innerText(), /戻るのを待っています/);
         await page.clock.runFor(600);
+        assert.equal(await progress.textContent(), '', 'Cancelled callback cannot restore progress');
         assert(await prepare.isEnabled()); assert(await read.isEnabled());
         assert.match(await page.locator('#status').innerText(), /模擬操作を取り消しました/);
         assert.equal(await result.textContent(), '');
@@ -48,6 +59,7 @@ module.exports = async (context, output) => {
         assert.equal(await result.textContent(), '');
         await button.click(); await page.clock.runFor(150);
         await end.click();
+        assert.equal(await progress.textContent(), '');
         assert(await prepare.isDisabled()); assert(await read.isDisabled());
         assert.equal(await result.textContent(), '');
         await restart.click();
@@ -67,6 +79,7 @@ module.exports = async (context, output) => {
           });
           assert.equal(await scenario.inputValue(), failure, 'Pending conditions cannot change');
           await page.clock.runFor(600);
+          assert.equal(await progress.textContent(), '', 'Failed acquisition clears progress');
           assert.equal(await result.textContent(), '', 'Partial acquisition must not appear');
           const failureText = await page.locator('#status').innerText();
           assert.match(failureText, failure === 'incomplete' ? /取得が完了しませんでした/ : /模擬処理でエラーが発生/);
