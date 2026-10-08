@@ -52,6 +52,8 @@ PDF本文を確認。PP29表のスクリーンショット取得は失敗した�
 
 ## 非実行準備器の実装記録
 
+2026-10-08 設定準備run: `readonly-settings-preparation-run.js`で既存transitionと信頼済み模擬応答readerを順次接続。固定のATCAF1/ATD0/ATCEA/ATDPNという名前をcallbackへ渡すだけで、transport/senderは持たない。取消時は観測を即失効し、pending readerがsettleするまで別runを拒否する。Promise完了は物理的な停止や設定復元の証明ではない。成功summaryもprofile=null、実行不可、実機由来未確認を維持する。通常経路への配線・追加設定の許可は別工程。
+
 2026-10-08 一取得の順次制御: `readonly-receipt-run.js`を開発用に追加。固定順序03/07/0A/0101だけを信頼済みreaderへ渡し、各commandの専用chunk callbackを発行する。時刻取得やreceipt受理に失敗したら後続readerを呼ばず、既存の診断セッションには書き込まない。callbackの戻り値`complete`は記録の構造検査へ渡すだけで、NO DATAをゼロ件、構造完了を意味検証済みに昇格させない。
 
 取消は記録だけを即失効する。readerの中断能力は持たず、未settleの読取がある間は新runを拒否する。settleしても物理的な接続終了を証明するものではなく、再開は明示run呼出でのみ行う。通常senderへの接続や実車の再試行許可は追加していない。模擬wireの既存結果参照保持と、失敗位置以降の送信0件を検証した。
