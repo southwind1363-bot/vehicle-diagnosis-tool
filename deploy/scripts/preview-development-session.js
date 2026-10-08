@@ -12,11 +12,13 @@ const status = document.getElementById('status'), output = document.getElementBy
 const progress = document.getElementById('progress');
 const scenario = document.getElementById('scenario');
 const sampleChoice = document.getElementById('sample');
+const failurePosition = document.getElementById('failure-position');
 const sampleNames = ['normal', 'codes_present', 'mixed_sources', 'mixed_conflict', 'compact', 'conflict', 'missing_prompt', 'negative_response', 'no_data'];
-let selectedScenario = 'normal', selectedSample = 'normal';
+let selectedScenario = 'normal', selectedSample = 'normal', selectedPosition = '2';
 const createOwner = (failure = selectedScenario) => {
   const context = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
   const sample = createSingleReadoutSample(selectedSample);
+  const failIndex = Number(selectedPosition) - 1;
   const wait = () => new Promise(resolve => setTimeout(resolve, 120));
   const report = (command, steps) => {
     if (ended || owner !== session || session.inspect().status !== 'running') return;
@@ -28,9 +30,9 @@ const createOwner = (failure = selectedScenario) => {
     async readCommand(command, append) {
       report(command, [['03', '保存DTC'], ['07', '保留DTC'], ['0A', '恒久DTC'], ['0101', 'レディネス']]);
       await wait();
-      if (command === '07' && failure === 'exception') throw new Error('synthetic_private_failure');
+      if (command === ['03', '07', '0A', '0101'][failIndex] && failure === 'exception') throw new Error('synthetic_private_failure');
       const transcript = sample.receipts.find(row => row.command === command).transcript;
-      if (command === '07' && failure === 'incomplete') { append(transcript.slice(0, 7)); return 'timeout'; }
+      if (command === ['03', '07', '0A', '0101'][failIndex] && failure === 'incomplete') { append(transcript.slice(0, 7)); return 'timeout'; }
       return append(transcript) ? 'complete' : 'cancelled';
     },
     invalidateReceipts: () => true,
@@ -38,8 +40,8 @@ const createOwner = (failure = selectedScenario) => {
     async readResponse(command) {
       report(command, [['ATCAF1', '応答整形の設定'], ['ATD0', 'データ長表示の設定'], ['ATCEA', '拡張アドレスの設定'], ['ATDPN', '通信番号の確認']]);
       await wait();
-      if (command === 'ATD0' && failure === 'exception') throw new Error('synthetic_private_failure');
-      if (command === 'ATD0' && failure === 'incomplete') return { completion: 'timeout', response: 'O' };
+      if (command === ['ATCAF1', 'ATD0', 'ATCEA', 'ATDPN'][failIndex] && failure === 'exception') throw new Error('synthetic_private_failure');
+      if (command === ['ATCAF1', 'ATD0', 'ATCEA', 'ATDPN'][failIndex] && failure === 'incomplete') return { completion: 'timeout', response: 'O' };
       return { completion: 'complete', response: command === 'ATDPN' ? 'A6' : 'OK' };
     }
   });
@@ -52,6 +54,7 @@ const paint = message => {
   buttons.prepare.disabled = buttons.read.disabled = ended || state.pending;
   scenario.disabled = ended || state.pending;
   sampleChoice.disabled = ended || state.pending;
+  failurePosition.disabled = ended || state.pending || selectedScenario === 'normal';
   buttons.cancel.disabled = ended || !state.pending || state.status === 'cancelling';
   buttons.end.disabled = ended;
   buttons.restart.hidden = !ended;
@@ -86,16 +89,18 @@ const execute = async kind => {
 buttons.prepare.addEventListener('click', () => { void execute('settings'); });
 buttons.read.addEventListener('click', () => { void execute('readout'); });
 const changeConditions = () => {
-  if (ended || owner.inspect().pending || !['normal', 'incomplete', 'exception'].includes(scenario.value) || !sampleNames.includes(sampleChoice.value)) {
-    scenario.value = selectedScenario; sampleChoice.value = selectedSample; return;
+  if (ended || owner.inspect().pending || !['normal', 'incomplete', 'exception'].includes(scenario.value) || !sampleNames.includes(sampleChoice.value) || !['1', '2', '3', '4'].includes(failurePosition.value)) {
+    scenario.value = selectedScenario; sampleChoice.value = selectedSample; failurePosition.value = selectedPosition; return;
   }
   selectedScenario = scenario.value;
   selectedSample = sampleChoice.value;
+  selectedPosition = failurePosition.value;
   owner.dispose(); owner = createOwner(); output.textContent = '';
   paint('模擬条件を変更しました。操作を選んでください');
 };
 scenario.addEventListener('change', changeConditions);
 sampleChoice.addEventListener('change', changeConditions);
+failurePosition.addEventListener('change', changeConditions);
 buttons.cancel.addEventListener('click', () => {
   if (owner.cancel()) { output.textContent = ''; paint('取消済み。模擬処理が戻るのを待っています。'); }
 });
@@ -121,7 +126,8 @@ paint('操作を選んでください');
 <p><label for="sample">読取内容の見本</label> <select id="sample" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">コード0件の応答</option><option value="codes_present">故障コードあり</option><option value="mixed_sources">複数ECUの応答</option><option value="mixed_conflict">同一ECU内の応答矛盾</option><option value="compact">空白なし形式の応答</option><option value="conflict">保存DTCの応答矛盾</option><option value="missing_prompt">応答終端の欠落</option><option value="negative_response">否定応答</option><option value="no_data">NO DATAの応答</option></select></p>
 <p>内容の見本は読取だけに適用します。NO DATAや応答矛盾を故障コード0件とは判定しません。</p>
 <p>読取処理の終了と、応答内容を診断に使えるかの判定は別です。空白なし形式も宣言済みの模擬条件であり、設定確認から自動認定するものではありません。</p>
-<p>失敗例は2番目の応答で停止します。条件を変えると表示済みの結果を消去します。再試行は自動では行いません。</p>
+<p><label for="failure-position">失敗させる段階</label> <select id="failure-position" style="font:inherit;max-width:100%;min-height:48px"><option value="1">1番目</option><option value="2" selected>2番目</option><option value="3">3番目</option><option value="4">4番目</option></select></p>
+<p>失敗例は選んだ段階の応答で停止します。正常な固定応答ではこの指定を使いません。条件を変えると表示済みの結果を消去します。再試行は自動では行いません。</p>
 <div class="controls"><button id="prepare">模擬設定を確認</button><button id="read">模擬記録を取得</button><button id="cancel">操作を取り消す</button><button id="end">セッションを終了</button><button id="restart" hidden>新しい模擬セッション</button></div>
 <p id="status" role="status" aria-live="polite"></p><p id="progress" role="status" aria-live="polite"></p><pre id="output"></pre><noscript>この模擬操作にはJavaScriptが必要です。</noscript></main><script>${script}</script></html>\n`;
 }

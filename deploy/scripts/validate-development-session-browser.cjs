@@ -24,6 +24,8 @@ module.exports = async (context, output) => {
       const end = page.locator('#end'), restart = page.locator('#restart'), result = page.locator('#output');
       const scenario = page.locator('#scenario');
       const sampleChoice = page.locator('#sample');
+      const failurePosition = page.locator('#failure-position');
+      assert(await failurePosition.isDisabled());
       const progress = page.locator('#progress');
       const checkSteps = async labels => {
         for (let index = 0; index < labels.length; index++) {
@@ -146,6 +148,33 @@ module.exports = async (context, output) => {
           assert.equal(await result.innerText(), completeText, 'Manual recovery keeps the selected sample semantics');
         }
       }
+      await sampleChoice.selectOption('normal');
+      for (const failure of ['incomplete', 'exception']) {
+        await scenario.selectOption(failure);
+        for (const position of ['1', '2', '3', '4']) {
+          await failurePosition.selectOption(position);
+          for (const button of [prepare, read]) {
+            await button.click();
+            assert(await failurePosition.isDisabled());
+            await page.evaluate(() => {
+              const select = document.getElementById('failure-position');
+              select.value = select.value === '1' ? '4' : '1'; select.dispatchEvent(new Event('change'));
+            });
+            assert.equal(await failurePosition.inputValue(), position);
+            await page.clock.runFor((Number(position) - 1) * 120);
+            assert.match(await progress.innerText(), new RegExp('^' + position + '/4：'));
+            await page.clock.runFor(120);
+            assert.equal(await result.textContent(), '', 'No completed result even when the fourth response fails');
+            assert.equal(await progress.textContent(), '');
+            assert.match(await page.locator('#status').innerText(), failure === 'incomplete' ? /取得が完了しませんでした/ : /模擬処理でエラーが発生/);
+            await page.clock.runFor(600);
+            assert.equal(await result.textContent(), '');
+          }
+        }
+      }
+      await scenario.selectOption('normal');
+      assert(await failurePosition.isDisabled());
+      await sampleChoice.selectOption('no_data'); await read.click(); await page.clock.runFor(600);
       await page.evaluate(() => {
         const select = document.getElementById('sample');
         select.add(new Option('unsupported', 'unknown')); select.value = 'unknown'; select.dispatchEvent(new Event('change'));
@@ -163,6 +192,6 @@ module.exports = async (context, output) => {
       assert.equal(await page.evaluate(() => typeof window.ObdReadOnly), 'undefined');
     }
     assert.deepEqual(errors, []); assert.deepEqual(external, []);
-    console.log('Development session browser: 9 samples, 36 sample failure/recovery paths, manual settings/readout, cancellation, disposal/restart and CSP passed at 390/1280px');
+    console.log('Development session browser: 9 samples, 36 sample recovery paths, 32 failure-position paths, cancellation, disposal/restart and CSP passed at 390/1280px');
   } finally { await page.close(); }
 };
