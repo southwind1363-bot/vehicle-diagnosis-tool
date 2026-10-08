@@ -6,6 +6,7 @@ import { client, attachWire } from "./fixtures/serial-runtime-harness.js";
 import { formatSingleReadoutReceiptPreview } from "./fixtures/single-readout-receipt-preview.js";
 import { createSingleReadoutPreviewSession } from "./fixtures/single-readout-preview-session.js";
 import { createSingleReadoutRunPreviewSession } from "./fixtures/single-readout-run-preview-session.js";
+import { createSingleReadoutSample } from "./fixtures/single-readout-sample.js";
 const host = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), host);
 const api = host.window.ObdReadOnly;
@@ -187,3 +188,34 @@ for (const [scenario, reason] of [["failure", "receipt_incomplete"], ["clock_fai
   cancelled.dispose(); await cancelled.ready;
   assert.equal(cancelled.inspect().text, null);
 }
+
+for (const scenario of ["codes_present", "mixed_sources"]) {
+  const sample = createSingleReadoutSample(scenario);
+  const observed = api.evaluateSingleReadoutRawReceipts({ receipts: sample.receipts.map(row => ({
+    ...row, profile: sample.profile, completion: "complete"
+  })) });
+  assert.deepEqual(Array.from(observed.readouts, row => row.observation), scenario === "codes_present"
+    ? ["source_positive_nonempty_observed", "source_positive_nonempty_observed", "source_positive_nonempty_observed", "source_positive_reported"]
+    : ["source_positive_nonempty_observed", "source_positive_empty_observed", "missing_or_unproven", "source_positive_reported"]);
+  assert.equal(observed.readoutCoverageComplete, false);
+  assert.equal(observed.executionEnabled, false);
+  const acquired = createSingleReadoutRunPreviewSession(api, scenario);
+  const previous = createSingleReadoutPreviewSession(api, scenario);
+  try {
+    await acquired.ready;
+    assert.deepEqual(acquired.inspect(), previous.inspect());
+    const text = acquired.inspect().text;
+    assert.match(text, /保存DTC: 故障コードを含む応答/);
+    if (scenario === "codes_present") {
+      assert.match(text, /保留DTC: 故障コードを含む応答/);
+      assert.match(text, /恒久DTC: 故障コードを含む応答/);
+      assert.doesNotMatch(text, /報告元からコード0件の応答/);
+    } else {
+      assert.match(text, /保留DTC: 報告元からコード0件の応答（車両全体の0件は未確認）/);
+      assert.match(text, /恒久DTC: 正応答を確認できません/);
+      assert.match(text, /NO DATA報告あり。故障コード0件とは判断できません/);
+    }
+  } finally { acquired.dispose(); previous.dispose(); }
+  assert.equal(acquired.inspect().text, null);
+}
+console.log("Single-readout acquisition: nonempty and mixed-source samples preserve per-readout observations and unknown coverage");
