@@ -111,7 +111,9 @@ module.exports = async (context, output) => {
       }
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({ path: path.join(output, `${width}-development-session.png`), fullPage: true });
-      for (const sample of ['normal', 'codes_present', 'mixed_sources', 'mixed_conflict', 'no_data']) {
+      const samples = ['normal', 'codes_present', 'mixed_sources', 'mixed_conflict', 'compact', 'conflict', 'missing_prompt', 'negative_response', 'no_data'];
+      assert.deepEqual(await sampleChoice.locator('option').evaluateAll(options => options.map(option => option.value)), samples);
+      for (const sample of samples) {
         await sampleChoice.selectOption(sample);
         assert.equal(await result.textContent(), '', 'Sample changes discard the previous display');
         assert.equal(await progress.textContent(), '');
@@ -131,6 +133,18 @@ module.exports = async (context, output) => {
         finally { baseline.dispose(); }
         assert.equal(await progress.textContent(), '');
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        const completeText = await result.innerText();
+        for (const failure of ['incomplete', 'exception']) {
+          await scenario.selectOption(failure);
+          assert.equal(await result.textContent(), '');
+          await read.click(); await page.clock.runFor(600);
+          assert.equal(await result.textContent(), '', `${sample}/${failure}: no partial diagnostic display`);
+          assert.equal(await progress.textContent(), '');
+          assert.match(await page.locator('#status').innerText(), failure === 'incomplete' ? /取得が完了しませんでした/ : /模擬処理でエラーが発生/);
+          await scenario.selectOption('normal');
+          await read.click(); await page.clock.runFor(600);
+          assert.equal(await result.innerText(), completeText, 'Manual recovery keeps the selected sample semantics');
+        }
       }
       await page.evaluate(() => {
         const select = document.getElementById('sample');
@@ -149,6 +163,6 @@ module.exports = async (context, output) => {
       assert.equal(await page.evaluate(() => typeof window.ObdReadOnly), 'undefined');
     }
     assert.deepEqual(errors, []); assert.deepEqual(external, []);
-    console.log('Development session browser: manual settings/readout, mutual exclusion, cancellation, disposal/restart, 8 failure/recovery paths and CSP passed at 390/1280px');
+    console.log('Development session browser: 9 samples, 36 sample failure/recovery paths, manual settings/readout, cancellation, disposal/restart and CSP passed at 390/1280px');
   } finally { await page.close(); }
 };
