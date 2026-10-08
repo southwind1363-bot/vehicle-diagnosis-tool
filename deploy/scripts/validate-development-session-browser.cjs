@@ -174,6 +174,27 @@ module.exports = async (context, output) => {
       }
       await scenario.selectOption('normal');
       assert(await failurePosition.isDisabled());
+      for (const position of ['1', '2', '3', '4']) {
+        for (const button of [prepare, read]) {
+          await scenario.selectOption('disconnect');
+          await failurePosition.selectOption(position);
+          await button.click(); await page.clock.runFor(600);
+          assert.equal(await result.textContent(), ''); assert.equal(await progress.textContent(), '');
+          const stopped = await page.locator('#status').innerText();
+          assert.match(stopped, /模擬接続または設定条件が変わった/);
+          assert(await read.isDisabled()); assert(await prepare.isDisabled());
+          assert(await scenario.isDisabled()); assert(await restart.isVisible());
+          await read.dispatchEvent('click'); await prepare.dispatchEvent('click');
+          await page.clock.runFor(1000);
+          assert.equal(await page.locator('#status').innerText(), stopped);
+          assert.equal(await result.textContent(), '');
+          await restart.click();
+          assert.equal(await result.textContent(), '', 'Restart never starts a read automatically');
+          await scenario.selectOption('normal');
+          await button.click(); await page.clock.runFor(600);
+          assert.match(await result.innerText(), button === prepare ? /実機設定・復元・通信形式は未確認/ : /模擬の一回分の記録/);
+        }
+      }
       await sampleChoice.selectOption('no_data'); await read.click(); await page.clock.runFor(600);
       await page.evaluate(() => {
         const select = document.getElementById('sample');
@@ -192,6 +213,6 @@ module.exports = async (context, output) => {
       assert.equal(await page.evaluate(() => typeof window.ObdReadOnly), 'undefined');
     }
     assert.deepEqual(errors, []); assert.deepEqual(external, []);
-    console.log('Development session browser: 9 samples, 36 sample recovery paths, 32 failure-position paths, cancellation, disposal/restart and CSP passed at 390/1280px');
+    console.log('Development session browser: 9 samples, 36 sample recovery paths, 32 failure-position paths, 16 disconnect/restart paths and CSP passed at 390/1280px');
   } finally { await page.close(); }
 };
