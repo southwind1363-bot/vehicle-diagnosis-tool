@@ -1,3 +1,4 @@
+import { runReadoutPresentationIntegrityCases } from './fixtures/readout-presentation-integrity-cases.js';
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -297,34 +298,11 @@ console.log("Negative responses: positive/negative mixture and negative-only rea
   assert.doesNotMatch(text, /private|<script>/);
   assert.match(text, /正応答 3、正応答未確認 0、判定保留 0、分類不明 1/);
   assert.equal(JSON.stringify(result), before);
-  const mutations = [
-    value => { value.summary = null; },
-    value => { value.summary.rawTranscriptValidation = null; },
-    value => { value.summary.rawTranscriptValidation.readouts.pop(); },
-    value => { value.summary.rawTranscriptValidation.readouts.reverse(); },
-    value => { value.summary.rawTranscriptValidation.semanticObservation.readouts.reverse(); },
-    value => { value.summary.rawTranscriptValidation.readouts.reverse(); value.summary.rawTranscriptValidation.semanticObservation.readouts.reverse(); },
-    value => { delete value.summary.rawTranscriptValidation.readouts[1]; },
-    value => { delete value.summary.rawTranscriptValidation.semanticObservation.readouts[2]; },
-    value => { value.summary.rawTranscriptValidation.semanticObservation.readouts[0].intent = "read_pending_dtc"; },
-    value => { value.summary.rawTranscriptValidation.semanticObservation.readouts[0].ordinal = 2; },
-    value => { value.summary.rawTranscriptValidation.semanticObservation.readouts[0].blockerIds = null; },
-    value => { value.summary.rawTranscriptValidation.semanticObservation.readouts[0].observation = {}; },
-    value => { value.summary.rawTranscriptValidation.readouts[0].errorCodes = "missing_prompt"; },
-    value => { value.summary.rawTranscriptValidation.readouts[0].noDataReported = "false"; },
-    value => { value.summary.rawTranscriptValidation.readouts[0].negativeResponseObserved = null; },
-    value => { value.summary.rawTranscriptValidation.readouts[0].errorCodes = [undefined]; }
-  ];
-  for (const mutate of mutations) {
-    const malformed = JSON.parse(before); mutate(malformed);
-    const snapshot = JSON.stringify(malformed);
-    const display = formatSingleReadoutReceiptPreview(malformed);
-    assert.deepEqual(display, { ok: false, reason: "semantic_observation_unavailable", text: null });
-    assert(Object.isFrozen(display));
-    assert.equal(JSON.stringify(malformed), snapshot);
-  }
-  for (const malformed of [null, undefined, { ok: true }, { ok: true, summary: {} }]) {
-    assert.equal(formatSingleReadoutReceiptPreview(malformed).text, null);
+  const integrityCases = runReadoutPresentationIntegrityCases(api);
+  assert.equal(integrityCases.length, 20);
+  for (const entry of integrityCases) {
+    assert.deepEqual(entry.result, { ok: false, reason: 'semantic_observation_unavailable', text: null });
+    assert.equal(entry.frozen, true); assert.equal(entry.unchanged, true);
   }
   console.log("Readout presentation integrity: 20 malformed/misaligned summaries rejected without partial display");
 }

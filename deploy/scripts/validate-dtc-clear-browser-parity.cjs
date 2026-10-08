@@ -25,7 +25,7 @@ module.exports = async function validateDtcClearBrowserParity(context) {
   for (const name of ['dtc-clear-browser-cases.js', 'dtc-clear-scoped-readout-core.js', 'dtc-clear-readout-scope.js',
     'dtc-clear-browser-sample.js', 'dtc-clear-browser-preview-session.js', 'monitor-preview-controller.js', 'monitor-preview-view.js',
     'readonly-receipt-owner.js', 'readonly-receipt-capture.js', 'readonly-capture-browser-cases.js', 'readonly-receipt-raw-validation.js', 'single-readout-preview-session.js', 'single-readout-preview-view.js',
-    'single-readout-receipt-preview.js', 'single-readout-sample.js', 'readonly-receipt-session.js', 'readonly-timed-receipt-session.js',
+    'single-readout-receipt-preview.js', 'single-readout-sample.js', 'readout-presentation-integrity-cases.js', 'readonly-receipt-session.js', 'readonly-timed-receipt-session.js',
     'readonly-receipt-run.js', 'single-readout-run-preview-session.js',
     'readonly-development-session.js', 'readonly-settings-preparation.js',
     'readonly-settings-preparation-session.js', 'readonly-settings-transition.js',
@@ -57,6 +57,16 @@ module.exports = async function validateDtcClearBrowserParity(context) {
     console.log('Single-readout Node/Chromium semantic parity: 17 cases passed');
     await require('./validate-dtc-clear-browser-owner.cjs')(page, expected[0].text.text);
     await require('./validate-single-readout-preview.cjs')(page, runtime.window.ObdReadOnly);
+    const { runReadoutPresentationIntegrityCases } = await import('./fixtures/readout-presentation-integrity-cases.js');
+    const integrityExpected = runReadoutPresentationIntegrityCases(runtime.window.ObdReadOnly);
+    assert.equal(integrityExpected.length, 20);
+    assert(integrityExpected.every(entry => entry.result.ok === false && entry.result.text === null && entry.frozen && entry.unchanged));
+    const integrityActual = await page.evaluate(async () => {
+      const { runReadoutPresentationIntegrityCases } = await import('./readout-presentation-integrity-cases.js');
+      return runReadoutPresentationIntegrityCases(window.ObdReadOnly);
+    });
+    assert.deepEqual(integrityActual, integrityExpected);
+    console.log('Readout presentation integrity Node/Chromium parity: 20 malformed summaries rejected, immutable results and unchanged inputs passed');
     await require('./validate-readonly-capture-browser.cjs')(page, runtime.window.ObdReadOnly);
     const { runCompactTranscriptCases } = await import('./validate-elm-readonly-compact.js');
     const compactCases = runCompactTranscriptCases(runtime.window.ObdReadOnly);
