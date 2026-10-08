@@ -52,6 +52,8 @@ PDF本文を確認。PP29表のスクリーンショット取得は失敗した�
 
 ## 非実行準備器の実装記録
 
+2026-10-08 開発用共通所有者: `readonly-development-session.js`は既存の取得runと設定準備runを私有し、片方のPromiseが終了するまで両方の再開始を拒否する。取消は対象所有者へ渡すが、取消要求だけで共通の占有を解放しない。明示呼出だけで次操作を始める。これは同一管理器内の模擬処理の排他であり、外部transportの停止確認や別管理器との排他保証ではない。設定成功からprofileを発行せず、宣言済み模擬profileを実機確認に昇格させない。
+
 2026-10-08 設定準備run: `readonly-settings-preparation-run.js`で既存transitionと信頼済み模擬応答readerを順次接続。固定のATCAF1/ATD0/ATCEA/ATDPNという名前をcallbackへ渡すだけで、transport/senderは持たない。取消時は観測を即失効し、pending readerがsettleするまで別runを拒否する。Promise完了は物理的な停止や設定復元の証明ではない。成功summaryもprofile=null、実行不可、実機由来未確認を維持する。通常経路への配線・追加設定の許可は別工程。
 
 2026-10-08 一取得の順次制御: `readonly-receipt-run.js`を開発用に追加。固定順序03/07/0A/0101だけを信頼済みreaderへ渡し、各commandの専用chunk callbackを発行する。時刻取得やreceipt受理に失敗したら後続readerを呼ばず、既存の診断セッションには書き込まない。callbackの戻り値`complete`は記録の構造検査へ渡すだけで、NO DATAをゼロ件、構造完了を意味検証済みに昇格させない。

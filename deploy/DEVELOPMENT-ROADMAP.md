@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-08 R2読取/設定準備の共通所有者: readonly-development-sessionが既存receipt runとsettings preparation runを私有し、両方向の同時開始をdevelopment_operation_busyで拒否。取消中も元Promiseのsettleまで所有を保持し、勝手なキュー実行/再開はしない。idle/running/cancellingと操作種別のみを非実行snapshotで公開。両操作×正常/取消/例外×4位置の24ケースで、待機中のreader/失効/世代更新呼出数不変、後続停止、明示的な反対操作の開始を確認しserial CIへ登録。宣言profileは模擬入力のままで、設定準備成功によるprofile認定や実送信許可は付与しない。通常画面/transportには未接続。本体3.13.633・ZIP・保存形式は不変。
+
 2026-10-08 R2設定応答のsnapshot検査: completion/responseのgetterが8回実行されても準備成功となる模擬入力を再現。readerのPromise完了後はown data descriptorの文字列だけをcopyし、accessor/継承値/配列/null/非文字列をsettings_response_unavailableで拒否。descriptor観測中の取消も直後に確認し後続を止める。4位置×6不正/取消条件と7接続field×4位置を追加し、準備runは計75ケースに合格。値のgetter/暗黙変換は呼ばず、失敗summaryを返さない。既存serial検証も確認。本体3.13.633・ZIP・保存形式・通常通信は不変。模擬readerの検査であり実アダプターの動作検証ではない。
 
 2026-10-08 R2設定準備の順次制御: readonly-settings-preparation-runを追加。既存transitionの旧receipt失効→設定世代更新→準備開始に続き、信頼済み模擬readerから固定3設定と通信番号の応答を順に既存検査へ渡す。途中の未完了/不正応答/例外/設定参照変更で後続を止め、失敗summaryは返さない。取消は即失効し、readerのPromiseがsettleするまで新runを拒否。23ケースで固定順序、前提失敗時のreader呼出0、全段階の失敗/取消/明示再開を検証しserial CIへ登録。成功でもprofile=null・実行不可・復元未確認を維持する。sender/実設定送信/通常画面接続は追加していない。本体3.13.633・ZIP・保存形式は不変。
