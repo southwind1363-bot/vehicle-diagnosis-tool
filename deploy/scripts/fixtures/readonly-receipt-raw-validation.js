@@ -18,6 +18,7 @@ export function createReceiptRawValidation(api) {
         promptObserved: parsed.promptObserved, frameCount: parsed.frames.length,
         // Keep only parser-owned codes, never payloads, raw text or source identities.
         errorCodes: Object.freeze([...new Set(parsed.errors.map(error => error.code))]),
+        negativeResponseObserved: parsed.frames.some(frame => frame.responseKind === "matching_negative_service"),
         noDataReported: parsed.statuses.some(status => status.code === "no_data") });
     });
     const semanticObservation = observe ? observe({ receipts: receipts.map(({ command, profile, completion, transcript }) =>

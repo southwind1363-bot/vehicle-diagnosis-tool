@@ -22,6 +22,7 @@ export function formatSingleReadoutReceiptPreview(result) {
     lines.push(`${titles[index]}: ${Object.hasOwn(labels, row.observation) ? labels[row.observation] : "確認できません"}`);
     const receipt = raw.readouts[index];
     if (receipt.noDataReported) lines.push("  NO DATA報告あり。故障コード0件とは判断できません。");
+    if (receipt.negativeResponseObserved) lines.push("  確認点: 要求に対する否定応答があります。正常・故障コード0件とは判断できません。");
     // Translate only known derived codes. Never expose raw responses or unknown identifiers.
     if (receipt.errorCodes.includes("missing_prompt")) lines.push("  確認点: 応答の終端記号を確認できません。");
     if (receipt.errorCodes.some(code => code !== "missing_prompt")) lines.push("  確認点: 応答形式に未確認の問題があります。");

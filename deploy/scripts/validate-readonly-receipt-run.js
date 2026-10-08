@@ -7,6 +7,7 @@ import { formatSingleReadoutReceiptPreview } from "./fixtures/single-readout-rec
 import { createSingleReadoutPreviewSession } from "./fixtures/single-readout-preview-session.js";
 import { createSingleReadoutRunPreviewSession } from "./fixtures/single-readout-run-preview-session.js";
 import { createSingleReadoutSample } from "./fixtures/single-readout-sample.js";
+import { createReceiptRawValidation } from "./fixtures/readonly-receipt-raw-validation.js";
 const host = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), host);
 const api = host.window.ObdReadOnly;
@@ -251,6 +252,31 @@ console.log("Single-readout acquisition: nonempty and mixed-source samples prese
   } finally { acquired.dispose(); previous.dispose(); }
 }
 console.log("Mixed-source conflicts: DTC/readiness remain indeterminate in both arrival orders despite another valid ECU");
+
+for (const scenario of ["negative_response", "normal", "no_data"]) {
+  const sample = createSingleReadoutSample(scenario);
+  const rows = sample.receipts.map(row => ({ ...row, profile: sample.profile, completion: "complete" }));
+  const result = createReceiptRawValidation(api)(rows);
+  assert.equal(result.status, "parsed", "Grammar completion must not be confused with a positive response");
+  assert(result.readouts.every(row => row.negativeResponseObserved === (scenario === "negative_response")));
+  if (scenario === "negative_response") {
+    assert(result.semanticObservation.readouts.every(row => row.observation === "indeterminate"));
+    assert.equal(result.readouts[0].frameCount, 2, "A positive response must not hide the negative response");
+    assert.equal(result.semanticObservation.executionEnabled, false);
+    assert.doesNotMatch(JSON.stringify(result), /7E9|7F 03|transcript/);
+  }
+  const session = createSingleReadoutRunPreviewSession(api, scenario);
+  try {
+    await session.ready;
+    const text = session.inspect().text;
+    if (scenario === "negative_response") {
+      assert.equal(text.split("確認点: 要求に対する否定応答があります。").length - 1, 4);
+      assert.equal(text.split(": 判定保留").length - 1, 4);
+      assert.doesNotMatch(text, /報告元からコード0件の応答|readiness応答あり/);
+    } else assert.doesNotMatch(text, /否定応答があります/);
+  } finally { session.dispose(); }
+}
+console.log("Negative responses: positive/negative mixture and negative-only readouts remain indeterminate, without raw/source disclosure");
 
 {
   const sample = createSingleReadoutSample("normal");
