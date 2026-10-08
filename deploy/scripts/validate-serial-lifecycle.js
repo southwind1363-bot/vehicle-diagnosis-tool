@@ -19,6 +19,7 @@ import "./validate-readonly-timed-receipt-session.js";
 import "./validate-readonly-receipt-run.js";
 import "./validate-readonly-settings-preparation-run.js";
 import "./validate-readonly-development-session.js";
+import "./validate-development-session-serial.js";
 import "./validate-receipt-runtime-handoff.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");

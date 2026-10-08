@@ -52,6 +52,8 @@ PDF本文を確認。PP29表のスクリーンショット取得は失敗した�
 
 ## 非実行準備器の実装記録
 
+2026-10-08 共通所有者の本体関数結合試験: `validate-development-session-serial.js`で実際の送受信関数をメモリ上のbyte queueへ接続する。4読取位置で正常・取消・終了・timeoutの16経路を確認。書込みのPromiseが待機している間は同じ所有者の再読取/設定準備を拒否する。取消は既に待機しているwriteを撤回できず、その完了後の後続commandを停止する。遅着chunkは取得記録へ入らず、失敗summaryを返さず、既存診断結果を保持する。設定準備の依存は失効確認をfalseに固定し、明示呼出でも設定送信なし。通常許可リストの候補3設定と04の拒否も確認する。実ポート・ドライバーを利用せず、本体へのcapture hook追加や物理停止の保証ではない。
+
 2026-10-08 開発用共通所有者: `readonly-development-session.js`は既存の取得runと設定準備runを私有し、片方のPromiseが終了するまで両方の再開始を拒否する。取消は対象所有者へ渡すが、取消要求だけで共通の占有を解放しない。明示呼出だけで次操作を始める。これは同一管理器内の模擬処理の排他であり、外部transportの停止確認や別管理器との排他保証ではない。設定成功からprofileを発行せず、宣言済み模擬profileを実機確認に昇格させない。
 
 2026-10-08 設定準備run: `readonly-settings-preparation-run.js`で既存transitionと信頼済み模擬応答readerを順次接続。固定のATCAF1/ATD0/ATCEA/ATDPNという名前をcallbackへ渡すだけで、transport/senderは持たない。取消時は観測を即失効し、pending readerがsettleするまで別runを拒否する。Promise完了は物理的な停止や設定復元の証明ではない。成功summaryもprofile=null、実行不可、実機由来未確認を維持する。通常経路への配線・追加設定の許可は別工程。
