@@ -103,6 +103,41 @@ for (const failure of ["throw", "incomplete", "overflow", "invalid_chunk"]) {
 }
 console.log("Receipt run: 13 real-function synthetic-wire cases preserve prior results and stop subsequent commands; cancellation waits for reader settlement before manual restart");
 
+// Lose connection ownership at every command, both during delivery and after
+// the final chunk while the trusted reader is still pending. Neither a complete
+// transcript nor a later successful reader return may revive the old attempt.
+for (const field of ["port", "reader", "writer", "settingsTicket", "revision", "connected", "unlocked"]) {
+  for (const failAt of [0, 1, 2, 3]) {
+    for (const phase of ["chunk", "settlement"]) {
+      const state = context(), sent = [], pending = deferred(), reached = deferred();
+      let ticks = 0, parses = 0, late;
+      const run = createReadOnlyReceiptRun(() => state, { ...api, parseElmReadOnlyRawTranscript(input) {
+        parses++; return api.parseElmReadOnlyRawTranscript(input);
+      } }, profile, () => ticks++, async (command, append) => {
+        const index = sent.length; sent.push(command); late = append;
+        if (index !== failAt) { assert.equal(append("NO DATA\r>"), true); return "complete"; }
+        assert.equal(append(phase === "chunk" ? "NO " : "NO DATA\r>"), true);
+        reached.resolve(); await pending.promise;
+        if (phase === "chunk") assert.equal(append("DATA\r>"), false);
+        return "complete";
+      });
+      const resultPromise = run.run(); await reached.promise;
+      state[field] = field === "revision" ? 2 : ["connected", "unlocked"].includes(field) ? false : {};
+      pending.resolve();
+      const result = await resultPromise;
+      assert.equal(result.ok, false);
+      assert.equal(result.reason, "receipt_context_changed", `${field}/${failAt}/${phase}`);
+      assert.equal(result.completedCommandCount, failAt);
+      assert.equal(result.summary, null);
+      assert.equal(parses, 0);
+      assert.equal(formatSingleReadoutReceiptPreview(result).text, null);
+      assert.deepEqual(sent, commands.slice(0, failAt + 1));
+      assert.equal(late("late>"), false);
+    }
+  }
+}
+console.log("Receipt run: 56 connection/settings lifetime interruptions stop subsequent commands without publishing partial results");
+
 for (const scenario of ["normal", "compact", "no_data", "conflict", "missing_prompt"]) {
   const state = context(); let tick = 0;
   const selectedProfile = scenario === "compact" ? profile.replace("s1", "s0") : profile;
@@ -139,7 +174,7 @@ for (const scenario of ["normal", "compact", "no_data", "conflict", "missing_pro
   if (scenario === "no_data") assert.doesNotMatch(display.text, /報告元からコード0件の応答/);
 }
 console.log("Receipt run display: five acquisition results match the existing single-readout preview; no-data, conflicts and missing prompt stay distinct");
-for (const [scenario, reason] of [["failure", "receipt_incomplete"], ["clock_failure", "receipt_clock_unavailable"]]) {
+for (const [scenario, reason] of [["failure", "receipt_incomplete"], ["clock_failure", "receipt_clock_unavailable"], ["disconnect", "receipt_context_changed"], ["settings_changed", "receipt_context_changed"]]) {
   let parses = 0;
   const session = createSingleReadoutRunPreviewSession({ ...api, parseElmReadOnlyRawTranscript(input) {
     parses++; return api.parseElmReadOnlyRawTranscript(input);

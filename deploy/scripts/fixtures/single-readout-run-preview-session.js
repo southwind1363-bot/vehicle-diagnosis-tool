@@ -4,7 +4,7 @@ import { createReadOnlyReceiptRun } from "./readonly-receipt-run.js";
 import { formatSingleReadoutReceiptPreview } from "./single-readout-receipt-preview.js";
 
 export function createSingleReadoutRunPreviewSession(api, scenario = "normal") {
-  const sample = createSingleReadoutSample(["failure", "clock_failure"].includes(scenario) ? "normal" : scenario);
+  const sample = createSingleReadoutSample(["failure", "clock_failure", "disconnect", "settings_changed"].includes(scenario) ? "normal" : scenario);
   const context = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
   let disposed = false, display = null, clockReads = 0;
   const runner = createReadOnlyReceiptRun(() => context, api, sample.profile, () => {
@@ -20,6 +20,12 @@ export function createSingleReadoutRunPreviewSession(api, scenario = "normal") {
     }
     for (let offset = 0; offset < receipt.transcript.length; offset += 7) {
       await Promise.resolve();
+      // Change the artificial connection after a partial second response.
+      // The receipt session must reject its next chunk and all derived output.
+      if (command === "07" && offset === 7) {
+        if (scenario === "disconnect") context.connected = false;
+        if (scenario === "settings_changed") context.settingsTicket = {};
+      }
       if (disposed || !append(receipt.transcript.slice(offset, offset + 7))) return "cancelled";
     }
     return "complete";

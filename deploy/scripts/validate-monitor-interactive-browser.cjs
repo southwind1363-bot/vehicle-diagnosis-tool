@@ -104,7 +104,7 @@ module.exports = async function validateInteractiveMonitor(context, output, kind
     assert.equal(await page.locator('#review [role="status"]').innerText(), single ? '記録を確認できません' : '前後記録を確認できません');
     if (single) {
       assert.equal(await page.locator('h1').innerText(), '一回分の模擬記録');
-      for (const failure of ['failure', 'clock_failure']) {
+      for (const failure of ['failure', 'clock_failure', 'disconnect', 'settings_changed']) {
         await scenario.selectOption(failure);
         await show.click(); await page.clock.runFor(500);
         assert.equal(await page.locator('#review [role="status"]').innerText(), '記録を確認できません');

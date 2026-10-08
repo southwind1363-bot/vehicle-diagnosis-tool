@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-10-08 R2一取得の接続失効を画面接続: 単回操作HTMLへ保留DTC受信途中の切断/設定世代交換を追加。既存receipt sessionがreceipt_context_changedで拒否し、途中記録を表示せず自動再試行もしない。port/reader/writer/settingsTicket/revision/connected/unlockedの7変更×4取得位置×受信途中/最終chunk後の56ケースで、完成記録parser未呼出・後続command停止・遅着拒否を確認。Chromiumでも旧失敗から正常条件への切替と表示隔離を検証。人工接続の寿命検査であり実切断/実車の検証ではない。本体3.13.633・ZIP・保存形式・通常通信は不変。
+
 2026-10-08 R2一取得の途中失敗を画面接続: 単回操作HTMLのfailureを表示待ちtimerの拒否から、保存DTC後の保留DTC途中timeoutへ切替え、2コマンド目開始時の時計検査失敗も追加。既存runnerがreceipt_incomplete/receipt_clock_unavailableを返し、未完了の結果は本文なしで表示不可となる。完成記録用parserが呼ばれないこと、終了後の失効、自動再試行なし、失敗待ちから正常への条件切替と遅着隔離をNode/Chromiumで確認。前後比較版の模擬表示失敗は維持。応答と時計異常は人工条件であり実機の障害試験ではない。本体3.13.633・ZIP・保存形式・通常車両通信は不変。
 
 2026-10-08 R2一取得の画面接続: 一回分の操作HTMLをreadonly-receipt-run→時計付きsession→既存raw/意味観測→共用日本語formatterへ接続。固定sample生成と表示文を共用し、同期の旧見本と非同期取得の5条件（正常/S0/NO DATA/矛盾/終端不足）の本文一致をNode/Chromiumで確認。取得終了を文法成立・ゼロ件・前後比較の許可に昇格させない。閉鎖/条件変更でsessionを破棄し、遅い完了は表示しない。既存操作HTMLの390/1280px・取消・CSP・外部要求0、61ライフサイクル項目を含む回帰試験に合格。受信bytesと接続は人工値、通常transport/保存/実車には未接続。本体3.13.633・ZIPは不変。
