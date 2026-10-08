@@ -122,6 +122,7 @@ module.exports = async (context, output) => {
       for (const sample of samples) {
         await sampleChoice.selectOption(sample);
         assert.equal(await result.textContent(), '', 'Sample changes discard the previous display');
+        assert.equal(await page.locator('#status').innerText(), '模擬条件を変更しました。操作を選んでください', 'Sample changes clear the previous conclusion');
         assert.equal(await progress.textContent(), '');
         await prepare.click(); await page.clock.runFor(600);
         assert.match(await result.innerText(), /実機設定・復元・通信形式は未確認/);
@@ -143,16 +144,36 @@ module.exports = async (context, output) => {
         assert.equal(await progress.textContent(), '');
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         const completeText = await result.innerText();
+        const completeStatus = await page.locator('#status').innerText();
+        // Re-read the same sample: discard the old conclusion before any response,
+        // and do not restore it when a cancelled response settles late.
+        await read.click();
+        assert.equal(await result.textContent(), '');
+        assert.equal(await page.locator('#status').innerText(), '模擬記録を取得中');
+        await page.clock.runFor(150); await cancel.click();
+        assert.equal(await result.textContent(), '');
+        assert.match(await page.locator('#status').innerText(), /戻るのを待っています/);
+        await page.clock.runFor(600);
+        assert.equal(await result.textContent(), '');
+        assert.match(await page.locator('#status').innerText(), /模擬操作を取り消しました/);
+        assert.notEqual(await page.locator('#status').innerText(), completeStatus);
+        await read.click(); await page.clock.runFor(600);
+        assert.equal(await result.innerText(), completeText);
+        assert.equal(await page.locator('#status').innerText(), completeStatus, 'Explicit retry restores the current sample conclusion');
         for (const failure of ['incomplete', 'exception']) {
           await scenario.selectOption(failure);
           assert.equal(await result.textContent(), '');
+          assert.equal(await page.locator('#status').innerText(), '模擬条件を変更しました。操作を選んでください');
           await read.click(); await page.clock.runFor(600);
           assert.equal(await result.textContent(), '', `${sample}/${failure}: no partial diagnostic display`);
           assert.equal(await progress.textContent(), '');
           assert.match(await page.locator('#status').innerText(), failure === 'incomplete' ? /取得が完了しませんでした/ : /模擬処理でエラーが発生/);
           await scenario.selectOption('normal');
-          await read.click(); await page.clock.runFor(600);
+          await read.click();
+          assert.equal(await page.locator('#status').innerText(), '模擬記録を取得中', 'Failure explanation clears before recovery completes');
+          await page.clock.runFor(600);
           assert.equal(await result.innerText(), completeText, 'Manual recovery keeps the selected sample semantics');
+          assert.equal(await page.locator('#status').innerText(), completeStatus, 'Manual recovery restores the selected sample conclusion');
         }
       }
       await sampleChoice.selectOption('normal');
