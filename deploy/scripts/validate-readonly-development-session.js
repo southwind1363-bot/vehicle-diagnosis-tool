@@ -250,4 +250,71 @@ for (const action of ['cancel', 'dispose']) {
     } finally { session.dispose(); }
   }
 }
-console.log(`Development session: ${cases} exclusion/cancellation/failure/disposal, backwards-clock, final-validation recovery and validator interruption cases passed; synthetic callbacks only`);
+// Change context after the lower run validates, before the shared owner delivers it.
+for (const kind of ['readout', 'settings']) for (const field of ['port', 'reader', 'writer', 'settingsTicket', 'revision', 'connected', 'unlocked']) {
+  const state = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+  const original = state[field], sent = [];
+  let inject = true, ticks = 0, changed = false, scheduled = false, protocolDelivered = false;
+  const scheduleChange = () => {
+    if (!inject || scheduled) return;
+    scheduled = true;
+    queueMicrotask(() => {
+      state[field] = field === 'revision' ? 2 : ['connected', 'unlocked'].includes(field) ? false : {};
+      changed = true;
+    });
+  };
+  const session = createReadOnlyDevelopmentSession({ readContext: () => {
+    if (kind === 'settings' && protocolDelivered) scheduleChange();
+    return state;
+  },
+    api: { ...api, evaluateSingleReadoutRawReceipts(input) {
+      const result = api.evaluateSingleReadoutRawReceipts(input);
+      scheduleChange();
+      return result;
+    } },
+    profile: 'iso15765_11bit_normal_h1_caf1_d0_s1_e0', readClock: () => ticks++,
+    async readCommand(command, append) { sent.push(command); append('NO DATA\r>'); return 'complete'; },
+    invalidateReceipts: () => true, beginSettingsGeneration() { state.settingsTicket = {}; return true; },
+    async readResponse(command) { sent.push(command); protocolDelivered = command === 'ATDPN'; return { completion: 'complete', response: protocolDelivered ? 'A6' : 'OK' }; }
+  });
+  try {
+    const failed = await (kind === 'readout' ? session.read() : session.prepareSettings());
+    assert.equal(changed, true);
+    assert.equal(failed.ok, false, `${field}: a result must still belong to the delivery context`);
+    assert.equal(failed.reason, kind === 'readout' ? 'receipt_context_changed' : 'preparation_context_changed'); assert.equal(failed.summary, null);
+    assert.equal(formatSingleReadoutReceiptPreview(failed).text, null);
+    assert.deepEqual(sent, kind === 'readout' ? ['03', '07', '0A', '0101'] : ['ATCAF1', 'ATD0', 'ATCEA', 'ATDPN']);
+    assert.equal(session.inspect().pending, false);
+    inject = false; state[field] = original;
+    assert.equal((await (kind === 'readout' ? session.read() : session.prepareSettings())).ok, true);
+    cases++;
+  } finally { session.dispose(); }
+}
+for (const action of ['cancel', 'dispose']) {
+  const state = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+  let session, ticks = 0, pendingAtStop, cancelled, inject = true;
+  session = createReadOnlyDevelopmentSession({ readContext: () => state,
+    api: { ...api, evaluateSingleReadoutRawReceipts(input) {
+      if (inject) queueMicrotask(() => {
+        pendingAtStop = session.inspect().pending;
+        cancelled = action === 'cancel' ? session.cancel() : session.dispose();
+      });
+      return api.evaluateSingleReadoutRawReceipts(input);
+    } },
+    profile: 'iso15765_11bit_normal_h1_caf1_d0_s1_e0', readClock: () => ticks++,
+    async readCommand(command, append) { append('NO DATA\r>'); return 'complete'; },
+    invalidateReceipts: () => true, beginSettingsGeneration: () => true,
+    readResponse() { throw Error('unexpected_settings_callback'); }
+  });
+  try {
+    const result = await session.read();
+    assert.equal(pendingAtStop, true);
+    if (action === 'cancel') assert.equal(cancelled, true);
+    assert.equal(result.reason, action === 'cancel' ? 'readout_cancelled' : 'development_session_disposed');
+    assert.equal(result.summary, null); assert.equal(session.inspect().pending, false);
+    inject = false;
+    assert.equal((await session.read()).ok, action === 'cancel');
+    cases++;
+  } finally { session.dispose(); }
+}
+console.log(`Development session: ${cases} lifecycle and delivery-context cases passed; synthetic callbacks only`);
