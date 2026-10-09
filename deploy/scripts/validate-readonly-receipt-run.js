@@ -246,10 +246,10 @@ console.log("Single-readout acquisition: nonempty and mixed-source samples prese
     assert.deepEqual(acquired.inspect(), previous.inspect());
     const text = acquired.inspect().text;
     assert.match(text, /保存DTC: 判定保留/);
-    assert.match(text, /readiness: 判定保留/);
+    assert.match(text, /レディネス: 判定保留/);
     assert.match(text, /保留DTC: 報告元からコード0件の応答/);
     assert.match(text, /恒久DTC: 正応答を確認できません/);
-    assert.doesNotMatch(text, /保存DTC: 報告元からコード0件|readiness応答あり/);
+    assert.doesNotMatch(text, /保存DTC: 報告元からコード0件|レディネス応答あり/);
   } finally { acquired.dispose(); previous.dispose(); }
 }
 console.log("Mixed-source conflicts: DTC/readiness remain indeterminate in both arrival orders despite another valid ECU");
@@ -273,7 +273,7 @@ for (const scenario of ["negative_response", "normal", "no_data"]) {
     if (scenario === "negative_response") {
       assert.equal(text.split("確認点: 要求に対する否定応答があります。").length - 1, 4);
       assert.equal(text.split(": 判定保留").length - 1, 4);
-      assert.doesNotMatch(text, /報告元からコード0件の応答|readiness応答あり/);
+      assert.doesNotMatch(text, /報告元からコード0件の応答|レディネス応答あり/);
     } else assert.doesNotMatch(text, /否定応答があります/);
   } finally { session.dispose(); }
 }

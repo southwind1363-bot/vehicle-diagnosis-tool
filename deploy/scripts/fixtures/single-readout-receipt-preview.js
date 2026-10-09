@@ -22,11 +22,11 @@ export function formatSingleReadoutReceiptPreview(result) {
     })) {
     return Object.freeze({ ok: false, reason: "semantic_observation_unavailable", text: null });
   }
-  const titles = ["保存DTC", "保留DTC", "恒久DTC", "readiness"];
+  const titles = ["保存DTC", "保留DTC", "恒久DTC", "レディネス"];
   const labels = {
     source_positive_empty_observed: "報告元からコード0件の応答（車両全体の0件は未確認）",
     source_positive_nonempty_observed: "故障コードを含む応答（この見本ではコード詳細を表示しません）",
-    source_positive_reported: "readiness応答あり（全項目完了の判定ではありません）",
+    source_positive_reported: "レディネス応答あり（全項目完了の判定ではありません）",
     missing_or_unproven: "正応答を確認できません",
     indeterminate: "判定保留（応答の矛盾・不足または受信品質を確認してください）"
   };
@@ -40,7 +40,7 @@ export function formatSingleReadoutReceiptPreview(result) {
   const lines = ["模擬の一回分の記録（実車の読取結果ではありません）",
     "取得元・対象車両・ECUの網羅性は未確認です。消去前後の比較ではありません。",
     "表示文章は実行許可に使えません。車両送信なし。",
-    `応答形式: ${raw.status === "parsed" ? "固定profileで解析済み（内容や実車適合の保証ではありません）" : "確認できません"}`,
+    `応答形式: ${raw.status === "parsed" ? "指定した応答形式で解析済み（内容や実車適合の保証ではありません）" : "確認できません"}`,
     `項目別の応答観測（全4項目）: 正応答 ${counts.positive}、正応答未確認 ${counts.missing}、判定保留 ${counts.held}、分類不明 ${counts.unknown}`,
     "正応答は故障なし・修理完了・対象ECUの網羅を証明するものではありません。"];
   semantics.readouts.forEach((row, index) => {
