@@ -210,14 +210,14 @@ for (const trigger of ["invalidate", "refresh", "scheduler", "observer"]) {
   controller.invalidate();
   assert.equal(disposals, 2);
 }
-for (const reason of ["receipt_incomplete", "receipt_clock_unavailable", "receipt_context_changed", "semantic_observation_unavailable", "private_error", "constructor", null]) {
+for (const reason of ["receipt_incomplete", "receipt_clock_unavailable", "receipt_context_changed", "semantic_observation_unavailable", "raw_validation_failed", "private_error", "constructor", null]) {
   let fail = true;
   const controller = createSimulatedReviewController(() => ({
     inspect() { return fail ? { ok: false, reason, text: "private_partial_result" } : { ok: true, text: "fresh" }; },
     dispose() {}
   }));
   assert.equal(await controller.read(), false);
-  assert.equal(controller.inspect().failureReason, ["receipt_incomplete", "receipt_clock_unavailable", "receipt_context_changed", "semantic_observation_unavailable"].includes(reason) ? reason : null);
+  assert.equal(controller.inspect().failureReason, ["receipt_incomplete", "receipt_clock_unavailable", "receipt_context_changed", "semantic_observation_unavailable", "raw_validation_failed"].includes(reason) ? reason : null);
   assert.equal(controller.inspect().text, null);
   assert(!JSON.stringify(controller.inspect()).includes("private"));
   controller.invalidate();

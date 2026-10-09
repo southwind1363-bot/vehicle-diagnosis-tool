@@ -4,7 +4,7 @@ export function createSimulatedReviewController(createSession, waitForPresentati
   if (typeof waitForPresentation !== "function") throw new TypeError("invalid_preview_scheduler");
   let ticket = null, owned = null;
   const state = (status, text = null, reason = null) => Object.freeze({ status, text,
-    failureReason: status === "unavailable" && ["receipt_incomplete", "receipt_clock_unavailable", "receipt_context_changed", "semantic_observation_unavailable"].includes(reason) ? reason : null,
+    failureReason: status === "unavailable" && ["receipt_incomplete", "receipt_clock_unavailable", "receipt_context_changed", "semantic_observation_unavailable", "raw_validation_failed"].includes(reason) ? reason : null,
     provenance: "simulated_only", executionEnabled: false, vehicleCommandEnabled: false,
     wouldTransmit: false, canExecute: false });
   let current = state("empty");

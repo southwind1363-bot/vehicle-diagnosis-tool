@@ -97,12 +97,17 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
         check(await controller.read() && root.querySelector('pre').textContent === 'fresh', 'explicit read recovers');
       } finally { controller.invalidate(); attached.dispose(); root.remove(); }
     }
-    // Corrupt only the observer's returned copy, after real fixed-sample acquisition.
+    // Fail parsing/observation or corrupt the observer's copy after fixed-sample acquisition.
     // A rejected presentation must retire the owner and clear a previously good DOM.
     {
       let mode = 'normal', active, observed = 0;
       const malformedApi = { ...window.ObdReadOnly,
+        parseElmReadOnlyRawTranscript(input) {
+          if (mode === 'parser_throw') { observed++; throw Error('private_parser_failure'); }
+          return window.ObdReadOnly.parseElmReadOnlyRawTranscript(input);
+        },
         evaluateSingleReadoutRawReceipts(input) {
+          if (mode === 'observer_throw') { observed++; throw Error('private_observer_failure'); }
           const result = window.ObdReadOnly.evaluateSingleReadoutRawReceipts(input);
           const readouts = result.readouts.map(row => ({ ...row }));
           if (mode === 'reverse') readouts.reverse();
@@ -120,7 +125,7 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
       const root = document.createElement('main'); document.body.append(root);
       const attached = attachSingleReadoutPreviewView(root, controller);
       try {
-        for (const corruption of ['reverse', 'missing', 'intent', 'ordinal']) {
+        for (const corruption of ['reverse', 'missing', 'intent', 'ordinal', 'parser_throw', 'observer_throw']) {
           mode = 'normal';
           check(await controller.read() && root.querySelector('pre').textContent === expected.normal, 'good baseline before malformed acquisition');
           const previous = active, before = observed;
@@ -132,8 +137,11 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
           check(controller.inspect().status === 'unavailable' && controller.inspect().text === null, 'malformed result unavailable');
           check(root.querySelector('pre').textContent === '' && root.querySelector('pre').hidden, 'malformed result never displayed');
           check(root.querySelector('[role=status]').textContent === '記録を確認できません', 'malformed result status');
-          check(root.querySelector('.receipt-failure-reason').textContent === '取得結果の項目構成を確認できません。記録は表示しません。' && !root.querySelector('.receipt-failure-reason').hidden, 'malformed result explains presentation failure');
-          check(!root.textContent.includes('private_') && !root.textContent.includes('semantic_observation_unavailable'), 'internal identifiers stay private');
+          const explanation = corruption.endsWith('_throw')
+            ? '取得した応答を解析できませんでした。記録は表示しません。'
+            : '取得結果の項目構成を確認できません。記録は表示しません。';
+          check(root.querySelector('.receipt-failure-reason').textContent === explanation && !root.querySelector('.receipt-failure-reason').hidden, 'failed result explains the correct failure stage');
+          check(!root.textContent.includes('private_') && !root.textContent.includes('semantic_observation_unavailable') && !root.textContent.includes('raw_validation_failed'), 'internal identifiers stay private');
           check(rejected.inspect().text === null && rejected.inspect().reason === 'scope_invalidated', 'rejected owner disposed');
           check(['executionEnabled', 'vehicleCommandEnabled', 'wouldTransmit', 'canExecute'].every(key => controller.inspect()[key] === false), 'malformed result grants no authority');
           mode = 'normal';
