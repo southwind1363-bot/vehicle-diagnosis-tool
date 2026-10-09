@@ -364,4 +364,129 @@ for (const kind of ['readout', 'settings']) for (const failure of ['null', 'thro
     cases++;
   } finally { session.dispose(); }
 }
+// Preparation and fresh receipts share a single simulated generation. The fixture
+// profile is an explicit test input, never inferred from the preparation summary.
+function preparedFixture() {
+  const state = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+  const reads = [], responses = [], callbacks = [], events = [];
+  let ticks = 0, session;
+  const controls = { beforeContext: null, response: null, read: null };
+  session = createReadOnlyDevelopmentSession({
+    readContext() { controls.beforeContext?.(); return state; }, api,
+    profile: 'iso15765_11bit_normal_h1_caf1_d0_s1_e0', readClock: () => ticks++,
+    invalidateReceipts() { events.push('invalidate'); return true; },
+    beginSettingsGeneration() { events.push('rotate'); state.settingsTicket = {}; return true; },
+    async readResponse(command) {
+      responses.push(command); events.push(command);
+      if (controls.response) return controls.response(command);
+      return { completion: 'complete', response: command === 'ATDPN' ? 'A6' : 'OK' };
+    },
+    async readCommand(command, append) {
+      reads.push(command); events.push(command); callbacks.push(append);
+      if (controls.read) return controls.read(command, append);
+      assert.equal(append('NO DATA\r>'), true); return 'complete';
+    }
+  });
+  return { state, reads, responses, callbacks, events, controls, session };
+}
+{
+  const f = preparedFixture();
+  try {
+    assert.equal((await f.session.readPrepared()).reason, 'settings_preparation_required');
+    const previous = await f.session.read(), previousText = JSON.stringify(previous);
+    const stale = [...f.callbacks], oldTicket = f.state.settingsTicket;
+    f.events.length = 0;
+    const prepared = await f.session.prepareSettings();
+    assert.equal(prepared.ok, true); assert.equal(prepared.summary.profile, null);
+    assert.equal(prepared.summary.profileVerified, false);
+    assert.notEqual(f.state.settingsTicket, oldTicket);
+    assert.deepEqual(f.events, ['invalidate', 'rotate', 'ATCAF1', 'ATD0', 'ATCEA', 'ATDPN']);
+    assert.equal(f.reads.length, 4, 'Preparation does not start acquisition');
+    for (const append of stale) assert.equal(append('old generation>'), false);
+    const acquired = await f.session.readPrepared();
+    assert.equal(acquired.ok, true); assert.equal(acquired.provenance, 'simulated_only');
+    assert.equal(acquired.executionEnabled, false); assert.notEqual(acquired.summary, previous.summary);
+    assert.deepEqual(f.events.slice(6), ['03', '07', '0A', '0101']);
+    assert.equal(JSON.stringify(previous), previousText);
+    assert.equal((await f.session.readPrepared()).reason, 'settings_preparation_required');
+    assert.equal(f.reads.length, 8, 'No replay or implicit retry');
+    for (const action of ['cancel', 'read']) {
+      assert.equal((await f.session.prepareSettings()).ok, true);
+      await f.session[action]();
+      assert.equal((await f.session.readPrepared()).reason, 'settings_preparation_required');
+    }
+    cases++;
+  } finally { f.session.dispose(); }
+}
+for (const field of ['port', 'reader', 'writer', 'settingsTicket', 'revision', 'connected', 'unlocked']) {
+  for (const duringRead of [false, true]) {
+    const f = preparedFixture(), gate = deferred(), reached = deferred();
+    try {
+      assert.equal((await f.session.prepareSettings()).ok, true);
+      const original = f.state[field];
+      if (duringRead) f.controls.read = async (command, append) => {
+        reached.resolve(); await gate.promise;
+        assert.equal(append('late old generation>'), false); return 'complete';
+      };
+      const pending = duringRead ? f.session.readPrepared() : null;
+      if (pending) await reached.promise;
+      f.state[field] = field === 'revision' ? 2 : ['connected', 'unlocked'].includes(field) ? false : {};
+      if (pending) {
+        assert.equal((await f.session.prepareSettings()).reason, 'development_operation_busy');
+        gate.resolve();
+      }
+      const result = await (pending || f.session.readPrepared());
+      assert.equal(result.ok, false); assert.equal(result.summary, null);
+      assert.equal(f.reads.length, duringRead ? 1 : 0);
+      f.state[field] = original; f.controls.read = null;
+      assert.equal((await f.session.readPrepared()).reason, 'settings_preparation_required', 'Restoring old references cannot revive the handoff');
+      assert.equal((await f.session.prepareSettings()).ok, true);
+      assert.equal((await f.session.readPrepared()).ok, true);
+      for (const append of f.callbacks) assert.equal(append('late>'), false);
+      cases++;
+    } finally { gate.resolve(); f.session.dispose(); }
+  }
+}
+for (const at of ['ATCAF1', 'ATD0', 'ATCEA', 'ATDPN']) {
+  const f = preparedFixture();
+  try {
+    assert.equal((await f.session.prepareSettings()).ok, true);
+    f.controls.response = async command => ({ completion: 'complete', response: command === at ? '?' : command === 'ATDPN' ? 'A6' : 'OK' });
+    assert.equal((await f.session.prepareSettings()).ok, false);
+    assert.equal((await f.session.readPrepared()).reason, 'settings_preparation_required');
+    assert.equal(f.reads.length, 0, 'Failed re-preparation discards previous handoff');
+    cases++;
+  } finally { f.session.dispose(); }
+}
+for (const action of ['cancel', 'dispose']) {
+  const f = preparedFixture(), gate = deferred(), reached = deferred();
+  try {
+    await f.session.prepareSettings();
+    f.controls.read = async (command, append) => {
+      reached.resolve(); await gate.promise; assert.equal(append('late>'), false); return 'complete';
+    };
+    const pending = f.session.readPrepared(); await reached.promise;
+    f.session[action]();
+    assert.equal(f.session.inspect().pending, true);
+    assert.equal((await f.session.readPrepared()).reason, action === 'cancel' ? 'development_operation_busy' : 'development_session_disposed');
+    gate.resolve();
+    assert.equal((await pending).ok, false); assert.equal(f.reads.length, 1);
+    assert.equal((await f.session.readPrepared()).reason, action === 'cancel' ? 'settings_preparation_required' : 'development_session_disposed');
+    cases++;
+  } finally { gate.resolve(); f.session.dispose(); }
+}
+// A context provider can change generation between entry validation and the
+// lower receipt owner beginning; pin the preparation across both observations.
+{
+  const f = preparedFixture();
+  try {
+    await f.session.prepareSettings();
+    let observations = 0;
+    f.controls.beforeContext = () => { if (++observations === 2) f.state.settingsTicket = {}; };
+    assert.equal((await f.session.readPrepared()).ok, false);
+    assert.equal(f.reads.length, 0);
+    assert.equal((await f.session.readPrepared()).reason, 'settings_preparation_required');
+    cases++;
+  } finally { f.session.dispose(); }
+}
 console.log(`Development session: ${cases} lifecycle and delivery-context cases passed; synthetic callbacks only`);
