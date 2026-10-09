@@ -53,7 +53,36 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
       assert.equal(await panel.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
       await panel.screenshot({ path: path.join(output, `settings-observation-${width}.png`) });
     }
+    const rawPanel = page.locator('#obdCoreRawReadoutDetails');
+    await page.evaluate(() => renderObdDeveloperGate());
+    assert.equal(await rawPanel.isVisible(), true);
+    await rawPanel.locator('summary').focus(); await page.keyboard.press('Enter');
+    assert.match(await rawPanel.innerText(), /未取得/);
+    await page.evaluate(() => {
+      obdDevSession.coreRawReadoutCapture = createWebSerialReadoutCapture(['03', '07', '0A', '0101']);
+      const owner = obdDevSession.coreRawReadoutCapture;
+      for (const command of ['03', '07', '0A', '0101']) owner.append({ command, transcript: 'PRIVATE_RAW_SENTINEL>',
+        startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
+      owner.finish(); renderObdDeveloperGate();
+    });
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.match(await rawPanel.innerText(), /4件を取得済み/);
+      assert.match(await rawPanel.innerText(), /解析は未接続/);
+      assert.doesNotMatch(await page.locator('body').innerText(), /PRIVATE_RAW_SENTINEL/);
+      assert.equal(await page.evaluate(() => obdDevSession.coreRawReadoutCapture.inspect().count), 4);
+      await rawPanel.scrollIntoViewIfNeeded();
+      assert.equal(await rawPanel.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
+      await rawPanel.screenshot({ path: path.join(output, `raw-readout-status-${width}.png`) });
+    }
+    await page.evaluate(() => {
+      const settings = obdDevSession.settingsObservation;
+      settings.owner.invalidate(); renderObdDeveloperGate();
+    });
+    assert.match(await rawPanel.innerText(), /通信設定の記録が未取得または失効/);
+    assert.equal(await page.evaluate(() => obdDevSession.coreRawReadoutCapture.inspect().count), 0);
     await page.evaluate(() => renderObdStageView('results'));
+    assert.equal(await rawPanel.isVisible(), false);
     assert.equal(await panel.isVisible(), false, 'Developer observations do not appear in normal results');
     await page.evaluate(() => { renderObdStageView('details'); resetWebSerialConnectionAttemptMetadata(); });
     assert.equal(await panel.isVisible(), false);

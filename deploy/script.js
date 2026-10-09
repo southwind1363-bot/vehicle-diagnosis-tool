@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.636";
+const APP_VERSION = "3.13.637";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6164,7 +6164,33 @@ function renderObdSettingsObservation() {
   panel.hidden = false;
 }
 
+function renderObdCoreRawReadoutStatus() {
+  const panel = document.querySelector("#obdCoreRawReadoutDetails");
+  const status = document.querySelector("#obdCoreRawReadoutStatus");
+  if (!panel || !status) return;
+  panel.hidden = true;
+  status.textContent = "";
+  if (!obdAccessUnlocked || !obdDevModeUnlocked || obdDevSession.previewMode) { panel.open = false; return; }
+  const snapshot = obdDevSession.coreRawReadoutCapture?.inspect();
+  const reasons = {
+    settings_unavailable: "通信設定の記録が未取得または失効しています。",
+    context_changed: "接続または読取の利用条件が変わりました。",
+    incomplete: "対象の原文4件がそろう前に集約を終了しました。",
+    invalid_record: "原文の順序・長さ・時刻などの記録条件を満たしませんでした。",
+    consumed: "取得済みの原文はすでに受け渡し済みです。",
+    discarded: "読取の中断・別の操作・接続終了などにより記録を破棄しました。",
+    unsupported_commands: "集約対象のコマンド構成が対応範囲外です。"
+  };
+  const message = !snapshot ? "未取得。基本読取で対象の原文を集約します。"
+    : snapshot.status === "finished" ? "対象の原文4件を取得済み。"
+      : snapshot.status === "collecting" ? `集約中（${snapshot.count}/4件）。`
+        : `利用不可。${reasons[snapshot.reason] || "記録の利用条件を確認できません。"}`;
+  status.textContent = `${message} 対象は保存・保留・永久DTCとレディネスです。集約原文は表示・保存しません。応答形式が未確認のため、集約原文の解析は未接続です。4件取得は診断成功・故障なし・実車適合を意味しません。`;
+  panel.hidden = false;
+}
+
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
+  if (typeof renderObdCoreRawReadoutStatus === "function") renderObdCoreRawReadoutStatus();
   if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
   if (typeof renderObdSerialSettings === "function") renderObdSerialSettings();
   renderObdMeasurementConditionSummary();
@@ -9906,11 +9932,15 @@ function createWebSerialReadoutCapture(commands) {
   const expected = commands.filter(command => ["03", "07", "0A", "0101"].includes(command));
   const context = readWebSerialCaptureContext();
   let records = [], phase = expected.length && expected.length <= 4 ? "collecting" : "invalidated";
-  const invalidate = () => { records = []; phase = "invalidated"; };
+  let reason = phase === "invalidated" ? "unsupported_commands" : null;
+  const discard = cause => { if (phase !== "invalidated") reason = cause; records = []; phase = "invalidated"; };
+  const invalidate = () => { if (valid()) discard("discarded"); };
   const valid = () => {
     const latest = readWebSerialCaptureContext();
-    if (phase === "invalidated" || !context.settingsTicket || context.connected !== true || context.unlocked !== true
-      || Object.keys(context).some(key => context[key] !== latest[key])) { invalidate(); return false; }
+    if (phase === "invalidated") return false;
+    if (!context.settingsTicket || !latest.settingsTicket || context.settingsTicket !== latest.settingsTicket) { discard("settings_unavailable"); return false; }
+    if (context.connected !== true || latest.connected !== true || context.unlocked !== true || latest.unlocked !== true
+      || Object.keys(context).some(key => context[key] !== latest[key])) { discard("context_changed"); return false; }
     return true;
   };
   return Object.freeze({
@@ -9921,7 +9951,7 @@ function createWebSerialReadoutCapture(commands) {
         || record.profileVerified !== false || record.realTransportProofAvailable !== false || record.executionEnabled !== false
         || !Number.isFinite(record.startedAt) || record.startedAt < 0 || !Number.isFinite(record.completedAt)
         || record.completedAt < record.startedAt || (records.length && record.startedAt < records[records.length - 1].completedAt)) {
-        invalidate(); return false;
+        discard("invalid_record"); return false;
       }
       records.push(Object.freeze({ command: record.command, transcript: record.transcript,
         startedAt: record.startedAt, completedAt: record.completedAt, profile: null, profileVerified: false,
@@ -9929,17 +9959,17 @@ function createWebSerialReadoutCapture(commands) {
       return true;
     },
     finish() {
-      if (!valid() || phase !== "collecting" || records.length !== expected.length) { invalidate(); return false; }
+      if (!valid() || phase !== "collecting" || records.length !== expected.length) { discard("incomplete"); return false; }
       phase = "finished"; return true;
     },
     inspect() {
       valid();
-      return Object.freeze({ status: phase, count: records.length, profile: null, executionEnabled: false });
+      return Object.freeze({ status: phase, count: records.length, reason, profile: null, executionEnabled: false });
     },
     take() {
       if (!valid() || phase !== "finished") return null;
       const result = Object.freeze([...records]);
-      invalidate(); return result;
+      discard("consumed"); return result;
     },
     invalidate
   });

@@ -897,6 +897,10 @@
             <button id="obdDevLockButton" class="secondary-button" type="button" disabled>ロック</button>
           </div>
           <p id="obdDevStatus" class="data-status" role="status" aria-atomic="true">詳細画面はロック中です。</p>
+          <details id="obdCoreRawReadoutDetails" class="obd-operation-panel" hidden>
+            <summary>基本読取の原文取得状況（開発用）</summary>
+            <p id="obdCoreRawReadoutStatus" class="data-status" role="status" aria-atomic="true"></p>
+          </details>
           <details id="obdSettingsObservationDetails" class="obd-operation-panel" hidden>
             <summary>通信設定の観測（開発用）</summary>
             <p id="obdSettingsObservationStatus" class="data-status"></p>

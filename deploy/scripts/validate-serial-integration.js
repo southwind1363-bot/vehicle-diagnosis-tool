@@ -562,11 +562,57 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
   await client.context.readObdDeveloperCoreScan();
   check(old.take() === null, "New scan must discard the previous aggregate");
   check(client.context.obdDevSession.coreRawReadoutCapture.take() === null, "Protocol requery must not splice settings generations");
+  check(client.context.obdDevSession.coreRawReadoutCapture.inspect().reason === "settings_unavailable", "Protocol requery must explain settings expiration");
   await client.context.initializeElmDeveloperAdapter();
   await client.context.readObdDeveloperCoreScan();
   check(client.context.obdDevSession.coreRawReadoutCapture.take()?.length === 4, "Explicit new initialization permits a fresh same-generation scan");
   check(old.take() === null, "Recovery must not revive old aggregate");
   await client.context.disconnectObdDeveloperVci();
+}
+
+{
+  // Inspect must explain rejection without consuming or exposing raw records.
+  const current = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+  const panel = {}, status = {};
+  const context = vm.createContext({ readWebSerialCaptureContext: () => ({ ...current }),
+    document: { querySelector: selector => selector === "#obdCoreRawReadoutDetails" ? panel : status },
+    obdAccessUnlocked: true, obdDevModeUnlocked: true, obdDevSession: {} });
+  load(context, ["createWebSerialReadoutCapture", "renderObdCoreRawReadoutStatus"]);
+  const commands = ["03", "07", "0A", "0101"];
+  const raw = command => ({ command, transcript: "PRIVATE_RAW_SENTINEL>", startedAt: 1, completedAt: 1,
+    profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
+  const render = () => { context.renderObdCoreRawReadoutStatus(); return status.textContent; };
+  check(render().includes("未取得"), "Missing capture must display not acquired");
+  for (const scenario of ["complete", "settings", "context", "incomplete", "record", "discard", "unsupported"]) {
+    const owner = context.createWebSerialReadoutCapture(scenario === "unsupported" ? [] : commands);
+    context.obdDevSession.coreRawReadoutCapture = owner;
+    if (scenario !== "unsupported") { owner.append(raw("03")); check(render().includes("1/4件"), "Partial capture must remain collecting"); }
+    if (scenario === "complete") {
+      for (const command of commands.slice(1)) owner.append(raw(command));
+      check(owner.finish(), "Complete raw capture must finish");
+      check(render().includes("4件を取得済み") && render().includes("解析は未接続"), "Finished raw capture must retain parsing boundary");
+      check(owner.inspect().count === 4 && owner.take().length === 4, "Rendering must not consume raw records");
+    }
+    if (scenario === "settings") current.settingsTicket = {};
+    if (scenario === "context") current.revision++;
+    if (scenario === "incomplete") owner.finish();
+    if (scenario === "record") owner.append(raw("04"));
+    if (scenario === "discard") owner.invalidate();
+    const expected = { complete: "consumed", settings: "settings_unavailable", context: "context_changed", incomplete: "incomplete",
+      record: "invalid_record", discard: "discarded", unsupported: "unsupported_commands" }[scenario];
+    check(render().includes("利用不可") && !render().includes("PRIVATE_RAW_SENTINEL"), "Unavailable UI must not leak raw records");
+    check(owner.inspect().reason === expected && owner.inspect().count === 0, scenario + ": missing rejection reason or retained raw data");
+    owner.invalidate(); owner.finish(); owner.take();
+    check(owner.inspect().reason === expected, "Cleanup must preserve the first rejection reason");
+    check(!JSON.stringify(owner.inspect()).includes("PRIVATE_RAW_SENTINEL"), "Inspect exposed raw text");
+  }
+  for (const field of ["obdAccessUnlocked", "obdDevModeUnlocked"]) {
+    context[field] = false; render();
+    check(panel.hidden && panel.open === false && status.textContent === "", "Locked UI must clear observations");
+    context[field] = true;
+  }
+  context.obdDevSession.previewMode = "fixture"; render();
+  check(panel.hidden && status.textContent === "", "Preview must not show runtime raw observations");
 }
 
 console.log(`validate-serial-integration: ${checks} checks passed`);
