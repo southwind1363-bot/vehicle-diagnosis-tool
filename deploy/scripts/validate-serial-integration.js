@@ -654,6 +654,10 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
       check(owner.finish(), "Raw recording completion is independent of format review");
       const review = owner.inspect().formatReview;
       check(review.profile === null && !review.profileVerified && !review.parserAllowed && !review.executionEnabled, "Appearance must never establish a parser profile or permission");
+      check(Object.isFrozen(review.readoutConditions) && review.readoutConditions.length === 4
+        && review.readoutConditions.every((row, index) => Object.isFrozen(row) && row.command === commands[index]
+          && row.initializationComplete === true && row.echoOffAcknowledged === true && row.spacesOffAcknowledged === true
+          && row.protocol11bitReported === (protocol === "A6")), "Per-readout conditions must preserve order and immutable pre-read observations");
       if (expectedIssue) check(review.issues.includes(expectedIssue), expectedIssue + ": missing lexical discrepancy");
       else check(review.compactLineCount === 4 && review.spacedLineCount === 0 && (protocol !== "A6" || !review.issues.length), "Compact shape should remain an observation only");
       check(review.issues.includes("protocol_unconfirmed") === (protocol !== "A6"), "Protocol observation must be considered without inference");
@@ -667,6 +671,8 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
       startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
     owner.finish();
     const missing = owner.inspect().formatReview;
+    check(missing.readoutConditions.every(row => ["initializationComplete", "echoOffAcknowledged", "spacesOffAcknowledged", "protocol11bitReported"]
+      .every(key => row[key] === (before?.initializationComplete === false ? false : null))), "Missing observations stay unknown; failed observations stay false");
     check(missing.protocolObservedBeforeReadCount === 0 && !missing.parserAllowed, "Current settings cannot repair missing/partial pre-read evidence");
     check(missing.issues.includes(before?.initializationComplete === false ? "initialization_before_read_incomplete" : "settings_before_read_unavailable"), "Missing pre-read evidence must be disclosed");
   }

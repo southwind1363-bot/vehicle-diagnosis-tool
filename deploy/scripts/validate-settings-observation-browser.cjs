@@ -101,12 +101,21 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
       owner.finish(); renderObdDeveloperGate();
     });
     assert.match(await rawPanel.innerText(), /読取開始時の対応する通信番号が未確認/);
+    assert.match(await rawPanel.innerText(), /保存DTC：対応する通信番号が未確認/);
+    for (const label of ['保留DTC', '永久DTC', 'レディネス']) assert((await rawPanel.innerText()).includes(label + '：初期化・エコー無効・空白無効・通信番号の応答記録あり'));
+    assert.match(await rawPanel.innerText(), /模擬設定の成功で未確認項目を補うことはできません/);
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.equal(await rawPanel.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
+      await rawPanel.screenshot({ path: path.join(output, 'readout-conditions-' + width + '.png') });
+    }
     assert.equal(await page.evaluate(() => obdDevSession.coreRawReadoutCapture.inspect().formatReview.protocolObservedBeforeReadCount), 3);
     await page.evaluate(() => {
       const settings = obdDevSession.settingsObservation;
       settings.owner.invalidate(); renderObdDeveloperGate();
     });
     assert.match(await rawPanel.innerText(), /通信設定の記録が未取得または失効/);
+    assert.doesNotMatch(await rawPanel.innerText(), /取得前条件:/);
     assert.equal(await page.evaluate(() => obdDevSession.coreRawReadoutCapture.inspect().count), 0);
     await page.evaluate(() => renderObdStageView('results'));
     assert.equal(await rawPanel.isVisible(), false);
