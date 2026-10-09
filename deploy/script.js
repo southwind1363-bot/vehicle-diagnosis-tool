@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.640";
+const APP_VERSION = "3.13.641";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6197,17 +6197,27 @@ function renderObdCoreRawReadoutStatus() {
     no_frame_evidence: "ヘッダーとデータの文字形を確認できない応答があります"
   };
   const review = snapshot?.formatReview;
-  const formatMessage = review ? ` 形式照合: ${review.issues.length
-    ? review.issues.map(code => formatReasons[code] || "照合条件が未確認です").join("。")
-    : "限定した文字形の不一致は見つかりませんでした。ただし通信設定の証明ではありません"}。CAN整形・DLC表示・アドレス方式は未確認です。` : "";
+  const conditions = Array.isArray(review?.readoutConditions) && review.readoutConditions.length === 4 ? review.readoutConditions : null;
+  // Item conditions already explain these issues; keep all other format failures visible.
+  const itemIssues = ["settings_before_read_unavailable", "initialization_before_read_incomplete", "protocol_unconfirmed"];
+  const formatIssues = review?.issues.filter(code => !conditions || !itemIssues.includes(code));
+  const formatMessage = review ? "形式照合:\n" + (formatIssues.length
+    ? formatIssues.map(code => "・" + (formatReasons[code] || "照合条件が未確認です")).join("\n")
+    : "限定した文字形の不一致は見つかりませんでした。ただし通信設定の証明ではありません。") : "";
   const readoutNames = { "03": "保存DTC", "07": "保留DTC", "0A": "永久DTC", "0101": "レディネス" };
   const conditionNames = { initializationComplete: "初期化応答", echoOffAcknowledged: "エコー無効応答",
     spacesOffAcknowledged: "空白無効応答", protocol11bitReported: "対応する通信番号" };
-  const conditionMessage = review?.readoutConditions ? " 取得前条件: " + review.readoutConditions.map(row => {
+  const groups = new Map();
+  for (const row of conditions || []) {
     const missing = Object.entries(conditionNames).filter(([key]) => row[key] !== true).map(([, label]) => label);
-    return (readoutNames[row.command] || "対象項目") + "：" + (missing.length ? missing.join("・") + "が未確認" : "初期化・エコー無効・空白無効・通信番号の応答記録あり");
-  }).join("。") + "。模擬設定の成功で未確認項目を補うことはできません。" : "";
-  status.textContent = `${message}${formatMessage}${conditionMessage} 対象は保存・保留・永久DTCとレディネスです。集約原文は表示・保存しません。応答形式が未確認のため、集約原文の解析は未接続です。4件取得は診断成功・故障なし・実車適合を意味しません。`;
+    const detail = missing.length ? missing.join("・") + "が未確認" : "初期化・エコー無効・空白無効・通信番号の応答記録あり";
+    if (!groups.has(detail)) groups.set(detail, []);
+    groups.get(detail).push(readoutNames[row.command] || "対象項目");
+  }
+  const conditionMessage = conditions ? "取得前条件:\n" + [...groups].map(([detail, names]) => "・" + names.join("・") + "：" + detail).join("\n") : "";
+  const unconfirmedMessage = review ? "共通の未確認条件: CAN整形・DLC表示・アドレス方式。模擬設定の成功で未確認項目を補うことはできません。" : "";
+  status.textContent = [message, conditionMessage, formatMessage, unconfirmedMessage,
+    "対象は保存・保留・永久DTCとレディネスです。集約原文は表示・保存しません。応答形式が未確認のため、集約原文の解析は未接続です。4件取得は診断成功・故障なし・実車適合を意味しません。"].filter(Boolean).join("\n\n");
   panel.hidden = false;
 }
 

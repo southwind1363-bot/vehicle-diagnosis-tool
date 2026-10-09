@@ -47,6 +47,7 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
     });
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme: width === 390 ? "light" : "dark" });
       assert.match(await panel.innerText(), /通信番号: A6/);
       assert.match(await panel.innerText(), /CAN自動整形・DLC表示・アドレス方式が未確認/);
       await panel.scrollIntoViewIfNeeded();
@@ -67,6 +68,7 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
     });
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme: width === 390 ? "light" : "dark" });
       assert.match(await rawPanel.innerText(), /4件を取得済み/);
       assert.match(await rawPanel.innerText(), /解析は未接続/);
       assert.match(await rawPanel.innerText(), /改行・終端または文字の形式/);
@@ -100,12 +102,15 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
         startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
       owner.finish(); renderObdDeveloperGate();
     });
-    assert.match(await rawPanel.innerText(), /読取開始時の対応する通信番号が未確認/);
+    assert.doesNotMatch(await rawPanel.innerText(), /読取開始時の対応する通信番号が未確認/, "Per-item explanation replaces the duplicate protocol warning");
     assert.match(await rawPanel.innerText(), /保存DTC：対応する通信番号が未確認/);
-    for (const label of ['保留DTC', '永久DTC', 'レディネス']) assert((await rawPanel.innerText()).includes(label + '：初期化・エコー無効・空白無効・通信番号の応答記録あり'));
+    assert.match(await rawPanel.innerText(), /保留DTC・永久DTC・レディネス：初期化・エコー無効・空白無効・通信番号の応答記録あり/);
+    assert.equal((await rawPanel.innerText()).match(/応答記録あり/g).length, 1);
+    assert.equal(await page.locator('#obdCoreRawReadoutStatus').evaluate(el => getComputedStyle(el).whiteSpace), 'pre-line');
     assert.match(await rawPanel.innerText(), /模擬設定の成功で未確認項目を補うことはできません/);
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme: width === 390 ? "light" : "dark" });
       assert.equal(await rawPanel.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
       await rawPanel.screenshot({ path: path.join(output, 'readout-conditions-' + width + '.png') });
     }

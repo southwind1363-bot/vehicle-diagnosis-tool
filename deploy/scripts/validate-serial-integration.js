@@ -612,6 +612,17 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
     check(owner.inspect().reason === expected, "Cleanup must preserve the first rejection reason");
     check(!JSON.stringify(owner.inspect()).includes("PRIVATE_RAW_SENTINEL"), "Inspect exposed raw text");
   }
+  const condition = (command, protocol = true) => ({ command, initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, protocol11bitReported: protocol });
+  const conditions = commands.map(command => condition(command, command !== '03'));
+  const review = { issues: ['protocol_unconfirmed', 'echo_conflict', 'unexpected_future_reason'], readoutConditions: conditions };
+  context.obdDevSession.coreRawReadoutCapture = { inspect: () => ({ status: 'finished', count: 4, formatReview: review }) };
+  const grouped = render();
+  check(grouped.includes('保存DTC：対応する通信番号が未確認') && grouped.includes('保留DTC・永久DTC・レディネス：'), 'Shared observations must not hide the distinct unconfirmed item');
+  check(!grouped.includes('読取開始時の対応する通信番号が未確認') && grouped.includes('コマンドのエコーがあります') && grouped.includes('照合条件が未確認です'), 'Deduplication preserves raw discrepancies and unknown issues');
+  check(grouped.split('応答記録あり').length === 2 && grouped.includes('\n\n取得前条件:\n'), 'Shared detail appears once in a separate section');
+  check(JSON.stringify(conditions) === JSON.stringify(commands.map(command => condition(command, command !== '03'))), 'Rendering must not modify pre-read evidence');
+  review.readoutConditions = conditions.slice(1);
+  check(render().includes('読取開始時の対応する通信番号が未確認') && !render().includes('取得前条件:'), 'Incomplete item coverage must retain the summary warning');
   for (const field of ["obdAccessUnlocked", "obdDevModeUnlocked"]) {
     context[field] = false; render();
     check(panel.hidden && panel.open === false && status.textContent === "", "Locked UI must clear observations");

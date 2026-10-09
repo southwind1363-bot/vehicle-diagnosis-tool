@@ -487,6 +487,11 @@ button:focus-visible,
   font-weight: 800;
 }
 
+#obdCoreRawReadoutStatus {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 .data-status.error {
   border-left-color: var(--danger);
   background: var(--danger-bg);
