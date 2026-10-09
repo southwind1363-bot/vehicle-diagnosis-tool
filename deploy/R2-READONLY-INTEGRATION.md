@@ -10,6 +10,14 @@
 
 ## コードごとの接続条件
 
+### 2026-10-09 一コマンド内部部品の実装
+
+[serial-command-capture.js](scripts/fixtures/serial-command-capture.js) を開発用部品として追加した。固有operationと7接続条件へ結び付け、整形前の文字列を最大12000文字までメモリ内で保持する。begin/append/finish/takeで時計と条件を検査し、不明・逆行・失効・上限超過では原文を破棄する。finishは呼出側の完了通知でありpromptや応答形式の認定ではない。takeは終了済み記録を1回だけ返し、内部保持を消去する。返却済みの文字列を後から失効させる機能ではないため、利用側の受け渡し後の条件確認は別途必要。
+
+`node deploy/scripts/validate-serial-command-capture.js` で寿命・時計・上限等に加え、実send/read関数の `pendingCommandOperation` を記録キーとして使用する模擬結合を確認した。1/7/32768 byteの分割、応答timeout、記録側のみの失効で通常の戻り値・送信順序・既存sessionが維持される。記録側の失効は物理通信の取消ではない。
+
+**本体の受信ループへのフックはまだ未設置。** 今回の配線は試験側だけで、通常経路で記録を取得可能にはしていない。次は本体のoperation開始・受信・終了・異常終了へ接続し、呼出側で記録を消費または破棄する寿命を確定する。profile認定、4項目集約、永続保存、消去操作へは接続しない。
+
 | 境界 | 現在の通常経路 | 開発用処理との差分・次に必要なこと |
 | --- | --- | --- |
 | 受信内容 | [script.js](script.js) の `readElmDeveloperLoop` はデコード文字列を `textBuffer` へ追加。`takeCompletedElmDeveloperResponse` は終端を除去し、CR/CRLFをLFへ変換してtrimする | [readonly-receipt-capture.js](scripts/fixtures/readonly-receipt-capture.js) は改行・promptをそのまま保持する。表示文字列や加工済みログからの復元は禁止。別の受信ループを開始せず、既存ループの整形前の入力を取得する必要がある |
@@ -39,4 +47,4 @@
 4. 通常読取のコマンド順序、表示用戻り値、例外、診断結果、保存形式を維持する。記録側のcallbackから送信・再試行・設定変更を開始させない。
 5. 模擬wireで通常経路と内部記録を同時に確認する。最初はparserの設定確認や4項目集約へ接続せず、利用不能な記録を診断の正常結果に補完しない。
 
-上記は次工程の受入条件であり、今回実装済みとはしない。実機設定の根拠、車両との関連付け、永続監査、消去実行については [R2設計](R2-DTC-CLEAR-DESIGN.md) と [通信根拠](R2-ELM327-PROTOCOL-EVIDENCE.md) の別工程を維持する。
+上記の内部部品と試験側結合は実装したが、通常経路での受入完了は本体への配線後に確認する。実機設定の根拠、車両との関連付け、永続監査、消去実行については [R2設計](R2-DTC-CLEAR-DESIGN.md) と [通信根拠](R2-ELM327-PROTOCOL-EVIDENCE.md) の別工程を維持する。
