@@ -36,6 +36,8 @@ for (const [item, expected] of [
   [{ id: "missing", value: null, freezeFrameNumber: null }, "missing: 未記録 [ECU未記録 / FF番号未記録]"],
   [{ id: "negative", value: -40, freezeFrameNumber: -1 }, "negative: -40 [ECU未記録 / FF番号未記録]"],
   [{ id: "empty", value: false, freezeFrameNumber: "" }, "empty: false [ECU未記録 / FF番号未記録]"],
+  [{ id: "engine_speed", label: "回転数", pid: "0c", value: 0, unit: "rpm", sourceEcu: "7E8", freezeFrameNumber: 0 }, "回転数: 0 rpm [PID 0C / 7E8 / FF #0]"],
+  [{ id: "raw", pid: "<0C>", value: "AA", decoded: false }, "raw: AA [ECU未記録 / FF番号未記録] / 未換算"],
   [{ id: "html", value: "<img src=x>", sourceEcu: "<ECU>" }, "html: <img src=x> [<ECU> / FF番号未記録]"]
 ]) {
   const before = JSON.stringify(item);

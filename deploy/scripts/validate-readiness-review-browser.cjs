@@ -7,7 +7,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
     const root = path.resolve(__dirname, '..');
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'readiness-review-'));
-  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true });
   const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
   const errors = [], blocked = [];
   let page;
@@ -123,6 +123,22 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.match(await ff.innerText(), /起点DTC:.*P0171/);
       await ff.getByRole('button', { name: '記録の絞り込みを解除', exact: true }).click();
       assert.match(await ff.locator('[data-freeze-review-count]').innerText(), /3 \/ 3/);
+      const search = ff.getByLabel('記録項目を検索', { exact: true });
+      for (const [query, count] of [['0c', 2], ['０Ｃ　７Ｅ８', 1], ['engine_speed 7e9', 1], ['rpm 7e8', 1], ['05', 1], ['冷却水温', 1], ['missing', 0], ['<script>', 0], ['　 ', 3]]) {
+        await search.fill(query);
+        assert((await ff.locator('[data-freeze-review-count]').innerText()).includes(count + ' / 3'), 'FF search: ' + query);
+      }
+      await search.fill('0c');
+      await ff.getByLabel('記録元ECU', { exact: true }).selectOption('7E8');
+      await ff.getByLabel('FF番号', { exact: true }).selectOption('1');
+      assert.match(await ff.locator('[data-freeze-review-count]').innerText(), /0 \/ 3/);
+      await ff.getByLabel('FF番号', { exact: true }).selectOption('0');
+      assert.match(await ff.locator('[data-freeze-review-count]').innerText(), /1 \/ 3/);
+      assert.match(await ff.innerText(), /PID 0C \/ 7E8 \/ FF #0/);
+      await ff.getByRole('button', { name: '記録の絞り込みを解除', exact: true }).click();
+      assert.equal(await search.inputValue(), '');
+      assert(await search.evaluate(el => document.activeElement === el));
+      assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), original);
       for (const dark of [false, true]) {
         await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
         await ff.evaluate(node => window.scrollTo({ top: window.scrollY + node.getBoundingClientRect().top - 230, behavior: 'instant' }));

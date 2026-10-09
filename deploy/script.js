@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.641";
+const APP_VERSION = "3.13.642";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10679,7 +10679,8 @@ function formatObdFreezeFrameValueLine(item = {}) {
   const frameNumber = getObdDisplayByteNumber(item.freezeFrameNumber ?? item.freeze_frame_number);
   const frame = frameNumber !== null ? `FF #${frameNumber}` : "FF番号未記録";
   const raw = item.decoded === false || item.undecodedRaw === true ? " / 未換算" : "";
-  return `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)} [${ecu} / ${frame}]${raw}`;
+  const pid = typeof item.pid === "string" && /^[0-9A-F]{2}$/i.test(item.pid) ? `PID ${item.pid.toUpperCase()} / ` : "";
+  return `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)} [${pid}${ecu} / ${frame}]${raw}`;
 }
 
 function createObdFreezeFrameReviewControls(values, rows) {
@@ -10687,12 +10688,14 @@ function createObdFreezeFrameReviewControls(values, rows) {
   const note = document.createElement("p"); note.textContent = "故障記録時の値です。現在のライブ値ではありません。未換算値は数値判定に使用せず、対象車両の整備書で確認してください。";
   const controls = document.createElement("div"); controls.className = "obd-readiness-controls";
   const searchLabel = document.createElement("label"); searchLabel.textContent = "記録項目を検索";
-  const search = document.createElement("input"); search.type = "search"; search.placeholder = "例：回転数、温度"; searchLabel.appendChild(search);
+  const search = document.createElement("input"); search.type = "search"; search.placeholder = "例：回転数、0C 7E8、rpm"; searchLabel.appendChild(search);
+  const normalize = text => String(text || "").normalize("NFKC").toLowerCase();
   const entries = values.map((value, index) => ({ row: rows[index],
     ecu: value.sourceEcu || value.source_ecu || "ECU未記録",
     frame: getObdDisplayByteNumber(value.freezeFrameNumber ?? value.freeze_frame_number),
     raw: value.decoded === false || value.undecodedRaw === true,
-    text: String(value.label || value.id || "項目").toLocaleLowerCase() }));
+    text: normalize([value.label, value.id, value.pid, value.sourceEcu || value.source_ecu, value.category, value.unit]
+      .filter(item => typeof item === "string" || typeof item === "number").join(" ")) }));
   controls.hidden = entries.length === 0;
   const select = (labelText, options) => {
     const label = document.createElement("label"); label.textContent = labelText;
@@ -10708,16 +10711,16 @@ function createObdFreezeFrameReviewControls(values, rows) {
   const reset = document.createElement("button"); reset.type = "button"; reset.className = "secondary-button"; reset.textContent = "記録の絞り込みを解除"; controls.appendChild(reset);
   const count = document.createElement("p"); count.setAttribute("role", "status"); count.setAttribute("aria-live", "polite"); count.dataset.freezeReviewCount = "";
   const update = () => {
-    const query = search.value.trim().toLocaleLowerCase();
+    const terms = normalize(search.value).trim().split(/\s+/).filter(Boolean);
     let visible = 0;
     for (const entry of entries) {
       const frameId = entry.frame === null ? "unknown" : String(entry.frame);
-      entry.row.hidden = !entry.text.includes(query) || (ecu.value !== "all" && ecu.value !== entry.ecu)
+      entry.row.hidden = !terms.every(term => entry.text.includes(term)) || (ecu.value !== "all" && ecu.value !== entry.ecu)
         || (frame.value !== "all" && frame.value !== frameId) || (status.value === "raw" && !entry.raw);
       if (!entry.row.hidden) visible += 1;
     }
     count.textContent = `記録値：${visible} / ${entries.length}項目` + (!visible ? (entries.length ? "。条件に一致する記録値はありません。" : "。記録値は未取得です。") : "");
-    reset.disabled = !query && ecu.value === "all" && frame.value === "all" && status.value === "all";
+    reset.disabled = !terms.length && ecu.value === "all" && frame.value === "all" && status.value === "all";
   };
   search.addEventListener("input", update);
   for (const input of [ecu, frame, status]) input.addEventListener("change", update);
