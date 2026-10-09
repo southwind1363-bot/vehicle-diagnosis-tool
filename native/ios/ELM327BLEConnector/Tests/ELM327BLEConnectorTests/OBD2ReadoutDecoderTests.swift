@@ -126,8 +126,6 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
             (.longTermFuelTrimBank1, "41 07 70", OBD2MonitorValue(id: "ltft_b1", pid: "07", value: -12.5, unit: "%")),
             (.shortTermFuelTrimBank2, "41 08 88", OBD2MonitorValue(id: "stft_b2", pid: "08", value: 6.25, unit: "%")),
             (.longTermFuelTrimBank2, "41 09 70", OBD2MonitorValue(id: "ltft_b2", pid: "09", value: -12.5, unit: "%")),
-            (.commandedDieselIntakeAirFlow, "41 6A 66", OBD2MonitorValue(id: "commanded_diesel_intake_air_flow", pid: "6A", value: 40, unit: "%")),
-            (.commandedThrottleControl, "41 6C 99", OBD2MonitorValue(id: "commanded_throttle_control", pid: "6C", value: 60, unit: "%")),
             (.manifoldSurfaceTemperature, "41 84 5A", OBD2MonitorValue(id: "manifold_surface_temp", pid: "84", value: 50, unit: "C")),
             (.commandedThrottleActuatorControl, "41 8C 80", OBD2MonitorValue(id: "commanded_throttle_actuator_control", pid: "8C", value: 50.19607843137255, unit: "%")),
             (.engineFrictionTorque, "41 8E 7B", OBD2MonitorValue(id: "engine_friction_torque", pid: "8E", value: -2, unit: "%")),

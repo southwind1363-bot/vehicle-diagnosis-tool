@@ -188,12 +188,35 @@ public enum OBD2ReadoutDecoder {
                     ?? wideOxygenVoltageValues(command: command, bytes: bytes)
                     ?? wideOxygenCurrentValues(command: command, bytes: bytes)
                     ?? enginePercentTorqueValues(command: command, bytes: bytes)
-                    ?? commandedEGRAndErrorValues(command: command, bytes: bytes)
                     ?? livePIDValue(command: command, bytes: bytes).map { [$0] }
                 guard let values else {
                     return .failure(.malformedResponse)
                 }
                 decoded.append(contentsOf: values.map { (scopeID: packet.scopeID, value: $0) })
+            }
+            return .success(decoded)
+        }
+    }
+
+    public static func decodeLiveRawPID(command: ELMReadCommand, response: String) -> Result<[(scopeID: String?, value: OBD2RawMonitorValue)], OBD2ReadoutDecodeFailure> {
+        let pid: UInt8
+        let length: Int
+        let id: String
+        switch command {
+        case .commandedEGRAndError: (pid, length, id) = (0x69, 7, "egr_system_pid69_raw")
+        case .commandedDieselIntakeAirFlow: (pid, length, id) = (0x6A, 5, "intake_air_flow_pid6a_raw")
+        case .commandedThrottleControl: (pid, length, id) = (0x6C, 5, "throttle_control_pid6c_raw")
+        default: return .failure(.malformedResponse)
+        }
+        return packets(in: response).flatMap { packets in
+            var decoded: [(scopeID: String?, value: OBD2RawMonitorValue)] = []
+            for packet in packets {
+                let payload = packet.payload
+                guard payload.count == length + 2, payload[0] == 0x41, payload[1] == pid else {
+                    return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
+                }
+                let raw = payload.dropFirst(2).map { String(format: "%02X", $0) }.joined(separator: " ")
+                decoded.append((scopeID: packet.scopeID, value: OBD2RawMonitorValue(id: id, pid: String(format: "%02X", pid), value: raw)))
             }
             return .success(decoded)
         }
@@ -524,12 +547,6 @@ public enum OBD2ReadoutDecoder {
         case .longTermFuelTrimBank2:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "ltft_b2", pid: "09", value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%")
-        case .commandedDieselIntakeAirFlow:
-            guard bytes.count == 1 else { return nil }
-            return OBD2MonitorValue(id: "commanded_diesel_intake_air_flow", pid: "6A", value: Double(bytes[0]) * 100 / 255, unit: "%")
-        case .commandedThrottleControl:
-            guard bytes.count == 1 else { return nil }
-            return OBD2MonitorValue(id: "commanded_throttle_control", pid: "6C", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .manifoldSurfaceTemperature:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "manifold_surface_temp", pid: "84", value: Double(Int(bytes[0]) - 40), unit: "C")
@@ -858,11 +875,5 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
-    private static func commandedEGRAndErrorValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2MonitorValue]? {
-        guard command == .commandedEGRAndError, bytes.count == 2 else { return nil }
-        return [
-            OBD2MonitorValue(id: "commanded_egr_pid69", pid: "69", value: Double(bytes[0]) * 100 / 255, unit: "%"),
-            OBD2MonitorValue(id: "egr_error_pid69", pid: "69", value: Double(Int(bytes[1]) - 128) * 100 / 128, unit: "%")
-        ]
-    }
+
 }

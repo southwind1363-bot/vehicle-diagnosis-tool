@@ -242,6 +242,17 @@ public enum NativeConnectorEnvelopeFactory {
         ], readoutID: "live_pid_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
+    public static func livePID(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, value: OBD2RawMonitorValue) -> NativeConnectorEnvelope {
+        make(context: context, sequence: sequence, intent: "read_live_pid_snapshot", data: [
+            "readout_id": .string("live_pid_snapshot"),
+            "monitor_values": .array([.object([
+                "id": .string(value.id), "pid": .string(value.pid), "value": .string(value.value),
+                "unit": .string(""), "decoded": .bool(false),
+                "source_ecu": scopeID.map { .string($0) } ?? .null
+            ])])
+        ], readoutID: "live_pid_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
+    }
+
     public static func dtcs(
         context: NativeConnectorSessionContext,
         sequence: Int,

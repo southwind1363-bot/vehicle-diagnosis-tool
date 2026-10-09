@@ -31,9 +31,20 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         public let unit: String
         public let sourceScopeID: String
 
+        public let isUndecodedRaw: Bool
+
+        public init(monitorID: String, pid: String, value: String, unit: String, sourceScopeID: String, isUndecodedRaw: Bool = false) {
+            self.monitorID = monitorID
+            self.pid = pid
+            self.value = value
+            self.unit = unit
+            self.sourceScopeID = sourceScopeID
+            self.isUndecodedRaw = isUndecodedRaw
+        }
+
         public var id: String { "\(monitorID):\(pid):\(sourceScopeID)" }
 
-        public var displayValue: String { unit.isEmpty ? value : "\(value) \(unit)" }
+        public var displayValue: String { isUndecodedRaw ? "未換算RAW: \(value)" : (unit.isEmpty ? value : "\(value) \(unit)") }
     }
 
     public struct Readiness: Identifiable, Sendable, Equatable {
@@ -387,7 +398,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
             } else {
                 unit = ""
             }
-            return TextMonitorValue(monitorID: monitorID, pid: pid, value: textValue, unit: unit, sourceScopeID: scopeID)
+            return TextMonitorValue(monitorID: monitorID, pid: pid, value: textValue, unit: unit, sourceScopeID: scopeID, isUndecodedRaw: object["decoded"] == .bool(false))
         }
     }
 

@@ -10,6 +10,19 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         vehicleContextID: UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
     )
 
+    func testRawControlArchivePreservesUnconvertedEvidence() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        let raw = OBD2RawMonitorValue(id: "intake_air_flow_pid6a_raw", pid: "6A", value: "0F 80 41 0D 28")
+        try builder.append(NativeConnectorEnvelopeFactory.livePID(context: context, sequence: 1, scopeID: "7E8", value: raw))
+        try builder.complete(with: manifest(count: 1, first: 1, last: 1, scopes: [NativeConnectorReadoutScope(readoutID: "live_pid_snapshot", scopeID: "7E8")], expectedIntents: ["read_live_pid_snapshot"], expectedReadouts: ["live_pid_snapshot"]))
+        let archive = try builder.export()
+        let restored = try JSONDecoder().decode(NativeConnectorScanArchive.self, from: JSONEncoder().encode(archive))
+        XCTAssertEqual(restored, archive)
+        let preview = NativeConnectorReadoutPreview(envelopes: restored.envelopes)
+        XCTAssertTrue(preview.liveValues.isEmpty)
+        XCTAssertEqual(preview.liveTextValues.first?.displayValue, "未換算RAW: 0F 80 41 0D 28")
+    }
+
     private func envelope(sequence: Int, code: String = "P0300", scopeID: String? = nil) -> NativeConnectorEnvelope {
         NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: sequence, intent: "read_stored_dtc", scopeID: scopeID, dtcs: [OBD2DTC(code: code, status: "stored")])
     }

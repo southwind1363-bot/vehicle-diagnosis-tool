@@ -14,6 +14,12 @@ public struct OBD2TextMonitorValue: Equatable, Sendable {
     public let unit: String
 }
 
+public struct OBD2RawMonitorValue: Equatable, Sendable {
+    public let id: String
+    public let pid: String
+    public let value: String
+}
+
 public enum OBD2PIDDecoder {
     public static func decode(_ command: ELMReadCommand, response: String) -> OBD2MonitorValue? {
         let values = decodeValues(command, response: response)

@@ -40,6 +40,8 @@ jobs:
         working-directory: native/ios/VehicleDiagnosisELMHost
 
       - name: Run read-only connector unit tests
+        env:
+          NATIVE_CONTROL_RAW_EXPORT: ${{ runner.temp }}/native-control-raw.json
         run: |
           set +e
           set -o pipefail
@@ -53,6 +55,9 @@ jobs:
             exit "$test_status"
           fi
         working-directory: native/ios/ELM327BLEConnector
+
+      - name: Verify Swift RAW output in Web importer
+        run: node deploy/scripts/validate-native-control-raw-contract.js "${{ runner.temp }}/native-control-raw.json"
 
       - name: Generate host project
         run: xcodegen generate

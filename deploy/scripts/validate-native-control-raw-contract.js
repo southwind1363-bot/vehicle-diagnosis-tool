@@ -42,3 +42,24 @@ for (const [pid, id, length, legacyId] of [
 }
 check(fs.readFileSync(new URL("obd-readonly.js", root), "utf8") === source, "Production source changed");
 console.log(`Native RAW contract proposal: ${checks} checks passed; synthetic envelopes and Web importer only; Swift/CI/BLE not executed`);
+
+if (process.argv[2]) {
+  const generated = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+  assert.equal(generated.length, 6, "Swift must emit every PID/ECU pair");
+  const pairs = new Set();
+  for (const envelope of generated) {
+    const result = obd.buildNativeConnectorDiagnosticImport(envelope);
+    assert.equal(result.accepted, true);
+    const row = result.session.livePidSnapshot.monitorValues[0];
+    assert.equal(row.decoded, false);
+    assert.equal(row.unit, "");
+    const length = row.pid === "69" ? 7 : 5;
+    assert.equal(row.value, Array(length).fill("80").join(" "));
+    pairs.add(row.pid + ":" + row.sourceEcu);
+    assert.equal(result.vehicleCommandEnabled, false);
+    const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(result.session)));
+    assert.equal(restored.livePidSnapshot.monitorValues[0].decoded, false);
+  }
+  assert.deepEqual([...pairs].sort(), ["69:7E8", "69:7E9", "6A:7E8", "6A:7E9", "6C:7E8", "6C:7E9"]);
+  console.log("Swift-generated RAW envelopes: all six PID/ECU pairs imported and re-exported");
+}
