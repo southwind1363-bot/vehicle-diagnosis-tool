@@ -165,12 +165,12 @@ paint('操作を選んでください');
 <main><h1>設定準備と読取の模擬操作</h1>
 <p class="notice">開発用の固定データです。車両通信は行いません。設定準備の成功は、実機の設定成立や読取許可を意味しません。読取も人工データの表示です。</p>
 <p>操作中は別の操作を開始できません。取消後は処理が戻るまで待ちます。「終了」後は新しい模擬セッションを明示的に開始してください。</p>
-<p><label for="scenario">模擬応答の条件</label> <select id="scenario" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">正常な固定応答</option><option value="incomplete">途中で応答が未完了</option><option value="exception">途中で模擬処理が失敗</option><option value="disconnect">途中で模擬接続が切れる</option><option value="settings_changed">途中で模擬設定が変わる</option></select></p>
+<p><label for="scenario">模擬取得の進み方</label> <select id="scenario" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">途中停止なし</option><option value="incomplete">途中で応答が未完了</option><option value="exception">途中で模擬処理が失敗</option><option value="disconnect">途中で模擬接続が切れる</option><option value="settings_changed">途中で模擬設定が変わる</option></select></p>
 <p><label for="sample">読取内容の見本</label> <select id="sample" style="font:inherit;max-width:100%;min-height:48px"><option value="normal">コード0件の応答</option><option value="codes_present">故障コードあり</option><option value="mixed_sources">複数ECUの応答</option><option value="mixed_conflict">同一ECU内の応答矛盾</option><option value="compact">空白なし形式の応答</option><option value="conflict">保存DTCの応答矛盾</option><option value="missing_prompt">応答終端の欠落</option><option value="negative_response">否定応答</option><option value="no_data">NO DATAの応答</option></select></p>
-<p>内容の見本は読取だけに適用します。NO DATAや応答矛盾を故障コード0件とは判定しません。</p>
+<p>取得の進み方は診断結果の正常・異常を表しません。内容の見本は読取だけに適用します。NO DATAや応答矛盾を故障コード0件とは判定しません。</p>
 <p>読取処理の終了と、応答内容を診断に使えるかの判定は別です。空白なし形式も宣言済みの模擬条件であり、設定確認から自動認定するものではありません。</p>
 <p><label for="failure-position">失敗させる段階</label> <select id="failure-position" style="font:inherit;max-width:100%;min-height:48px"><option value="1">1番目</option><option value="2" selected>2番目</option><option value="3">3番目</option><option value="4">4番目</option></select></p>
-<p>失敗例は選んだ段階の応答で停止します。正常な固定応答ではこの指定を使いません。条件を変えると表示済みの結果を消去します。再試行は自動では行いません。</p>
+<p>失敗例は選んだ段階の応答で停止します。「途中停止なし」ではこの指定を使いません。条件を変えると表示済みの結果を消去します。再試行は自動では行いません。</p>
 <div class="controls"><button id="prepare">模擬設定を確認</button><button id="read">模擬記録を取得</button><button id="show-result" aria-controls="output" disabled>結果へ移動</button><button id="cancel">操作を取り消す</button><button id="end">セッションを終了</button><button id="restart" hidden>新しい模擬セッション</button></div>
 <p id="status" role="status" aria-live="polite"></p><p id="progress" role="status" aria-live="polite"></p><pre id="output" tabindex="-1" role="region" aria-label="模擬操作の結果"></pre><button id="back-controls" aria-controls="scenario" hidden disabled>操作へ戻る</button><noscript>この模擬操作にはJavaScriptが必要です。</noscript></main><script>${script}</script></html>\n`;
 }

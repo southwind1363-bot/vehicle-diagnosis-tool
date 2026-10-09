@@ -45,7 +45,7 @@ module.exports = async (context, output) => {
         assert.equal(await page.locator('#status').innerText(), message);
         assert(await read.isEnabled());
       };
-      const scenario = page.locator('#scenario');
+      const scenario = page.getByRole('combobox', { name: '模擬取得の進み方', exact: true });
       const sampleChoice = page.locator('#sample');
       const failurePosition = page.locator('#failure-position');
       assert(await failurePosition.isDisabled());
