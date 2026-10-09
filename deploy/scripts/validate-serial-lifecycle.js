@@ -327,7 +327,7 @@ async function readClient() {
     return true;
   };
   c.buildWebSerialConnectionStatus = () => ({});
-  load(c, ["runObdDeveloperRead"]);
+  load(c, ["readWebSerialCaptureContext", "createWebSerialReadoutCapture", "createSerialCommandCapture", "readElmDeveloperCommandRecord", "runObdDeveloperRead"]);
   return result;
 }
 

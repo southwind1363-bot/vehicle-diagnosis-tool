@@ -74,7 +74,7 @@ export function attachWire(c, size, overrides = {}) {
       return setTimeout(callback, delay);
     } });
   vm.runInContext(source.match(/const WEB_SERIAL_READ_ONLY_COMMANDS = [\s\S]*?\);/)[0], c.context);
-  for (const name of ["createSerialCommandCapture", "readElmDeveloperCommandRecord", "sendElmDeveloperCommand", "isAllowedObdDeveloperCommand", "isCurrentWebSerialReadLoop",
+  for (const name of ["readWebSerialCaptureContext", "createWebSerialReadoutCapture", "createSerialCommandCapture", "readElmDeveloperCommandRecord", "sendElmDeveloperCommand", "isAllowedObdDeveloperCommand", "isCurrentWebSerialReadLoop",
     "readElmDeveloperLoop", "hasCompletedElmDeveloperResponse", "takeCompletedElmDeveloperResponse", "readElmDeveloperResponse"]) {
     const match = source.match(new RegExp(`(?:async )?function ${name}\\([^\\n]*\\) \\{[\\s\\S]*?\\r?\\n\\}`));
     assert.ok(match, name); vm.runInContext(match[0], c.context);

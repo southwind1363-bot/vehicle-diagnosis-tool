@@ -47,7 +47,7 @@ const webSerialFunctions = [
   "buildWebSerialConnectionStatus", "buildWebSerialAdapterInitializationSummary", "getWebSerialAdapterInitializationStopReason",
   "getWebSerialDisplayBaudRate",
   "formatWebSerialConnectionFailure", "formatWebSerialAdapterInitializationFailure", "formatWebSerialAdapterInitializationSummary",
-  "formatWebSerialStopReason", "appendObdDeveloperLog", "sendElmDeveloperCommand", "readElmDeveloperLoop", "readElmDeveloperResponse",
+  "formatWebSerialStopReason", "appendObdDeveloperLog", "readWebSerialCaptureContext", "createWebSerialReadoutCapture", "createSerialCommandCapture", "readElmDeveloperCommandRecord", "sendElmDeveloperCommand", "readElmDeveloperLoop", "readElmDeveloperResponse",
   "isAllowedObdDeveloperCommand", "isCurrentWebSerialReadLoop", "hasCompletedElmDeveloperResponse", "takeCompletedElmDeveloperResponse"
 ];
 const webSerialConstants = [
@@ -187,7 +187,9 @@ function createClient(responses, options = {}) {
     assert.ok(match, `Missing script.js constant ${name}`);
     vm.runInContext(match[0], context, { filename: `script.js:${name}` });
   }
-  load(context, webSerialFunctions);
+  load(context, [...webSerialFunctions, "createReadOnlySettingsObservation", "createReadOnlySettingsSession"]);
+  const property = scriptSource.match(/  settingsObservation: \{[\s\S]*?\r?\n  \},/)[0].trim().slice(0, -1);
+  vm.runInContext(`obdDevSession.settingsObservation = ({${property}}).settingsObservation`, context);
   context.buildSelectedObdReadoutInterface = () => ({ id: "user-vci-elm327", route: "desktop_web_serial" });
   const formatConnectionFailure = context.formatWebSerialConnectionFailure;
   context.formatWebSerialConnectionFailure = (reason, summary, error) => {
@@ -470,6 +472,59 @@ for (const [command, service, status, label] of [["03", "43", "stored", "保存D
   await client.context.disconnectObdDeveloperVci();
   check(replacement.closed && replacement.calls.close === 1 && client.port.calls.close === 1,
     "Recovery did not close each port exactly once");
+}
+
+// Raw capture belongs to one normal read operation; never to the saved session.
+{
+  const client = createClient(successfulResponses, { fragmentResponses: true, fragmentSize: 1 });
+  await connect(client);
+  for (const commands of [["03"], ["07", "0A"], ["0101"]]) {
+    await client.context.runObdDeveloperRead("capture", commands);
+    const owner = client.context.obdDevSession.rawReadoutCapture;
+    check(owner.inspect().status === "finished" && owner.inspect().count === commands.length, "Normal read must finish its own raw group");
+    const records = owner.take();
+    check(JSON.stringify(records.map(row => row.command)) === JSON.stringify(commands), "Raw group command order differs");
+    check(records.every((row, index) => row.transcript === successfulResponses[commands[index]] + ">"
+      && row.profile === null && row.executionEnabled === false && row.realTransportProofAvailable === false), "Raw group changed text or gained authority");
+    check(owner.take() === null, "Raw group can only be consumed once");
+    const session = client.context.obdDevSession.lastSession;
+    check(!Object.hasOwn(session, "rawReadoutCapture"), "Private capture must not enter saved session");
+    const exported = client.context.ObdReadOnly.buildBridgeSessionExportPayload(session);
+    check(!JSON.stringify(exported).includes('"rawReadoutCapture"'), "Private capture must not enter JSON export");
+    const probe = client.context.createWebSerialReadoutCapture(commands);
+    check(probe.take() === null, "Unfinished capture must not expose a partial group");
+    for (const row of records) check(probe.append(row), "Bounded group must accept its expected records");
+    check(!probe.append({ ...records[0], command: undefined }), "Extra record must not bypass the command limit");
+    check(!probe.finish() && probe.take() === null, "Overfilled group must be discarded");
+    for (const changed of [{ ...records[0], command: "04" }, { ...records[0], transcript: "x".repeat(12001) },
+      { ...records[0], profileVerified: true }, { ...records[0], completedAt: -1 }]) {
+      const invalid = client.context.createWebSerialReadoutCapture(commands);
+      check(!invalid.append(changed) && invalid.take() === null, "Invalid record must discard the group without authority");
+    }
+  }
+  await client.context.disconnectObdDeveloperVci();
+}
+for (const event of ["next_read", "protocol", "initialize", "reset", "disconnect", "revision"]) {
+  const client = createClient(successfulResponses);
+  await connect(client);
+  await client.context.runObdDeveloperRead("capture", ["03"]);
+  const owner = client.context.obdDevSession.rawReadoutCapture;
+  check(owner.inspect().status === "finished", event + ": initial capture missing");
+  if (event === "next_read") await client.context.runObdDeveloperRead("capture", ["07", "0A"]);
+  if (event === "protocol") await client.context.captureObdDeveloperProtocolAfterStoredDtc();
+  if (event === "initialize") await client.context.initializeElmDeveloperAdapter();
+  if (event === "reset") client.context.resetWebSerialConnectionAttemptMetadata();
+  if (event === "disconnect") await client.context.disconnectObdDeveloperVci();
+  if (event === "revision") client.context.obdSerialRevision++;
+  check(owner.take() === null && owner.inspect().count === 0, event + ": previous raw group survived invalidation");
+  if (!client.port.closed) await client.context.disconnectObdDeveloperVci();
+}
+{
+  const client = createClient({ ...successfulResponses, "0A": new Error("synthetic_write_failure") });
+  await connect(client);
+  check(await client.context.runObdDeveloperRead("partial", ["07", "0A"]) === false, "Partial raw group must preserve failed read outcome");
+  check(client.context.obdDevSession.rawReadoutCapture.take() === null, "Failed read must discard already acquired raw data");
+  if (!client.port.closed) await client.context.disconnectObdDeveloperVci();
 }
 
 console.log(`validate-serial-integration: ${checks} checks passed`);

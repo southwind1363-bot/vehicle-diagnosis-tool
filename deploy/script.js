@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.634";
+const APP_VERSION = "3.13.635";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -779,6 +779,7 @@ const obdDevSession = {
   port: null,
   reader: null,
   writer: null,
+  rawReadoutCapture: null,
   decoder: null,
   encoder: null,
   textBuffer: "",
@@ -1207,6 +1208,7 @@ obdOperationJournalViewer?.addEventListener("toggle", () => {
   else renderObdOperationJournalViewer();
 });
 window.addEventListener("pagehide", () => {
+  obdDevSession.rawReadoutCapture?.invalidate();
   obdDevSession.settingsObservation?.owner.invalidate();
   if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
   clearObdOperationJournalComparison();
@@ -7548,6 +7550,7 @@ if (!continueObdSerialOperation(revision)) return;
 }
 
 function resetWebSerialConnectionAttemptMetadata() {
+  obdDevSession.rawReadoutCapture?.invalidate();
   obdDevSession.settingsObservation?.owner.invalidate();
   if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
   if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
@@ -7596,6 +7599,7 @@ function handleObdSerialDisconnect(event) {
 }
 
 async function disconnectObdDeveloperVci(options = {}) {
+  obdDevSession.rawReadoutCapture?.invalidate();
   obdDevSession.settingsObservation?.owner.invalidate();
   if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
   const reason = typeof options?.reason === "string" ? options.reason : "operator_disconnect";
@@ -7836,6 +7840,7 @@ function throwIfObdSerialOperationCancelled(revision) {
 }
 
 async function initializeElmDeveloperAdapter() {
+  obdDevSession.rawReadoutCapture?.invalidate();
   const revision = obdSerialRevision;
   const settings = obdDevSession.settingsObservation;
   const settingsTicket = settings?.owner.begin().ticket || null;
@@ -7962,6 +7967,7 @@ function mergeWebSerialAdapterIdentity(previous = null, update = null) {
 }
 
 async function captureObdDeveloperProtocolAfterStoredDtc() {
+  obdDevSession.rawReadoutCapture?.invalidate();
   const revision = obdSerialRevision;
   if (!continueObdSerialOperation(revision)) return false;
   if (obdDevSession.pendingCommandOperation || obdSerialDisconnectOperation) return false;
@@ -9344,6 +9350,9 @@ async function runObdDeveloperRead(label, commands) {
   obdDevSession.readInProgress = true;
   setObdDeveloperConnectionState("reading");
   renderObdDeveloperGate();
+  obdDevSession.rawReadoutCapture?.invalidate();
+  const rawCapture = createWebSerialReadoutCapture(commands);
+  obdDevSession.rawReadoutCapture = rawCapture;
   const startedAt = new Date().toISOString();
   const chunks = [];
   const commandResponses = [];
@@ -9358,7 +9367,11 @@ async function runObdDeveloperRead(label, commands) {
       chunks.push(`>${command}`);
       attemptedCommandCount += 1;
       currentCommandStartedAt = Date.now();
-      const response = await sendElmDeveloperCommand(command, 3500);
+      const captureRequested = ["03", "07", "0A", "0101"].includes(command);
+      const acquired = captureRequested ? await readElmDeveloperCommandRecord(command, 3500)
+        : { response: await sendElmDeveloperCommand(command, 3500), record: null };
+      const response = acquired.response;
+      if (captureRequested) rawCapture.append(acquired.record);
       throwIfObdSerialOperationCancelled(revision);
       commandResponses.push({ command, response, responseElapsedMs: Math.max(0, Date.now() - currentCommandStartedAt) });
       currentCommandStartedAt = null;
@@ -9375,12 +9388,14 @@ async function runObdDeveloperRead(label, commands) {
       replaceOnboardMonitorSnapshot
     });
     obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
+    rawCapture.finish();
     if (outcome.stopScope === "scan" && obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = outcome.stopReason;
     obdDevStatus.textContent = outcome.readoutCompleted
       ? `${label}が完了しました。取れた値だけ表示します。`
       : `${label}は未完了です。応答品質を記録し、取得できた値だけ表示します。`;
     return outcome.readoutCompleted;
   } catch (error) {
+    rawCapture.invalidate();
     if (!continueObdSerialOperation(revision)) return false;
     const message = error?.message || String(error);
     if (message === "elm_write_busy") return false;
@@ -9858,6 +9873,58 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   return session;
 }
 
+function readWebSerialCaptureContext() {
+  return { port: obdDevSession.port, reader: obdDevSession.reader, writer: obdDevSession.writer,
+    settingsTicket: obdDevSession.settingsObservation?.owner.inspect(obdDevSession.settingsObservation.ticket).ok
+      ? obdDevSession.settingsObservation.ticket : null,
+    revision: obdSerialRevision, connected: obdDevSession.readLoopActive && !obdSerialDisconnectOperation,
+    unlocked: isCurrentObdSerialOperation(obdSerialRevision) };
+}
+
+// Private, bounded read-operation storage. Never merged into diagnostic sessions or exports.
+function createWebSerialReadoutCapture(commands) {
+  const expected = commands.filter(command => ["03", "07", "0A", "0101"].includes(command));
+  const context = readWebSerialCaptureContext();
+  let records = [], phase = expected.length && expected.length <= 4 ? "collecting" : "invalidated";
+  const invalidate = () => { records = []; phase = "invalidated"; };
+  const valid = () => {
+    const latest = readWebSerialCaptureContext();
+    if (phase === "invalidated" || !context.settingsTicket || context.connected !== true || context.unlocked !== true
+      || Object.keys(context).some(key => context[key] !== latest[key])) { invalidate(); return false; }
+    return true;
+  };
+  return Object.freeze({
+    append(record) {
+      if (!valid() || phase !== "collecting") return false;
+      if (records.length >= expected.length || !record || record.command !== expected[records.length] || typeof record.transcript !== "string"
+        || record.transcript.length === 0 || record.transcript.length > 12000 || record.profile !== null
+        || record.profileVerified !== false || record.realTransportProofAvailable !== false || record.executionEnabled !== false
+        || !Number.isFinite(record.startedAt) || record.startedAt < 0 || !Number.isFinite(record.completedAt)
+        || record.completedAt < record.startedAt || (records.length && record.startedAt < records[records.length - 1].completedAt)) {
+        invalidate(); return false;
+      }
+      records.push(Object.freeze({ command: record.command, transcript: record.transcript,
+        startedAt: record.startedAt, completedAt: record.completedAt, profile: null, profileVerified: false,
+        realTransportProofAvailable: false, executionEnabled: false }));
+      return true;
+    },
+    finish() {
+      if (!valid() || phase !== "collecting" || records.length !== expected.length) { invalidate(); return false; }
+      phase = "finished"; return true;
+    },
+    inspect() {
+      valid();
+      return Object.freeze({ status: phase, count: records.length, profile: null, executionEnabled: false });
+    },
+    take() {
+      if (!valid() || phase !== "finished") return null;
+      const result = Object.freeze([...records]);
+      invalidate(); return result;
+    },
+    invalidate
+  });
+}
+
 function createSerialCommandCapture({ readContext, readClock }) {
   if (typeof readContext !== "function" || typeof readClock !== "function") throw new TypeError("capture_dependencies_required");
   const fields = ["port", "reader", "writer", "settingsTicket", "revision", "connected", "unlocked"];
@@ -9957,11 +10024,7 @@ function createSerialCommandCapture({ readContext, readClock }) {
 // Internal opt-in raw observation. No settings/profile or vehicle provenance is inferred.
 async function readElmDeveloperCommandRecord(command, timeoutMs = 3000) {
   const request = { owner: createSerialCommandCapture({
-    readContext: () => ({ port: obdDevSession.port, reader: obdDevSession.reader, writer: obdDevSession.writer,
-      settingsTicket: obdDevSession.settingsObservation?.owner.inspect(obdDevSession.settingsObservation.ticket).ok
-        ? obdDevSession.settingsObservation.ticket : null,
-      revision: obdSerialRevision, connected: obdDevSession.readLoopActive && !obdSerialDisconnectOperation,
-      unlocked: isCurrentObdSerialOperation(obdSerialRevision) }),
+    readContext: readWebSerialCaptureContext,
     readClock: () => performance.now()
   }), operation: null };
   try {
