@@ -110,4 +110,45 @@ for (const kind of ["readout", "settings"]) {
     cases++;
   }
 }
-console.log(`Development session: ${cases} exclusion/cancellation/failure/disposal cases passed; synthetic callbacks only`);
+// A backwards clock may occur after a response or before the next command.
+// Exercise the shared owner, including recovery after a previously good result.
+for (const boundary of [1, 2, 3, 4, 5, 6, 7]) {
+  const state = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+  const commands = ["03", "07", "0A", "0101"], sent = [], callbacks = [];
+  let failureAt = -1, ticks = 0, parses = 0, settingsCalls = 0, stale = [];
+  const session = createReadOnlyDevelopmentSession({ readContext: () => state,
+    api: { ...api, parseElmReadOnlyRawTranscript(input) { parses++; return api.parseElmReadOnlyRawTranscript(input); } },
+    profile: "iso15765_11bit_normal_h1_caf1_d0_s1_e0",
+    readClock() { const position = ticks++; return position === failureAt ? 0 : 10 + position; },
+    async readCommand(command, append) {
+      for (const previous of stale) assert.equal(previous("late>"), false);
+      sent.push(command); callbacks.push(append);
+      assert.equal(append("NO DATA\r>"), true); return "complete";
+    },
+    invalidateReceipts() { settingsCalls++; return true; },
+    beginSettingsGeneration() { settingsCalls++; return true; },
+    readResponse() { settingsCalls++; throw Error("unexpected_settings_callback"); }
+  });
+  try {
+    const previous = await session.read(); assert.equal(previous.ok, true);
+    const previousText = JSON.stringify(previous);
+    stale = [...callbacks]; callbacks.length = 0; sent.length = 0; parses = 0; ticks = 0; failureAt = boundary;
+    const failed = await session.read();
+    assert.equal(failed.reason, "receipt_clock_unavailable");
+    assert.equal(failed.ok, false); assert.equal(failed.summary, null);
+    assert.equal(failed.completedCommandCount, Math.floor(boundary / 2));
+    assert.equal(ticks, boundary + 1);
+    assert.deepEqual(sent, commands.slice(0, Math.ceil(boundary / 2)));
+    assert.equal(parses, 0, "An incomplete timed run must not reach the completed-record parser");
+    assert.equal(session.inspect().status, "idle"); assert.equal(session.inspect().pending, false);
+    assert.equal(JSON.stringify(previous), previousText, "Failure must not mutate an already delivered result");
+    stale.push(...callbacks); callbacks.length = 0; sent.length = 0; ticks = 0; failureAt = -1;
+    const recovered = await session.read();
+    assert.equal(recovered.ok, true); assert.notEqual(recovered.summary, previous.summary);
+    assert.deepEqual(sent, commands); assert.equal(parses, 4);
+    assert.equal(settingsCalls, 0, "Clock recovery does not implicitly prepare settings");
+    assert.equal(recovered.executionEnabled, false);
+    cases++;
+  } finally { session.dispose(); }
+}
+console.log(`Development session: ${cases} exclusion/cancellation/failure/disposal and backwards-clock recovery cases passed; synthetic callbacks only`);
