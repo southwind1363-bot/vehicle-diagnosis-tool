@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.635";
+const APP_VERSION = "3.13.636";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -780,6 +780,7 @@ const obdDevSession = {
   reader: null,
   writer: null,
   rawReadoutCapture: null,
+  coreRawReadoutCapture: null,
   decoder: null,
   encoder: null,
   textBuffer: "",
@@ -1208,6 +1209,7 @@ obdOperationJournalViewer?.addEventListener("toggle", () => {
   else renderObdOperationJournalViewer();
 });
 window.addEventListener("pagehide", () => {
+  obdDevSession.coreRawReadoutCapture?.invalidate();
   obdDevSession.rawReadoutCapture?.invalidate();
   obdDevSession.settingsObservation?.owner.invalidate();
   if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
@@ -7550,6 +7552,7 @@ if (!continueObdSerialOperation(revision)) return;
 }
 
 function resetWebSerialConnectionAttemptMetadata() {
+  obdDevSession.coreRawReadoutCapture?.invalidate();
   obdDevSession.rawReadoutCapture?.invalidate();
   obdDevSession.settingsObservation?.owner.invalidate();
   if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
@@ -7599,6 +7602,7 @@ function handleObdSerialDisconnect(event) {
 }
 
 async function disconnectObdDeveloperVci(options = {}) {
+  obdDevSession.coreRawReadoutCapture?.invalidate();
   obdDevSession.rawReadoutCapture?.invalidate();
   obdDevSession.settingsObservation?.owner.invalidate();
   if (obdDevSession.settingsObservation) obdDevSession.settingsObservation.ticket = null;
@@ -7840,6 +7844,7 @@ function throwIfObdSerialOperationCancelled(revision) {
 }
 
 async function initializeElmDeveloperAdapter() {
+  obdDevSession.coreRawReadoutCapture?.invalidate();
   obdDevSession.rawReadoutCapture?.invalidate();
   const revision = obdSerialRevision;
   const settings = obdDevSession.settingsObservation;
@@ -7966,7 +7971,8 @@ function mergeWebSerialAdapterIdentity(previous = null, update = null) {
   };
 }
 
-async function captureObdDeveloperProtocolAfterStoredDtc() {
+async function captureObdDeveloperProtocolAfterStoredDtc(scanCapture = null) {
+  if (!scanCapture || scanCapture !== obdDevSession.coreRawReadoutCapture || !obdDevSession.coreScanInProgress) obdDevSession.coreRawReadoutCapture?.invalidate();
   obdDevSession.rawReadoutCapture?.invalidate();
   const revision = obdSerialRevision;
   if (!continueObdSerialOperation(revision)) return false;
@@ -8186,14 +8192,14 @@ function hasWebSerialEcuInfoTypeCoverage(snapshot, commands = []) {
   });
 }
 
-async function readObdDeveloperDtc() {
+async function readObdDeveloperDtc(scanCapture = null) {
   const revision = obdSerialRevision;
-  const storedReadCompleted = await runObdDeveloperRead("保存DTC読取", ["03"]);
+  const storedReadCompleted = await runObdDeveloperRead("保存DTC読取", ["03"], scanCapture);
   if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   if (!storedReadCompleted || !hasWebSerialDtcStatusReport("stored")) return false;
-  await captureObdDeveloperProtocolAfterStoredDtc();
+  await captureObdDeveloperProtocolAfterStoredDtc(scanCapture);
   if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
-  await runObdDeveloperRead("保留・永久DTC読取", ["07", "0A"]);
+  await runObdDeveloperRead("保留・永久DTC読取", ["07", "0A"], scanCapture);
   if (!continueObdSerialOperation(revision)) return false;
   return hasWebSerialDtcCoverage(["stored", "pending", "permanent"]);
 }
@@ -8201,6 +8207,9 @@ async function readObdDeveloperDtc() {
 async function readObdDeveloperCoreScan() {
   const revision = obdSerialRevision;
   if (!beginWebSerialReadoutProfile("initial_diagnostic")) return;
+  const scanCapture = createWebSerialReadoutCapture(["03", "07", "0A", "0101"]);
+  obdDevSession.coreRawReadoutCapture = scanCapture;
+  let scanCompleted = false;
   obdDevSession.coreScanInProgress = true;
   obdDevSession.coreScanStopReason = null;
   renderObdDeveloperGate();
@@ -8218,7 +8227,7 @@ async function readObdDeveloperCoreScan() {
       if (!obdDevSession.port) break;
       obdDevSession.activeCoreReadoutId = readStep.id;
       renderObdDeveloperGate();
-      const readCompleted = await readStep.read();
+      const readCompleted = await readStep.read(scanCapture);
       if (!continueObdSerialOperation(revision)) return;
       if (obdDevSession.port && readCompleted !== true) incompleteLabels.push(readStep.label);
       if (obdDevSession.coreScanStopReason) break;
@@ -8232,7 +8241,9 @@ async function readObdDeveloperCoreScan() {
     } else {
       obdDevStatus.textContent = "基本読取を完了しました。";
     }
+    scanCompleted = !obdDevSession.coreScanStopReason && !!obdDevSession.port && scanCapture.finish();
   } finally {
+    if (!scanCompleted) scanCapture.invalidate();
     if (continueObdSerialOperation(revision)) {
       obdDevSession.coreScanInProgress = false;
       obdDevSession.coreScanStopReason = null;
@@ -8268,6 +8279,7 @@ function beginWebSerialReadoutProfile(readoutProfile) {
   obdDevSession.activeCoreReadoutId = null;
   obdDevSession.lastSession = null;
   handleObdReadoutSessionReplacement();
+  obdDevSession.coreRawReadoutCapture?.invalidate();
   obdDevSession.readoutProfile = readoutProfile;
   obdScannerText.value = "";
   obdDetectedCodes.innerHTML = "";
@@ -8317,9 +8329,9 @@ async function readObdDeveloperQuickCondition() {
   }
 }
 
-async function readObdDeveloperFreezeFrame() {
+async function readObdDeveloperFreezeFrame(scanCapture = null) {
   const revision = obdSerialRevision;
-  const readCompleted = await runObdDeveloperRead("フリーズフレーム起点DTC読取", ["0202"]);
+  const readCompleted = await runObdDeveloperRead("フリーズフレーム起点DTC読取", ["0202"], scanCapture);
   if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   const freezeFrameSnapshot = obdDevSession.lastSession?.freezeFrameSnapshot;
   if (!readCompleted || !hasWebSerialFreezeFrameCoverage(freezeFrameSnapshot)) return false;
@@ -8328,7 +8340,7 @@ async function readObdDeveloperFreezeFrame() {
     renderObdDeveloperGate();
     return true;
   }
-  const capabilityReadCompleted = await runObdDeveloperRead("フリーズフレーム対応PID読取", ["0200"]);
+  const capabilityReadCompleted = await runObdDeveloperRead("フリーズフレーム対応PID読取", ["0200"], scanCapture);
   if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   if (!capabilityReadCompleted || !hasWebSerialFreezeFrameCapabilityReport(obdDevSession.freezeFrameCapabilityResponse, freezeFrameSnapshot)) return false;
   const supportedPids = getWebSerialFreezeFrameSupportedPidsForTriggerScopes(obdDevSession.freezeFrameCapabilityResponse, freezeFrameSnapshot);
@@ -8343,21 +8355,21 @@ async function readObdDeveloperFreezeFrame() {
     renderObdDeveloperGate();
     return true;
   }
-  const valuesReadCompleted = await runObdDeveloperRead("フリーズフレーム値読取", supportedCommands);
+  const valuesReadCompleted = await runObdDeveloperRead("フリーズフレーム値読取", supportedCommands, scanCapture);
   if (!continueObdSerialOperation(revision)) return false;
   return valuesReadCompleted && hasWebSerialFreezeFrameCoverage(obdDevSession.lastSession?.freezeFrameSnapshot);
 }
 
-async function readObdDeveloperReadiness() {
+async function readObdDeveloperReadiness(scanCapture = null) {
   const revision = obdSerialRevision;
-  const readCompleted = await runObdDeveloperRead("レディネス読取", ["0101"]);
+  const readCompleted = await runObdDeveloperRead("レディネス読取", ["0101"], scanCapture);
   if (!continueObdSerialOperation(revision)) return false;
   return readCompleted && hasWebSerialReadinessCoverage(obdDevSession.lastSession?.readinessSnapshot);
 }
 
-async function readObdDeveloperEcuInfo() {
+async function readObdDeveloperEcuInfo(scanCapture = null) {
   const revision = obdSerialRevision;
-  const supportReadCompleted = await runObdDeveloperRead("ECU情報対応確認", ["0900"]);
+  const supportReadCompleted = await runObdDeveloperRead("ECU情報対応確認", ["0900"], scanCapture);
   if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   const ecuInfoSnapshot = obdDevSession.lastSession?.ecuInfoSnapshot;
   if (!supportReadCompleted || !isWebSerialReadoutReported(ecuInfoSnapshot, "ecuInfoReadoutStatus", "ecu_info_readout_status")) return false;
@@ -8376,15 +8388,15 @@ async function readObdDeveloperEcuInfo() {
     renderObdDeveloperGate();
     return true;
   }
-  const readCompleted = await runObdDeveloperRead("ECU情報読取", supportedCommands);
+  const readCompleted = await runObdDeveloperRead("ECU情報読取", supportedCommands, scanCapture);
   if (!continueObdSerialOperation(revision)) return false;
   const completedSnapshot = obdDevSession.lastSession?.ecuInfoSnapshot;
   return readCompleted && hasWebSerialEcuInfoTypeCoverage(completedSnapshot, supportedCommands);
 }
 
-async function readObdDeveloperOnboardMonitor() {
+async function readObdDeveloperOnboardMonitor(scanCapture = null) {
   const revision = obdSerialRevision;
-  const readCompleted = await runObdDeveloperRead("Mode06読取", ["06"]);
+  const readCompleted = await runObdDeveloperRead("Mode06読取", ["06"], scanCapture);
   if (!continueObdSerialOperation(revision)) return false;
   return readCompleted && hasWebSerialOnboardMonitorCoverage(obdDevSession.lastSession?.onboardMonitorSnapshot);
 }
@@ -8396,9 +8408,9 @@ async function readObdDeveloperPermanentDtc() {
   return readCompleted && hasWebSerialDtcStatusReport("permanent");
 }
 
-async function readObdDeveloperLiveSnapshot() {
+async function readObdDeveloperLiveSnapshot(scanCapture = null) {
   const revision = obdSerialRevision;
-  const supportReadCompleted = await readObdDeveloperSupportedPidMaps();
+  const supportReadCompleted = await readObdDeveloperSupportedPidMaps(scanCapture);
   if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   if (!supportReadCompleted) return false;
   const supportedPids = new Set(obdDevSession.supportedPidSet);
@@ -8408,7 +8420,7 @@ async function readObdDeveloperLiveSnapshot() {
     renderObdDeveloperGate();
     return true;
   }
-  const readCompleted = await runObdDeveloperRead("ライブデータ読取", supportedCommands);
+  const readCompleted = await runObdDeveloperRead("ライブデータ読取", supportedCommands, scanCapture);
   if (!continueObdSerialOperation(revision)) return false;
   return readCompleted && hasWebSerialLivePidCoverage(obdDevSession.lastSession?.livePidSnapshot);
 }
@@ -8430,17 +8442,17 @@ async function readObdDeveloperQuickLiveSnapshot() {
   return readCompleted && hasWebSerialLivePidCoverage(obdDevSession.lastSession?.livePidSnapshot);
 }
 
-async function readObdDeveloperSupportedPidMaps() {
+async function readObdDeveloperSupportedPidMaps(scanCapture = null) {
   const revision = obdSerialRevision;
   if (!continueObdSerialOperation(revision)) return false;
   if (obdDevSession.supportedPidDiscoveryComplete) return true;
-  const baseReadCompleted = await runObdDeveloperRead("対応PID確認", ["0100"]);
+  const baseReadCompleted = await runObdDeveloperRead("対応PID確認", ["0100"], scanCapture);
   if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   if (!baseReadCompleted || !hasWebSerialSupportedPidPage(obdDevSession.lastSession?.supportedPidMatrix, "00")) return false;
   for (const basePid of ["20", "40", "60", "80", "A0", "C0", "E0"]) {
     const supportedPids = new Set(obdDevSession.lastSession?.supportedPidMatrix?.supportedPids || []);
     if (!supportedPids.has(basePid)) break;
-    const pageReadCompleted = await runObdDeveloperRead("対応PID確認", [`01${basePid}`]);
+    const pageReadCompleted = await runObdDeveloperRead("対応PID確認", [`01${basePid}`], scanCapture);
     if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
     if (!pageReadCompleted || !hasWebSerialSupportedPidPage(obdDevSession.lastSession?.supportedPidMatrix, basePid)) return false;
   }
@@ -9336,7 +9348,7 @@ function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) 
   };
 }
 
-async function runObdDeveloperRead(label, commands) {
+async function runObdDeveloperRead(label, commands, scanCapture = null) {
   const revision = obdSerialRevision;
   if (!continueObdSerialOperation(revision)) return false;
   if (obdDevSession.pendingCommandOperation || obdDevSession.pendingWriteOperation || obdSerialDisconnectOperation) return false;
@@ -9350,6 +9362,8 @@ async function runObdDeveloperRead(label, commands) {
   obdDevSession.readInProgress = true;
   setObdDeveloperConnectionState("reading");
   renderObdDeveloperGate();
+  const scanOwner = scanCapture && scanCapture === obdDevSession.coreRawReadoutCapture && obdDevSession.coreScanInProgress ? scanCapture : null;
+  if (!scanOwner) obdDevSession.coreRawReadoutCapture?.invalidate();
   obdDevSession.rawReadoutCapture?.invalidate();
   const rawCapture = createWebSerialReadoutCapture(commands);
   obdDevSession.rawReadoutCapture = rawCapture;
@@ -9388,7 +9402,12 @@ async function runObdDeveloperRead(label, commands) {
       replaceOnboardMonitorSnapshot
     });
     obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
-    rawCapture.finish();
+    const rawFinished = rawCapture.finish();
+    if (scanOwner && commands.some(command => ["03", "07", "0A", "0101"].includes(command))) {
+      const records = rawFinished ? rawCapture.take() : null;
+      if (!records) scanOwner.invalidate();
+      else for (const record of records) if (!scanOwner.append(record)) { scanOwner.invalidate(); break; }
+    }
     if (outcome.stopScope === "scan" && obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = outcome.stopReason;
     obdDevStatus.textContent = outcome.readoutCompleted
       ? `${label}が完了しました。取れた値だけ表示します。`
@@ -9396,6 +9415,7 @@ async function runObdDeveloperRead(label, commands) {
     return outcome.readoutCompleted;
   } catch (error) {
     rawCapture.invalidate();
+    scanOwner?.invalidate();
     if (!continueObdSerialOperation(revision)) return false;
     const message = error?.message || String(error);
     if (message === "elm_write_busy") return false;

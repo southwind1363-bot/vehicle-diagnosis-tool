@@ -234,6 +234,13 @@ for (const eol of ["\r\n", "\r", "\n"]) {
   await client.context.readObdDeveloperCoreScan();
   const session = client.context.obdDevSession.lastSession;
   const attempts = client.context.obdDevSession.readoutAttempts;
+  const scanCapture = client.context.obdDevSession.coreRawReadoutCapture;
+  check(scanCapture.inspect().status === "finished" && scanCapture.inspect().count === 4, "Core scan must aggregate four same-generation records");
+  const rawRecords = scanCapture.take();
+  check(JSON.stringify(rawRecords.map(row => row.command)) === JSON.stringify(["03", "07", "0A", "0101"]), "Core raw records lost command order");
+  check(rawRecords.every(row => row.profile === null && !row.profileVerified && !row.executionEnabled && !row.realTransportProofAvailable), "Aggregation must not infer profile or vehicle authority");
+  check(scanCapture.take() === null, "Core aggregate must be consumed once");
+  check(!Object.hasOwn(session, "coreRawReadoutCapture"), "Core raw aggregate leaked into saved session");
   check(attempts.length === 9 && attempts.every((attempt) => attempt.status === "completed" && attempt.transportErrorCount === 0), `Successful core scan recorded failures or duplicate attempts (${JSON.stringify(attempts)})`);
   check(session?.webSerialReadoutSummary?.source === "web_serial", "Core scan did not retain Web Serial readout provenance");
   check(JSON.stringify(session?.dtcSnapshot?.codes) === JSON.stringify(["P0133", "P0420"]), `Multi-ECU Mode 03 retention fabricated or lost DTCs (${JSON.stringify(session?.dtcSnapshot?.dtcs || [])})`);
@@ -525,6 +532,41 @@ for (const event of ["next_read", "protocol", "initialize", "reset", "disconnect
   check(await client.context.runObdDeveloperRead("partial", ["07", "0A"]) === false, "Partial raw group must preserve failed read outcome");
   check(client.context.obdDevSession.rawReadoutCapture.take() === null, "Failed read must discard already acquired raw data");
   if (!client.port.closed) await client.context.disconnectObdDeveloperVci();
+}
+
+// Explicit scan ownership across protocol inquiry and intervening reads.
+for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]) {
+  const client = createClient(successfulResponses);
+  await connect(client);
+  const read = client.context.readObdDeveloperReadiness;
+  client.context.readObdDeveloperReadiness = async owner => {
+    if (interference === "settings") client.context.obdDevSession.settingsObservation.owner.invalidate();
+    if (interference === "manual_read") await client.context.runObdDeveloperRead("other", ["03"]);
+    if (interference === "cancel") client.context.obdAccessUnlocked = false;
+    return read(interference === "copied_owner" ? { ...owner } : owner);
+  };
+  await client.context.readObdDeveloperCoreScan();
+  const owner = client.context.obdDevSession.coreRawReadoutCapture;
+  check(owner.take() === null && owner.inspect().count === 0, interference + ": partial or foreign scan records survived");
+  if (interference !== "cancel") check(client.context.obdDevSession.lastSession.dtcSnapshot.codes.includes("P0133"), "Raw rejection must preserve ordinary diagnostic result");
+  client.context.obdAccessUnlocked = true;
+  await client.context.disconnectObdDeveloperVci();
+}
+{
+  const client = createClient(successfulResponses);
+  await connect(client);
+  await client.context.readObdDeveloperCoreScan();
+  const old = client.context.obdDevSession.coreRawReadoutCapture;
+  check(old.inspect().count === 4, "First scan raw records missing");
+  // Existing protocol requery expires the settings ticket; do not relax it for aggregation.
+  await client.context.readObdDeveloperCoreScan();
+  check(old.take() === null, "New scan must discard the previous aggregate");
+  check(client.context.obdDevSession.coreRawReadoutCapture.take() === null, "Protocol requery must not splice settings generations");
+  await client.context.initializeElmDeveloperAdapter();
+  await client.context.readObdDeveloperCoreScan();
+  check(client.context.obdDevSession.coreRawReadoutCapture.take()?.length === 4, "Explicit new initialization permits a fresh same-generation scan");
+  check(old.take() === null, "Recovery must not revive old aggregate");
+  await client.context.disconnectObdDeveloperVci();
 }
 
 console.log(`validate-serial-integration: ${checks} checks passed`);
