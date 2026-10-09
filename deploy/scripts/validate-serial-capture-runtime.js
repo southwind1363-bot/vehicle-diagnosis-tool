@@ -70,4 +70,25 @@ for (const size of [1, 7, 32768]) {
     cases++;
   } finally { await wire.close(); }
 }
+{
+  const c = client(), wire = attachWire(c, 7, { "03": "NO DATA\r>" });
+  try {
+    await c.context.initializeElmDeveloperAdapter();
+    const state = c.context.obdDevSession, settings = state.settingsObservation;
+    const write = state.writer.write;
+    state.writer.write = bytes => {
+      // An observation arriving after the read starts cannot prove its earlier conditions.
+      assert.equal(settings.owner.recordProtocol(settings.ticket, "A6").ok, true);
+      return write(bytes);
+    };
+    const result = await c.context.readElmDeveloperCommandRecord("03", 80);
+    assert.equal(settings.owner.inspect(settings.ticket).summary.protocol11bitReported, true);
+    assert.equal(result.record.settingsBeforeRead.protocol11bitReported, false);
+    assert.equal(Object.isFrozen(result.record.settingsBeforeRead), true);
+    assert.equal(result.record.settingsBeforeRead.initializationComplete, true);
+    assert.equal(result.response, "NO DATA");
+    assert.equal(wire.writes.at(-1), "03\r");
+    cases++;
+  } finally { await wire.close(); }
+}
 console.log(`Production capture hook: ${cases} synthetic paths passed; raw data consumed or discarded, ordinary API preserved`);

@@ -85,12 +85,23 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
         const owner = createWebSerialReadoutCapture(['03', '07', '0A', '0101']);
         obdDevSession.coreRawReadoutCapture = owner;
         for (const command of ['03', '07', '0A', '0101']) owner.append({ command, transcript: text,
+          settingsBeforeRead: { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, protocol11bitReported: true },
           startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
         owner.finish(); renderObdDeveloperGate();
       }, transcript);
       assert.match(await rawPanel.innerText(), expected);
       assert.equal(await page.evaluate(() => obdDevSession.coreRawReadoutCapture.inspect().formatReview.parserAllowed), false);
     }
+    await page.evaluate(() => {
+      const owner = createWebSerialReadoutCapture(['03', '07', '0A', '0101']);
+      obdDevSession.coreRawReadoutCapture = owner;
+      for (const command of ['03', '07', '0A', '0101']) owner.append({ command, transcript: '7E8024300AAAAAAAAAA\r>',
+        settingsBeforeRead: { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, protocol11bitReported: command !== '03' },
+        startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
+      owner.finish(); renderObdDeveloperGate();
+    });
+    assert.match(await rawPanel.innerText(), /読取開始時の対応する通信番号が未確認/);
+    assert.equal(await page.evaluate(() => obdDevSession.coreRawReadoutCapture.inspect().formatReview.protocolObservedBeforeReadCount), 3);
     await page.evaluate(() => {
       const settings = obdDevSession.settingsObservation;
       settings.owner.invalidate(); renderObdDeveloperGate();

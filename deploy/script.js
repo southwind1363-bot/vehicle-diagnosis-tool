@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.638";
+const APP_VERSION = "3.13.639";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6187,7 +6187,9 @@ function renderObdCoreRawReadoutStatus() {
         : `利用不可。${reasons[snapshot.reason] || "記録の利用条件を確認できません。"}`;
   const formatReasons = {
     settings_unavailable: "設定観測を照合できません",
-    protocol_unconfirmed: "対応する通信番号が未確認です",
+    settings_before_read_unavailable: "読取開始時の設定観測がありません",
+    initialization_before_read_incomplete: "読取開始時の初期化応答が不足しています",
+    protocol_unconfirmed: "読取開始時の対応する通信番号が未確認です",
     echo_conflict: "エコー無効の応答記録に対してコマンドのエコーがあります",
     spacing_conflict: "空白無効の応答記録に対して空白区切りの行があります",
     framing_mismatch: "改行・終端または文字の形式が限定解析器の条件に合いません",
@@ -9964,9 +9966,15 @@ function createWebSerialReadoutCapture(commands) {
     const summary = observed?.ok ? observed.summary : null;
     const issues = new Set();
     if (!summary) issues.add("settings_unavailable");
-    else if (summary.protocol11bitReported !== true) issues.add("protocol_unconfirmed");
-    let compactLineCount = 0, spacedLineCount = 0;
+    let compactLineCount = 0, spacedLineCount = 0, protocolObservedBeforeReadCount = 0;
     for (const record of records) {
+      const before = record.settingsBeforeRead;
+      if (!before) issues.add("settings_before_read_unavailable");
+      else {
+        if (!before.initializationComplete) issues.add("initialization_before_read_incomplete");
+        if (!before.protocol11bitReported) issues.add("protocol_unconfirmed");
+        else protocolObservedBeforeReadCount++;
+      }
       const text = record.transcript;
       // Same bounded CR/CRLF and terminal-prompt contract as the existing limited parser.
       const lines = text.replace(/\r\n/g, "\r").split("\r");
@@ -9978,18 +9986,18 @@ function createWebSerialReadoutCapture(commands) {
       for (const line of lines.slice(0, -1)) {
         if (line === "" || ["SEARCHING...", "BUS INIT: OK", "NO DATA"].includes(line)) continue;
         if (line === record.command) {
-          issues.add(summary?.acknowledgedCommands.includes("ATE0") ? "echo_conflict" : "unsupported_line"); continue;
+          issues.add(before?.echoOffAcknowledged ? "echo_conflict" : "unsupported_line"); continue;
         }
         const compact = /^[0-9A-F]{19}$/.test(line);
         const spaced = /^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/.test(line);
         if ((!compact && !spaced) || parseInt(line.slice(0, 3), 16) > 0x7ff) { issues.add("unsupported_line"); continue; }
         frameShapeObserved = true;
         if (compact) compactLineCount++;
-        else { spacedLineCount++; if (summary?.spacesOffAcknowledged) issues.add("spacing_conflict"); }
+        else { spacedLineCount++; if (before?.spacesOffAcknowledged) issues.add("spacing_conflict"); }
       }
       if (!frameShapeObserved) issues.add("no_frame_evidence");
     }
-    return Object.freeze({ issues: Object.freeze([...issues]), compactLineCount, spacedLineCount,
+    return Object.freeze({ issues: Object.freeze([...issues]), compactLineCount, spacedLineCount, protocolObservedBeforeReadCount,
       profile: null, profileVerified: false, parserAllowed: false, executionEnabled: false });
   };
   return Object.freeze({
@@ -10002,7 +10010,11 @@ function createWebSerialReadoutCapture(commands) {
         || record.completedAt < record.startedAt || (records.length && record.startedAt < records[records.length - 1].completedAt)) {
         discard("invalid_record"); return false;
       }
-      records.push(Object.freeze({ command: record.command, transcript: record.transcript,
+      const before = record.settingsBeforeRead;
+      const fields = ["initializationComplete", "echoOffAcknowledged", "spacesOffAcknowledged", "protocol11bitReported"];
+      const settingsBeforeRead = before && fields.every(key => typeof before[key] === "boolean")
+        ? Object.freeze(Object.fromEntries(fields.map(key => [key, before[key]]))) : null;
+      records.push(Object.freeze({ command: record.command, transcript: record.transcript, settingsBeforeRead,
         startedAt: record.startedAt, completedAt: record.completedAt, profile: null, profileVerified: false,
         realTransportProofAvailable: false, executionEnabled: false }));
       return true;
@@ -10126,10 +10138,22 @@ async function readElmDeveloperCommandRecord(command, timeoutMs = 3000) {
     readContext: readWebSerialCaptureContext,
     readClock: () => performance.now()
   }), operation: null };
+  let settingsBeforeRead = null;
+  try {
+    const settings = obdDevSession.settingsObservation;
+    const observed = settings?.ticket ? settings.owner.inspect(settings.ticket) : null;
+    const summary = observed?.ok ? observed.summary : null;
+    if (summary) settingsBeforeRead = Object.freeze({
+      initializationComplete: summary.phase === "awaiting_protocol" || summary.phase === "observed",
+      echoOffAcknowledged: summary.acknowledgedCommands.includes("ATE0"),
+      spacesOffAcknowledged: summary.spacesOffAcknowledged === true,
+      protocol11bitReported: summary.protocol11bitReported === true
+    });
+  } catch { /* Missing passive observations must not change ordinary diagnostic reads. */ }
   try {
     const response = await sendElmDeveloperCommand(command, timeoutMs, request);
     const captured = request.owner.take(request.operation);
-    return Object.freeze({ response, record: captured.ok ? captured.record : null });
+    return Object.freeze({ response, record: captured.ok ? Object.freeze({ ...captured.record, settingsBeforeRead }) : null });
   } finally { request.owner.invalidate(); }
 }
 

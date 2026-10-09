@@ -239,6 +239,10 @@ for (const eol of ["\r\n", "\r", "\n"]) {
   check(scanCapture.inspect().formatReview?.issues.includes("framing_mismatch") && !scanCapture.inspect().formatReview.parserAllowed,
     "Normal synthetic core scan must disclose raw terminator mismatch without enabling parsing");
   const rawRecords = scanCapture.take();
+  check(JSON.stringify(rawRecords.map(row => row.settingsBeforeRead?.protocol11bitReported)) === JSON.stringify([false, true, true, true]),
+    "Later protocol observation must not be backfilled into the first stored-DTC read");
+  check(rawRecords.every(row => Object.isFrozen(row.settingsBeforeRead) && row.settingsBeforeRead.initializationComplete), "Pre-read observations must be immutable");
+  check(!JSON.stringify(session).includes("settingsBeforeRead"), "Private pre-read observations must not enter saved diagnostics");
   check(JSON.stringify(rawRecords.map(row => row.command)) === JSON.stringify(["03", "07", "0A", "0101"]), "Core raw records lost command order");
   check(rawRecords.every(row => row.profile === null && !row.profileVerified && !row.executionEnabled && !row.realTransportProofAvailable), "Aggregation must not infer profile or vehicle authority");
   check(scanCapture.take() === null, "Core aggregate must be consumed once");
@@ -640,10 +644,12 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
     const ticket = settings.begin(); current.settingsTicket = ticket;
     for (const command of ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"]) settings.recordInitialization(ticket, command, command === "ATZ" ? "fixture" : "OK");
     if (protocol) settings.recordProtocol(ticket, protocol);
+    const settingsBeforeRead = { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true,
+      protocol11bitReported: protocol === "A6" };
     for (const [text, expectedIssue] of cases) {
       const owner = context.createWebSerialReadoutCapture(commands);
       for (const command of commands) check(owner.append({ command, transcript: text, startedAt: 1, completedAt: 1,
-        profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false }), "Lexical mismatch must not modify capture or diagnostics");
+        settingsBeforeRead, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false }), "Lexical mismatch must not modify capture or diagnostics");
       check(owner.inspect().formatReview === null, "Partial capture must not publish a format review");
       check(owner.finish(), "Raw recording completion is independent of format review");
       const review = owner.inspect().formatReview;
@@ -654,6 +660,15 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
       check(!JSON.stringify(review).includes("PRIVATE_RAW_SENTINEL") && Object.isFrozen(review) && Object.isFrozen(review.issues), "Format review must be bounded, immutable and raw-free");
       check(owner.take().length === 4 && owner.inspect().formatReview === null, "Review must neither consume raw records nor outlive consumption");
     }
+  }
+  for (const before of [null, {}, { initializationComplete: false, echoOffAcknowledged: false, spacesOffAcknowledged: false, protocol11bitReported: false }]) {
+    const owner = context.createWebSerialReadoutCapture(commands);
+    for (const command of commands) owner.append({ command, transcript: compact, settingsBeforeRead: before,
+      startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
+    owner.finish();
+    const missing = owner.inspect().formatReview;
+    check(missing.protocolObservedBeforeReadCount === 0 && !missing.parserAllowed, "Current settings cannot repair missing/partial pre-read evidence");
+    check(missing.issues.includes(before?.initializationComplete === false ? "initialization_before_read_incomplete" : "settings_before_read_unavailable"), "Missing pre-read evidence must be disclosed");
   }
 }
 
