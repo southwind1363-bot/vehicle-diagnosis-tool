@@ -317,4 +317,51 @@ for (const action of ['cancel', 'dispose']) {
     cases++;
   } finally { session.dispose(); }
 }
+// Exercise unavailable data and invalidation inside the final context provider itself.
+for (const kind of ['readout', 'settings']) for (const failure of ['null', 'throw', 'accessor', 'cancel', 'dispose']) {
+  const state = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+  const sent = [], nested = [];
+  let session, ticks = 0, inject = true, ready = false, scheduled = false, protocolDelivered = false, hits = 0, getterCalls = 0, cancelResult;
+  const arm = () => {
+    if (inject && !scheduled) { scheduled = true; queueMicrotask(() => { ready = true; }); }
+  };
+  session = createReadOnlyDevelopmentSession({ readContext: () => {
+    if (inject && ready) {
+      hits++;
+      if (failure === 'cancel') cancelResult = session.cancel();
+      if (failure === 'dispose') session.dispose();
+      nested.push(session.read(), session.prepareSettings());
+      if (failure === 'null') return null;
+      if (failure === 'throw') throw Error('private_delivery_context_failure');
+      if (failure === 'accessor') return { ...state, get port() { getterCalls++; return state.port; } };
+      return state;
+    }
+    if (kind === 'settings' && protocolDelivered) arm();
+    return state;
+  },
+    api: { ...api, evaluateSingleReadoutRawReceipts(input) { arm(); return api.evaluateSingleReadoutRawReceipts(input); } },
+    profile: 'iso15765_11bit_normal_h1_caf1_d0_s1_e0', readClock: () => ticks++,
+    async readCommand(command, append) { sent.push(command); append('NO DATA\r>'); return 'complete'; },
+    invalidateReceipts: () => true, beginSettingsGeneration() { state.settingsTicket = {}; return true; },
+    async readResponse(command) { sent.push(command); protocolDelivered = command === 'ATDPN'; return { completion: 'complete', response: protocolDelivered ? 'A6' : 'OK' }; }
+  });
+  try {
+    const result = await (kind === 'readout' ? session.read() : session.prepareSettings());
+    assert.equal(hits, 1); assert.equal(getterCalls, 0, 'Context accessors must never be invoked');
+    const reason = failure === 'dispose' ? 'development_session_disposed'
+      : failure === 'cancel' ? (kind === 'readout' ? 'readout_cancelled' : 'settings_preparation_cancelled')
+      : kind === 'readout' ? 'receipt_context_changed' : 'preparation_context_changed';
+    assert.equal(result.ok, false); assert.equal(result.reason, reason); assert.equal(result.summary, null);
+    assert.equal(formatSingleReadoutReceiptPreview(result).text, null);
+    assert(!JSON.stringify(result).includes('private_'));
+    if (failure === 'cancel') assert.equal(cancelResult, true);
+    for (const denied of await Promise.all(nested)) assert.equal(denied.reason, failure === 'dispose' ? 'development_session_disposed' : 'development_operation_busy');
+    assert.equal(sent.length, 4); assert.equal(session.inspect().pending, false);
+    inject = false;
+    const recovered = await (kind === 'readout' ? session.read() : session.prepareSettings());
+    assert.equal(recovered.ok, failure !== 'dispose');
+    assert.equal(sent.length, failure === 'dispose' ? 4 : 8);
+    cases++;
+  } finally { session.dispose(); }
+}
 console.log(`Development session: ${cases} lifecycle and delivery-context cases passed; synthetic callbacks only`);
