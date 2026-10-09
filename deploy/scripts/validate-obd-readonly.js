@@ -23,6 +23,7 @@ import "./validate-manufacturer-evidence-export.js";
 import "./validate-manufacturer-history-export.js";
 import "./validate-quality-history-roundtrip.js";
 import "./validate-pid-numeric-input.js";
+import "./validate-temperature-pid-payload.js";
 import "./validate-scanner-navigation.js";
 import "./validate-ecu-info-display.js";
 
