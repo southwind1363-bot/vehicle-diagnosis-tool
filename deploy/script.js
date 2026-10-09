@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.643";
+const APP_VERSION = "3.13.644";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10674,13 +10674,34 @@ function renderObdBridgeMeasurementValues(livePidSnapshot, freezeFrameSnapshot) 
   }
 }
 
+function formatObdTemperatureConversion(item = {}) {
+  const pid = typeof item.pid === "string" ? item.pid.toUpperCase() : "";
+  const id = pid === "67" ? "engine_coolant_temp_sensors" : pid === "68" ? "intake_air_temp_sensors" : null;
+  if (!id || item.id !== id || !(item.decoded === false || item.undecodedRaw === true)) return "";
+  const text = typeof item.value === "string" ? item.value.trim() : "";
+  const count = pid === "67" ? 2 : 6;
+  if (!/^[0-9a-f]{2}(?:\s+[0-9a-f]{2})+$/i.test(text)) return "換算表示: RAW形式を確認できません";
+  const bytes = text.split(/\s+/).map((part) => Number.parseInt(part, 16));
+  if (bytes.length !== count + 1) return "換算表示: RAWの長さが一致しません";
+  if (bytes[0] & ~((1 << count) - 1)) return "換算表示: 対応ビットの定義を確認できません";
+  const values = [];
+  for (let index = 0; index < count; index++) {
+    if (!(bytes[0] & (1 << index))) continue;
+    const label = pid === "67" ? `冷却水温${index + 1}` : `吸気温 B${Math.floor(index / 3) + 1} S${index % 3 + 1}`;
+    values.push(`${label}: ${bytes[index + 1] - 40} °C`);
+  }
+  return values.length ? `換算表示（RAWから計算）: ${values.join(" / ")}。2011年定義による参考表示・車両適合未確認。` : "換算表示: 対応センサーの報告なし";
+}
+
 function formatObdFreezeFrameValueLine(item = {}) {
   const ecu = item.sourceEcu || item.source_ecu || "ECU未記録";
   const frameNumber = getObdDisplayByteNumber(item.freezeFrameNumber ?? item.freeze_frame_number);
   const frame = frameNumber !== null ? `FF #${frameNumber}` : "FF番号未記録";
   const raw = item.decoded === false || item.undecodedRaw === true ? " / 未換算" : "";
   const pid = typeof item.pid === "string" && /^[0-9A-F]{2}$/i.test(item.pid) ? `PID ${item.pid.toUpperCase()} / ` : "";
-  return `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)} [${pid}${ecu} / ${frame}]${raw}`;
+  const conversion = formatObdTemperatureConversion(item);
+  const reading = conversion ? `RAW ${item.value}` : formatObdBridgeReadoutValue(item);
+  return `${item.label || item.id || "項目"}: ${reading} [${pid}${ecu} / ${frame}]${raw}${conversion ? ` / ${conversion}` : ""}`;
 }
 
 function createObdFreezeFrameReviewControls(values, rows) {
@@ -15947,14 +15968,21 @@ function renderObdMonitorValues(values, insights = []) {
 
     const reading = document.createElement("p");
     reading.className = "obd-monitor-reading";
+    const conversion = formatObdTemperatureConversion(item);
     reading.textContent = item.value === null || item.value === undefined || item.value === ""
-      ? "値未確認" : `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
+      ? "値未確認" : conversion ? `RAW ${item.value}` : `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
 
     const note = document.createElement("span");
     note.className = "obd-monitor-note";
     note.textContent = item.supportNote || "メーカー整備書の基準値と比較してください。";
 
     card.append(category, displayLabel, reading, note);
+    if (conversion) {
+      const detail = document.createElement("p");
+      detail.className = "obd-monitor-note";
+      detail.textContent = conversion;
+      card.appendChild(detail);
+    }
     obdMonitorGrid.appendChild(card);
   });
 

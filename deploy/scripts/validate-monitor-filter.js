@@ -34,7 +34,8 @@ function harness(observable = true) {
     constructor(callback) { this.callback = callback; }
     observe(target, options) { subscriptions.push({ target, options, callback: this.callback }); }
   };
-  vm.runInContext(`${extract("initializeObdReadoutFilter")}\n${extract("initializeObdMonitorFilter")}\n${extract("renderObdMonitorValues")}`, context);
+  vm.runInContext(`${extract("initializeObdReadoutFilter")}\n${extract("initializeObdMonitorFilter")}\n${extract("formatObdTemperatureConversion")}
+${extract("renderObdMonitorValues")}`, context);
   context.initializeObdMonitorFilter();
   return { context, nodes, subscriptions };
 }
