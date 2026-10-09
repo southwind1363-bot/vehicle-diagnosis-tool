@@ -97,4 +97,4 @@ for (const wire of [wires[0].replace(">", ""), "\r>" , "x".repeat(12001)]) {
 const unsupported = createReadOnlyReceiptCapture(api), attempt = unsupported.begin();
 check(unsupported.startCommand(attempt, "03", "iso15765_11bit_normal_h1_caf1_d0_s0_e0", 0).reason === "profile_unavailable",
   "current space-off setting silently promoted to the fixed space-on profile");
-console.log(`Serial/raw receipt handoff: ${checks} checks passed (synthetic bytes; production capture hook not installed)`);
+console.log(`Serial/raw receipt handoff: ${checks} checks passed (synthetic bytes; receipt aggregation remains test-only)`);

@@ -23,6 +23,7 @@ import "./validate-development-session-serial.js";
 import "./validate-receipt-runtime-handoff.js";
 import "./validate-readonly-integration-boundary.js";
 import "./validate-serial-command-capture.js";
+import "./validate-serial-capture-runtime.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["connectObdDeveloperVci", "disconnectObdDeveloperVci", "lockObdDeveloperMode", "lockObdAccess", "setObdDeveloperConnectionState", "resetWebSerialConnectionAttemptMetadata", "isWebSerialPortSelectionCancelled", "getWebSerialConnectionFailureReason", "isCurrentObdSerialOperation", "continueObdSerialOperation", "throwIfObdSerialOperationCancelled", "beginObdBridgeOperation", "isObdBridgeOperationBlocked"];

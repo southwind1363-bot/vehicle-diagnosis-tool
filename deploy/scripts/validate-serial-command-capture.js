@@ -132,4 +132,4 @@ for (const size of [1, 7, 32768]) {
     } finally { await wire.close(); }
   }
 }
-console.log(`Single-command capture: ${cases} lifetime/clock/boundary and synthetic serial cases passed; application receive hook not installed`);
+console.log(`Single-command capture: ${cases} lifetime/clock/boundary and synthetic serial cases passed; production factory, test-owned wiring`);
