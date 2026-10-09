@@ -27,6 +27,8 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
     const { createSingleReadoutRunPreviewSession } = await import('./single-readout-run-preview-session.js');
     const { attachSingleReadoutPreviewView } = await import('./single-readout-preview-view.js');
     const { createSimulatedReviewController } = await import('./monitor-preview-controller.js');
+    const { createReadOnlyDevelopmentSession } = await import('./readonly-development-session.js');
+    const { formatSingleReadoutReceiptPreview } = await import('./single-readout-receipt-preview.js');
     let checks = 0, scenario = 'normal';
     const check = (condition, name) => { if (!condition) throw new Error(name); checks++; };
     for (const phase of ['factory', 'inspect', 'text']) {
@@ -151,6 +153,50 @@ module.exports = async function validateSingleReadoutPreview(page, api) {
           check(root.querySelector('.receipt-failure-reason').textContent === '' && root.querySelector('.receipt-failure-reason').hidden, 'recovered result has no stale explanation');
           check(root.querySelector('[role=status]').textContent === '固定の模擬記録を表示中', 'recovery clears failure status');
         }
+      } finally { controller.invalidate(); attached.dispose(); root.remove(); }
+    }
+    // The shared owner's final context check must also suppress a ready-looking DOM.
+    for (const field of ['port', 'reader', 'writer', 'settingsTicket', 'revision', 'connected', 'unlocked']) {
+      let change = false, active, changes = 0;
+      const controller = createSimulatedReviewController(() => {
+        const context = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+        let display = null, disposed = false, ticks = 0;
+        const runner = createReadOnlyDevelopmentSession({ readContext: () => context,
+          api: { ...window.ObdReadOnly, evaluateSingleReadoutRawReceipts(input) {
+            const result = window.ObdReadOnly.evaluateSingleReadoutRawReceipts(input);
+            if (change) queueMicrotask(() => {
+              context[field] = field === 'revision' ? 2 : ['connected', 'unlocked'].includes(field) ? false : {};
+              changes++;
+            });
+            return result;
+          } },
+          profile: 'iso15765_11bit_normal_h1_caf1_d0_s1_e0', readClock: () => ticks++,
+          async readCommand(command, append) { append('NO DATA\r>'); return 'complete'; },
+          invalidateReceipts: () => false, beginSettingsGeneration: () => false,
+          readResponse() { throw Error('unexpected_settings_callback'); }
+        });
+        active = {
+          ready: runner.read().then(result => { if (!disposed) display = formatSingleReadoutReceiptPreview(result); }),
+          inspect() { return display || { ok: false, text: null }; },
+          dispose() { disposed = true; display = null; runner.dispose(); }
+        };
+        return active;
+      }, () => active.ready);
+      const root = document.createElement('main'); document.body.append(root);
+      const attached = attachSingleReadoutPreviewView(root, controller);
+      try {
+        check(await controller.read() && root.querySelector('pre').textContent === expected.no_data, 'baseline delivery visible');
+        change = true;
+        const pending = controller.read();
+        check(root.querySelector('pre').textContent === '', 'delivery check clears previous result synchronously');
+        check(await pending === false && changes === 1, 'delivery context actually changes and is rejected');
+        check(controller.inspect().failureReason === 'receipt_context_changed', 'delivery failure retains bounded context reason');
+        check(root.querySelector('pre').hidden && root.querySelector('pre').textContent === '', 'late context result stays hidden');
+        check(root.querySelector('.receipt-failure-reason').textContent === '取得中に接続または設定が変わりました。以前の条件の記録は表示しません。', 'delivery failure has Japanese explanation');
+        check(active.inspect().text === null, 'rejected delivery owner disposed');
+        change = false;
+        check(await controller.read() && root.querySelector('pre').textContent === expected.no_data, 'explicit fresh acquisition recovers');
+        check(root.querySelector('.receipt-failure-reason').hidden, 'fresh acquisition clears delivery failure explanation');
       } finally { controller.invalidate(); attached.dispose(); root.remove(); }
     }
     const sessions = [], gates = [];
