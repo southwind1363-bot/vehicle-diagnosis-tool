@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { createReadOnlyDevelopmentSession } from "./fixtures/readonly-development-session.js";
+import { formatSingleReadoutReceiptPreview } from "./fixtures/single-readout-receipt-preview.js";
 const runtime = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), runtime);
 const api = runtime.window.ObdReadOnly;
@@ -151,4 +152,52 @@ for (const boundary of [1, 2, 3, 4, 5, 6, 7]) {
     cases++;
   } finally { session.dispose(); }
 }
-console.log(`Development session: ${cases} exclusion/cancellation/failure/disposal and backwards-clock recovery cases passed; synthetic callbacks only`);
+// All bytes may arrive successfully while final parsing/observation still fails.
+for (const failAt of [0, 1, 2, 3, 'observation']) {
+  const state = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+  const commands = ['03', '07', '0A', '0101'], sent = [], callbacks = [];
+  let inject = false, ticks = 0, parses = 0, observations = 0, settingsCalls = 0;
+  const session = createReadOnlyDevelopmentSession({ readContext: () => state,
+    api: { ...api,
+      parseElmReadOnlyRawTranscript(input) {
+        const index = parses++;
+        if (inject && index === failAt) throw Error('private_parser_failure');
+        return api.parseElmReadOnlyRawTranscript(input);
+      },
+      evaluateSingleReadoutRawReceipts(input) {
+        observations++;
+        if (inject && failAt === 'observation') throw Error('private_observer_failure');
+        return api.evaluateSingleReadoutRawReceipts(input);
+      }
+    },
+    profile: 'iso15765_11bit_normal_h1_caf1_d0_s1_e0', readClock: () => ticks++,
+    async readCommand(command, append) { sent.push(command); callbacks.push(append); append('NO DATA\r>'); return 'complete'; },
+    invalidateReceipts() { settingsCalls++; return true; },
+    beginSettingsGeneration() { settingsCalls++; return true; },
+    readResponse() { settingsCalls++; throw Error('unexpected_settings_callback'); }
+  });
+  try {
+    const previous = await session.read(); assert.equal(previous.ok, true);
+    const previousText = JSON.stringify(previous);
+    inject = true; parses = 0; observations = 0; sent.length = 0;
+    const failed = await session.read();
+    assert.equal(failed.ok, false); assert.equal(failed.reason, 'raw_validation_failed');
+    assert.equal(failed.completedCommandCount, 4); assert.equal(failed.summary, null);
+    assert.deepEqual(sent, commands, 'Acquisition completion does not imply successful validation');
+    assert.equal(parses, failAt === 'observation' ? 4 : failAt + 1);
+    assert.equal(observations, failAt === 'observation' ? 1 : 0);
+    assert.equal(formatSingleReadoutReceiptPreview(failed).text, null);
+    assert(!JSON.stringify(failed).includes('private_'));
+    assert.equal(JSON.stringify(previous), previousText);
+    assert.equal(session.inspect().status, 'idle'); assert.equal(session.inspect().pending, false);
+    for (const append of callbacks) assert.equal(append('late>'), false);
+    inject = false; parses = 0; observations = 0; sent.length = 0;
+    const recovered = await session.read();
+    assert.equal(recovered.ok, true); assert.notEqual(recovered.summary, previous.summary);
+    assert.equal(parses, 4); assert.equal(observations, 1); assert.deepEqual(sent, commands);
+    assert.match(formatSingleReadoutReceiptPreview(recovered).text, /NO DATA報告あり/);
+    assert.equal(settingsCalls, 0); assert.equal(recovered.executionEnabled, false);
+    cases++;
+  } finally { session.dispose(); }
+}
+console.log(`Development session: ${cases} exclusion/cancellation/failure/disposal, backwards-clock and final-validation recovery cases passed; synthetic callbacks only`);
