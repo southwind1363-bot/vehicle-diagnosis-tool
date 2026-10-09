@@ -7,7 +7,7 @@ import { createMonitorPreviewBrowserSource } from "./fixtures/monitor-preview-br
 export function createDevelopmentSessionPreview() {
   const script = `(() => { "use strict";
 ${createMonitorPreviewBrowserSource("single")}
-const buttons = Object.fromEntries(['prepare','read','cancel','end','restart','show-result','back-controls'].map(id => [id, document.getElementById(id)]));
+const buttons = Object.fromEntries(['prepare','read','read-prepared','cancel','end','restart','show-result','back-controls'].map(id => [id, document.getElementById(id)]));
 const status = document.getElementById('status'), output = document.getElementById('output');
 const progress = document.getElementById('progress');
 const scenario = document.getElementById('scenario');
@@ -51,11 +51,12 @@ const createOwner = (failure = selectedScenario) => {
   });
   return session;
 };
-let owner = createOwner(), ended = false;
+let owner = createOwner(), ended = false, prepared = false;
 const paint = message => {
   const state = owner.inspect();
   if (ended || state.status !== 'running') progress.textContent = '';
   buttons.prepare.disabled = buttons.read.disabled = ended || state.pending;
+  buttons['read-prepared'].disabled = ended || state.pending || !prepared;
   scenario.disabled = ended || state.pending;
   sampleChoice.disabled = ended || state.pending;
   failurePosition.disabled = ended || state.pending || selectedScenario === 'normal';
@@ -70,10 +71,12 @@ const paint = message => {
 const execute = async kind => {
   if (ended || owner.inspect().pending) return;
   syncRestoredConditions();
+  if (kind === 'prepared' && !prepared) return;
   const current = owner;
+  prepared = false;
   output.textContent = '';
   progress.textContent = '';
-  const promise = kind === 'settings' ? current.prepareSettings() : current.read();
+  const promise = kind === 'settings' ? current.prepareSettings() : kind === 'prepared' ? current.readPrepared() : current.read();
   paint(kind === 'settings' ? '模擬設定の応答を確認中' : '模擬記録を取得中');
   const result = await promise;
   if (ended || current !== owner) return;
@@ -94,7 +97,10 @@ const execute = async kind => {
     }
     paint(message + ' 再試行は操作ボタンで選んでください。'); return;
   }
-  if (kind === 'settings') output.textContent = '模擬設定の応答確認が終了しました。実機設定・復元・通信形式は未確認です。読み取りは自動開始しません。';
+  if (kind === 'settings') {
+    prepared = true;
+    output.textContent = '模擬設定の応答確認が終了しました。実機設定・復元・通信形式は未確認です。読み取りは自動開始しません。「準備後の模擬記録を取得」で同じ模擬条件の記録を一度だけ新しく取得できます。';
+  }
   else {
     const display = formatSingleReadoutReceiptPreview(result);
     if (!display.ok) { paint('取得結果の項目構成を確認できません。記録は表示しません。'); return; }
@@ -120,6 +126,7 @@ buttons['back-controls'].addEventListener('click', () => {
 });
 buttons.prepare.addEventListener('click', () => { void execute('settings'); });
 buttons.read.addEventListener('click', () => { void execute('readout'); });
+buttons['read-prepared'].addEventListener('click', () => { void execute('prepared'); });
 const changeConditions = () => {
   if (ended || owner.inspect().pending || !['normal', 'incomplete', 'exception', 'disconnect', 'settings_changed'].includes(scenario.value) || !sampleNames.includes(sampleChoice.value) || !['1', '2', '3', '4'].includes(failurePosition.value)) {
     scenario.value = selectedScenario; sampleChoice.value = selectedSample; failurePosition.value = selectedPosition; return;
@@ -127,7 +134,7 @@ const changeConditions = () => {
   selectedScenario = scenario.value;
   selectedSample = sampleChoice.value;
   selectedPosition = failurePosition.value;
-  owner.dispose(); owner = createOwner(); output.textContent = '';
+  prepared = false; owner.dispose(); owner = createOwner(); output.textContent = '';
   paint('模擬条件を変更しました。操作を選んでください');
 };
 scenario.addEventListener('change', changeConditions);
@@ -138,16 +145,17 @@ const syncRestoredConditions = () => {
   if (scenario.value !== selectedScenario || sampleChoice.value !== selectedSample || failurePosition.value !== selectedPosition) changeConditions();
 };
 buttons.cancel.addEventListener('click', () => {
+  if (buttons.cancel.disabled) return;
   if (owner.cancel()) { output.textContent = ''; paint('取消済み。模擬処理が戻るのを待っています。'); }
 });
 const end = (focusRestart = false) => {
-  ended = true; owner.dispose(); output.textContent = ''; paint('この模擬セッションは終了しました');
+  prepared = false; ended = true; owner.dispose(); output.textContent = ''; paint('この模擬セッションは終了しました');
   if (focusRestart) buttons.restart.focus();
 };
 buttons.end.addEventListener('click', () => end(true));
 buttons.restart.addEventListener('click', () => {
   if (!ended) return;
-  owner = createOwner(); ended = false; output.textContent = ''; paint('操作を選んでください'); buttons.prepare.focus();
+  prepared = false; owner = createOwner(); ended = false; output.textContent = ''; paint('操作を選んでください'); buttons.prepare.focus();
 });
 window.addEventListener('pagehide', () => end());
 window.addEventListener('pageshow', event => {
@@ -171,7 +179,8 @@ paint('操作を選んでください');
 <p>読取処理の終了と、応答内容を診断に使えるかの判定は別です。空白なし形式も宣言済みの模擬条件であり、設定確認から自動認定するものではありません。</p>
 <p><label for="failure-position">失敗させる段階</label> <select id="failure-position" style="font:inherit;max-width:100%;min-height:48px"><option value="1">1番目</option><option value="2" selected>2番目</option><option value="3">3番目</option><option value="4">4番目</option></select></p>
 <p>失敗例は選んだ段階の応答で停止します。「途中停止なし」ではこの指定を使いません。条件を変えると表示済みの結果を消去します。再試行は自動では行いません。</p>
-<div class="controls"><button id="prepare">模擬設定を確認</button><button id="read">模擬記録を取得</button><button id="show-result" aria-controls="output" disabled>結果へ移動</button><button id="cancel">操作を取り消す</button><button id="end">セッションを終了</button><button id="restart" hidden>新しい模擬セッション</button></div>
+<p>「準備後の模擬記録を取得」は設定確認の完了後に一度だけ使えます。条件変更・別の取得・取消・終了後は、もう一度模擬設定を確認してください。</p>
+<div class="controls"><button id="prepare">模擬設定を確認</button><button id="read">模擬記録を取得</button><button id="read-prepared" disabled>準備後の模擬記録を取得</button><button id="show-result" aria-controls="output" disabled>結果へ移動</button><button id="cancel">操作を取り消す</button><button id="end">セッションを終了</button><button id="restart" hidden>新しい模擬セッション</button></div>
 <p id="status" role="status" aria-live="polite"></p><p id="progress" role="status" aria-live="polite"></p><pre id="output" tabindex="-1" role="region" aria-label="模擬操作の結果"></pre><button id="back-controls" aria-controls="scenario" hidden disabled>操作へ戻る</button><noscript>この模擬操作にはJavaScriptが必要です。</noscript></main><script>${script}</script></html>\n`;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

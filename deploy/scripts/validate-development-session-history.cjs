@@ -39,9 +39,13 @@ module.exports = async (chromium, output) => {
         for (const width of [390, 1280]) {
           await page.setViewportSize({ width, height: 900 });
           for (const phase of ['complete', 'pending']) {
-            for (const operation of ['prepare', 'read']) {
+            for (const operation of ['prepare', 'read', 'read-prepared']) {
               await page.goto(origin + '/session');
               await page.selectOption('#sample', 'no_data');
+              if (operation === 'read-prepared') {
+                await page.locator('#prepare').click();
+                await page.waitForFunction(() => !document.getElementById('read-prepared').disabled);
+              }
               if (phase === 'pending') {
                 const waiting = await page.evaluate(operation => {
                   window.historyProbe.hold = true;
@@ -68,6 +72,7 @@ module.exports = async (chromium, output) => {
               assert.equal(probe.documentId === before, cacheEnabled);
               assert.equal(await page.locator('#output').textContent(), '');
               assert.equal(await page.locator('#progress').textContent(), '');
+              assert(await page.locator('#read-prepared').isDisabled(), 'History cannot restore a consumed or previous preparation');
               assert(await page.locator('#show-result').isDisabled());
               assert(await page.locator('#back-controls').isHidden());
               assert(await page.locator('#back-controls').isDisabled());
@@ -121,6 +126,6 @@ module.exports = async (chromium, output) => {
     }
     fs.writeFileSync(path.join(output, 'development-session-history.json'), JSON.stringify(evidence, null, 2) + '\n');
     console.log('Development session actual history:', JSON.stringify(evidence));
-    console.log('Development session history: 16 actual navigation/return/manual-restart paths passed; pending synthetic response callbacks controlled by test');
+    console.log(`Development session history: ${evidence.length} actual navigation/return/manual-restart paths passed; pending synthetic response callbacks controlled by test`);
   } finally { await new Promise(resolve => server.close(resolve)); }
 };

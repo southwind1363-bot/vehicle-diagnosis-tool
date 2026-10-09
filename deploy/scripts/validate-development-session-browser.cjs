@@ -20,6 +20,8 @@ module.exports = async (context, output) => {
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ colorScheme: width === 390 ? 'light' : 'dark' });
       await page.goto(pathToFileURL(file).href);
+      const preparedRead = page.locator('#read-prepared');
+      assert(await preparedRead.isDisabled());
       const prepare = page.locator('#prepare'), read = page.locator('#read'), cancel = page.locator('#cancel');
       const end = page.locator('#end'), restart = page.locator('#restart'), result = page.locator('#output');
       const showResult = page.getByRole('button', { name: '結果へ移動', exact: true });
@@ -72,11 +74,68 @@ module.exports = async (context, output) => {
       await checkResultNavigation();
       await page.clock.runFor(2000);
       assert.equal(await result.innerText(), settingsText, 'Settings must not auto-start readout');
-      await read.click(); assert.equal(await result.textContent(), '');
+      assert(await preparedRead.isEnabled());
+      await cancel.dispatchEvent('click');
+      assert(await preparedRead.isEnabled(), 'Disabled cancellation must not expire idle preparation');
+      await preparedRead.focus(); await page.keyboard.press('Enter');
+      assert(await preparedRead.isDisabled());
+      assert.equal(await result.textContent(), '');
       await checkSteps(['保存DTC', '保留DTC', '恒久DTC', 'レディネス']);
       assert.match(await result.innerText(), /模擬の一回分の記録/);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({ path: path.join(output, `${width}-development-session.png`), fullPage: true });
+      const acquiredText = await result.textContent();
+      await preparedRead.dispatchEvent('click'); await page.clock.runFor(600);
+      assert.equal(await result.textContent(), acquiredText, 'Consumed preparation cannot start another acquisition');
+      for (const at of [0, 1, 2, 3]) for (const action of ['cancel', 'end']) {
+        await prepare.click(); await page.clock.runFor(600);
+        assert(await preparedRead.isEnabled());
+        await preparedRead.click(); await page.clock.runFor(at * 120 + 1);
+        assert(await preparedRead.isDisabled());
+        await (action === 'cancel' ? cancel : end).click();
+        await preparedRead.dispatchEvent('click');
+        assert.equal(await result.textContent(), '');
+        await page.clock.runFor(600);
+        assert.equal(await result.textContent(), '', 'Late prepared response cannot restore a result');
+        assert(await preparedRead.isDisabled());
+        if (action === 'end') { await restart.click(); assert(await preparedRead.isDisabled()); }
+      }
+      for (const [selector, value] of [[sampleChoice, 'codes_present'], [scenario, 'incomplete'], [failurePosition, '3']]) {
+        await scenario.selectOption('normal'); await sampleChoice.selectOption('normal');
+        await prepare.click(); await page.clock.runFor(600);
+        assert(await preparedRead.isEnabled());
+        // The position control is disabled in normal mode; use a restored value
+        // without a change event to exercise execute's condition resynchronization.
+        if (selector === failurePosition) {
+          await selector.evaluate((element, next) => { element.value = next; }, value);
+          await preparedRead.click();
+        } else await selector.selectOption(value);
+        assert(await preparedRead.isDisabled());
+        assert.equal(await result.textContent(), '');
+        await page.clock.runFor(600); assert.equal(await result.textContent(), '');
+      }
+      await scenario.selectOption('normal'); await sampleChoice.selectOption('normal');
+      await prepare.click(); await page.clock.runFor(600);
+      await read.click(); assert(await preparedRead.isDisabled()); await page.clock.runFor(600);
+      for (const sample of ['normal', 'codes_present', 'mixed_sources', 'mixed_conflict', 'compact', 'conflict', 'missing_prompt', 'negative_response', 'no_data']) {
+        await sampleChoice.selectOption(sample);
+        await prepare.click(); await page.clock.runFor(600);
+        assert(await preparedRead.isEnabled());
+        await preparedRead.click(); await page.clock.runFor(600);
+        assert(await preparedRead.isDisabled());
+        const preparedText = await result.textContent();
+        await read.click(); await page.clock.runFor(600);
+        assert.equal(await result.textContent(), preparedText, 'Prepared acquisition preserves existing sample interpretation');
+        assert(!preparedText.includes('settingsTicket')); assert(!preparedText.includes('7E8'));
+      }
+      await sampleChoice.selectOption('normal');
+      await prepare.click(); await page.clock.runFor(600);
+      assert(await preparedRead.isEnabled());
+      await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
+      assert(await preparedRead.isDisabled());
+      await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+      assert(await preparedRead.isDisabled());
+      await restart.click(); assert(await preparedRead.isDisabled());
       for (const button of [prepare, read]) {
         await button.click(); await page.clock.runFor(150);
         await cancel.click();
@@ -300,6 +359,6 @@ module.exports = async (context, output) => {
       assert.equal(await page.evaluate(() => typeof window.ObdReadOnly), 'undefined');
     }
     assert.deepEqual(errors, []); assert.deepEqual(external, []);
-    console.log('Development session browser: 9 samples, 36 sample recovery paths, 32 failure-position paths, 32 connection/settings interruption and restart paths and CSP passed at 390/1280px');
+    console.log('Development session browser: prepared one-use acquisition, 9 sample parity, cancel/end at all 4 positions, condition reset and history expiry; existing 9 samples, 36 sample recovery paths, 32 failure-position paths, 32 connection/settings interruption and restart paths and CSP passed at 390/1280px');
   } finally { await page.close(); }
 };
