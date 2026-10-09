@@ -200,4 +200,54 @@ for (const failAt of [0, 1, 2, 3, 'observation']) {
     cases++;
   } finally { session.dispose(); }
 }
-console.log(`Development session: ${cases} exclusion/cancellation/failure/disposal, backwards-clock and final-validation recovery cases passed; synthetic callbacks only`);
+// Invalidation inside a synchronous final validator must win over its later return.
+for (const action of ['cancel', 'dispose']) {
+  for (const at of [0, 1, 2, 3, 'observation']) {
+    const state = { port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true };
+    const sent = [], callbacks = [], nested = [];
+    let session, inject = true, parses = 0, observations = 0, ticks = 0, stops = 0, stopResult, stoppedState, settingsCalls = 0;
+    const interrupt = position => {
+      if (!inject || position !== at) return;
+      stops++;
+      stopResult = action === 'cancel' ? session.cancel() : session.dispose();
+      stoppedState = session.inspect();
+      nested.push(session.read(), session.prepareSettings());
+    };
+    session = createReadOnlyDevelopmentSession({ readContext: () => state,
+      api: { ...api,
+        parseElmReadOnlyRawTranscript(input) { interrupt(parses++); return api.parseElmReadOnlyRawTranscript(input); },
+        evaluateSingleReadoutRawReceipts(input) { observations++; interrupt('observation'); return api.evaluateSingleReadoutRawReceipts(input); }
+      },
+      profile: 'iso15765_11bit_normal_h1_caf1_d0_s1_e0', readClock: () => ticks++,
+      async readCommand(command, append) { sent.push(command); callbacks.push(append); append('NO DATA\r>'); return 'complete'; },
+      invalidateReceipts() { settingsCalls++; return true; },
+      beginSettingsGeneration() { settingsCalls++; return true; },
+      readResponse() { settingsCalls++; throw Error('unexpected_settings_callback'); }
+    });
+    try {
+      const result = await session.read();
+      assert.equal(stops, 1); assert.equal(parses, 4); assert.equal(observations, 1);
+      assert.equal(stoppedState.status, action === 'cancel' ? 'cancelling' : 'disposed');
+      assert.equal(stoppedState.pending, true, 'Final validation remains owned until its run settles');
+      if (action === 'cancel') assert.equal(stopResult, true);
+      assert.equal(result.ok, false); assert.equal(result.summary, null);
+      assert.equal(result.reason, action === 'cancel' ? 'readout_cancelled' : 'development_session_disposed');
+      assert.equal(formatSingleReadoutReceiptPreview(result).text, null);
+      for (const denied of await Promise.all(nested)) {
+        assert.equal(denied.reason, action === 'cancel' ? 'development_operation_busy' : 'development_session_disposed');
+      }
+      assert.deepEqual(sent, ['03', '07', '0A', '0101']);
+      for (const append of callbacks) assert.equal(append('late>'), false);
+      assert.equal(session.inspect().pending, false); assert.equal(settingsCalls, 0);
+      inject = false;
+      const next = await session.read();
+      if (action === 'cancel') {
+        assert.equal(next.ok, true); assert.equal(sent.length, 8);
+      } else {
+        assert.equal(next.reason, 'development_session_disposed'); assert.equal(sent.length, 4);
+      }
+      cases++;
+    } finally { session.dispose(); }
+  }
+}
+console.log(`Development session: ${cases} exclusion/cancellation/failure/disposal, backwards-clock, final-validation recovery and validator interruption cases passed; synthetic callbacks only`);
