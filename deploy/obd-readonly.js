@@ -40942,7 +40942,10 @@
     else if (["61", "62", "8E"].includes(pid)) value = a - 125;
     else if (pid === "63") value = word();
     else if (pid === "64") return decodeEnginePercentTorqueData(pid, dataBytes);
-    else if (pid === "69") return decodeCommandedEgrAndError(pid, a, b);
+    else if (pid === "69") {
+      const rawDefinition = monitorDefinitions.find((item) => item.id === "egr_system_pid69_raw");
+      return rawDefinition ? buildUndecodedPidValue(rawDefinition, pid, dataBytes) : null;
+    }
     else if (pid === "84") value = a - 40;
     else if (pid === "8C") value = a * 100 / 255;
     else if (pid === "A6") value = doubleWord() === null ? null : doubleWord() / 10;
@@ -40985,17 +40988,17 @@
     ];
     const twoBytePids = [
       "02", "03", "0C", "10", "14", "15", "16", "17", "18", "19", "1A", "1B", "1F", "21", "22", "23",
-      "31", "32", "3C", "3D", "3E", "3F", "42", "43", "44", "4D", "4E", "59", "5D", "5E", "63", "69"
+      "31", "32", "3C", "3D", "3E", "3F", "42", "43", "44", "4D", "4E", "59", "5D", "5E", "63"
     ];
     const fourBytePids = ["01", "24", "25", "26", "27", "28", "29", "2A", "2B", "34", "35", "38", "39", "A6"];
     if (oneBytePids.includes(pid)) return 1;
     if (twoBytePids.includes(pid)) return 2;
     if (fourBytePids.includes(pid)) return 4;
     if (pid === "64") return 5;
-    // SAE J1979-DA OCT2011, Tables B83/B84: support byte plus sensor bytes.
+    // SAE J1979-DA OCT2011, Tables B83/B84/B85: support byte plus data bytes.
     // Keep these values RAW until individual sensor conversion is implemented.
     if (pid === "67") return 3;
-    if (pid === "68") return 7;
+    if (pid === "68" || pid === "69") return 7;
     return 0;
   }
 
@@ -41113,30 +41116,6 @@
         unit: definition.unit
       });
     });
-    return values.length ? values : null;
-  }
-
-  function decodeCommandedEgrAndError(pid, a, b) {
-    if (!Number.isInteger(b)) return null;
-    const commandDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "commanded_egr_pid69");
-    const errorDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "egr_error_pid69");
-    const values = [];
-    if (commandDefinition) {
-      values.push({
-        id: commandDefinition.id,
-        pid,
-        value: Number((a * 100 / 255).toFixed(3)),
-        unit: commandDefinition.unit
-      });
-    }
-    if (errorDefinition) {
-      values.push({
-        id: errorDefinition.id,
-        pid,
-        value: Number(((b - 128) * 100 / 128).toFixed(3)),
-        unit: errorDefinition.unit
-      });
-    }
     return values.length ? values : null;
   }
 

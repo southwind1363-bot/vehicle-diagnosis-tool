@@ -1,21 +1,21 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import { applyPid69RawProposal, pid69RawDefinition } from "./fixtures/pid69-raw-proposal.js";
+const pid69RawDefinition = { id: "egr_system_pid69_raw" };
 const source = fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8");
 const definitions = JSON.parse(fs.readFileSync(new URL("../data/obd-monitor-definitions.json", import.meta.url), "utf8"));
 function load(code, rows) {
   const context = vm.createContext({ window: {} }); vm.runInContext(code, context);
   const obd = context.window.ObdReadOnly; obd.configureMonitorDefinitions(rows); return obd;
 }
-const current = load(source, definitions);
-const proposed = load(applyPid69RawProposal(source), [...definitions, pid69RawDefinition]);
+const current = load(source, definitions.filter(row => row.id !== pid69RawDefinition.id));
+const proposed = load(source, definitions);
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
 const example = "41 69 3F 80 41 0D 28 00 80";
-const old = current.decodeLivePidResponse({ raw: example });
-check(old.monitorValues.some(row => row.id === "vehicle_speed" && row.value === 40), "Re-evaluate audit: current decoder no longer invents speed");
-check(old.monitorValues.some(row => row.id === "commanded_egr_pid69" && row.value === 24.706), "Re-evaluate audit: support byte interpretation changed");
+const old = proposed.decodeLivePidResponse({ raw: example });
+check(old.monitorValues.length === 1 && old.monitorValues[0].id === pid69RawDefinition.id, "PID69 invented speed or EGR numbers");
+check(old.monitorValues[0].decoded === false, "PID69 RAW was promoted to numeric evidence");
 for (const [mode, header, decoder, status] of [
   ["live", "41", proposed.decodeLivePidResponse, "livePidReadoutStatus"],
   ["FF", "42", proposed.decodeFreezeFrameResponse, "freezeFrameReadoutStatus"]
@@ -50,4 +50,19 @@ const legacy = current.buildDiagnosticScanSession({ livePidSnapshot: current.nor
 const restoredLegacy = proposed.buildDiagnosticScanSessionFromJson(JSON.stringify(current.buildBridgeSessionExportPayload(legacy)));
 check(restoredLegacy.livePidSnapshot.monitorValues.length === 2 && restoredLegacy.livePidSnapshot.monitorValues[0].value === 50.196 && restoredLegacy.livePidSnapshot.monitorValues[1].value === 12.5, "Proposal silently rewrote legacy numeric records");
 check(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8") === source, "On-disk production source changed");
-console.log(`PID69 RAW proposal: ${checks} checks passed; current misdecoding reproduced; isolated VM only`);
+
+for(const text of ['Mode 01 PID 69: 41 69 3F 80 41 0D 28 00 80','Mode 01 PID 69: 3F 80 41 0D 28 00 80']) {
+ const rows=proposed.analyzeScannerText(text).monitorValues;
+ check(rows.length===1 && rows[0].id===pid69RawDefinition.id && rows[0].decoded===false, 'Text import lost full RAW');
+}
+const external=proposed.normalizeBridgeLivePidSnapshot({values:[{pid:'69',value:50.196}]});
+check(external.monitorValues[0]?.id==='commanded_egr_pid69' && external.monitorValues[0]?.value===50.196, 'PID-only external numeric import was reinterpreted');
+const standard=proposed.decodeLivePidResponse({raw:'41 2C 80 41 2D 90'}).monitorValues;
+check(standard.some(r=>r.id==='commanded_egr' && r.value===50.196) && standard.some(r=>r.id==='egr_error' && r.value===12.5), 'PID 2C/2D changed');
+const app=fs.readFileSync(new URL('../script.js',import.meta.url),'utf8');
+const noteContext=vm.createContext({});vm.runInContext(app.match(/function formatObdPid69ReviewNote\([^)]*\) \{[\s\S]*?\r?\n\}/)[0],noteContext);
+for(const id of ['commanded_egr_pid69','egr_error_pid69']) for(const value of [0,12.5,-100]) {
+ const row=Object.freeze({id,value});check(noteContext.formatObdPid69ReviewNote(row).includes('旧PID69数値'), 'Legacy numeric value lacks review note');
+}
+for(const row of [{id:'commanded_egr',value:20},{id:'egr_error_pid69',value:'12.5'},{id:'commanded_egr_pid69',value:20,decoded:false},{id:pid69RawDefinition.id,value:'3F 80 41 0D 28 00 80',decoded:false}]) check(noteContext.formatObdPid69ReviewNote(row)==='', 'Unrelated/RAW value labeled legacy numeric');
+console.log(`PID69 RAW regression: ${checks} checks passed; production decoding and legacy dictionary compatibility`);

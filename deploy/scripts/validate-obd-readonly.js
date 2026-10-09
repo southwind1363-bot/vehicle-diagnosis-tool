@@ -25,6 +25,7 @@ import "./validate-quality-history-roundtrip.js";
 import "./validate-pid-numeric-input.js";
 import "./validate-temperature-pid-payload.js";
 import "./validate-temperature-conversion-display.js";
+import "./validate-pid69-raw-proposal.js";
 import "./validate-scanner-navigation.js";
 import "./validate-ecu-info-display.js";
 
@@ -877,7 +878,6 @@ const oxygenSensorPidFunctionSource = source.match(/function decodeOxygenSensorP
 const wideOxygenVoltagePidFunctionSource = source.match(/function decodeWideOxygenVoltagePid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const wideOxygenCurrentPidFunctionSource = source.match(/function decodeWideOxygenCurrentPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const enginePercentTorqueDataFunctionSource = source.match(/function decodeEnginePercentTorqueData[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
-const commandedEgrAndErrorFunctionSource = source.match(/function decodeCommandedEgrAndError[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const secondaryAirStatusFunctionSource = source.match(/function decodeSecondaryAirStatus[\s\S]*?\r?\n  \}/);
 const oxygenSensorLocationsFunctionSource = source.match(/function decodeOxygenSensorLocations[\s\S]*?\r?\n  \}/);
 const auxiliaryInputStatusFunctionSource = source.match(/function decodeAuxiliaryInputStatus[\s\S]*?\r?\n  \}/);
@@ -2807,16 +2807,14 @@ const enginePercentTorqueDataFunctionChecks = () => {
     check(functionBody.includes('return values.length ? values : null;'), "decodeEnginePercentTorqueData should return null without decoded torque values");
   }
 };
-const commandedEgrAndErrorFunctionChecks = () => {
-  check(Boolean(commandedEgrAndErrorFunctionSource), "decodeCommandedEgrAndError is missing from obd-readonly.js");
-  if (commandedEgrAndErrorFunctionSource) {
-    const functionBody = commandedEgrAndErrorFunctionSource[0];
-    check(functionBody.includes('if (!Number.isInteger(b)) return null;'), "decodeCommandedEgrAndError should require the EGR error byte");
-    check(functionBody.includes('item.id === "commanded_egr_pid69"') && functionBody.includes('item.id === "egr_error_pid69"'), "decodeCommandedEgrAndError should resolve commanded EGR and EGR error definitions");
-    check(functionBody.includes('value: Number((a * 100 / 255).toFixed(3))'), "decodeCommandedEgrAndError should decode commanded EGR percentage");
-    check(functionBody.includes('value: Number(((b - 128) * 100 / 128).toFixed(3))'), "decodeCommandedEgrAndError should decode signed EGR error percentage");
-    check(functionBody.includes('return values.length ? values : null;'), "decodeCommandedEgrAndError should return null without decoded EGR values");
-  }
+const pid69RawFunctionChecks = () => {
+  const definition = monitorDefinitions.find((item) => item.id === "egr_system_pid69_raw");
+  check(!source.includes("decodeCommandedEgrAndError"), "Obsolete PID69 numeric decoder must remain removed");
+  check(source.includes('if (pid === "68" || pid === "69") return 7;'), "PID69 must retain its seven-byte boundary");
+  check(source.includes('return rawDefinition ? buildUndecodedPidValue(rawDefinition, pid, dataBytes) : null;'), "PID69 must use the undecoded RAW path");
+  check(definition?.pid === "69" && definition?.service === "01", "PID69 RAW definition must identify its service and PID");
+  check(definition?.value_type === "text" && definition?.unit === "", "PID69 RAW must not claim a numeric unit");
+  check(definition?.source_ref === "SAE-J1979DA-201110", "PID69 RAW must identify the historical evidence actually reviewed");
 };
 const basicEnumPidFunctionChecks = () => {
   check(Boolean(secondaryAirStatusFunctionSource), "decodeSecondaryAirStatus is missing from obd-readonly.js");
@@ -3051,7 +3049,7 @@ fuelSystemStatusPidFunctionChecks();
 oxygenSensorPidFunctionChecks();
 wideOxygenSensorPidFunctionChecks();
 enginePercentTorqueDataFunctionChecks();
-commandedEgrAndErrorFunctionChecks();
+pid69RawFunctionChecks();
 basicEnumPidFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
@@ -4884,7 +4882,7 @@ check(appSource.includes('badge.textContent = `${progress.progressPercent || 0}%
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.last_verified_date === "2026-08-17" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2026-07" && item.title.includes("J2012DA_202607") && item.source_url.includes("j2012da_202607") && item.source_date === "2026-07-29" && item.last_verified_date === "2026-08-22" && item.reference_type === "licensed_dataset" && item.edition_status === "current" && item.service_manual_required === true), "Current J2012DA source verification is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-historical-2025-10" && item.title.includes("J2012DA_202510") && item.source_url.includes("j2012da_202510") && item.source_date === "2025-10-24" && item.last_verified_date === "2026-08-22" && item.reference_type === "licensed_dataset" && item.edition_status === "historical" && item.superseded_by === "J2012DA_202607" && item.service_manual_required === true), "Historical J2012DA source lineage is missing");
-check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID definitions must retain their last reconciled J1979DA source version until the licensed annex is reviewed");
+check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 158 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service) && item.id !== "egr_system_pid69_raw").every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID definitions must retain their last reconciled J1979DA source version until the licensed annex is reviewed");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 const clipboardImportSource = appSource.match(/async function pasteObdScannerImport\(\) \{[\s\S]*?\r?\n\}/)?.[0] || "";
 // The importer awaits the read through a bounded race; direct-await syntax is no longer required.
@@ -16899,7 +16897,7 @@ check(decodedSupportedPids.supportedPidReadoutStatus === "reported" && obd.decod
 check(obd.buildSupportedPidMatrix({ obd_protocol: "ISO9141-2", supported_pids: ["0C"] }).protocol === "ISO9141-2", "Supported PID matrix did not preserve obd_protocol aliases");
 const ignoredNonBitmapPid = obd.decodeSupportedPidResponse({ raw: "41 0C 1A F8 41 05 7B" });
 check(ignoredNonBitmapPid.supportedPids.length === 0, "ライブPID応答を対応PIDビットマップとして誤読しています");
-const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 01 82 07 22 00 41 03 01 00 41 12 02 41 13 31 41 1D 55 41 1E 01 41 1C 06 41 1F 01 2C 41 51 04 41 14 80 90 41 24 80 00 20 00 41 34 80 00 7F 00 41 0C 1A F8 41 05 7B 41 0F 46 41 0D 28 41 0E 80 41 42 34 98 41 11 80 41 21 01 F4 41 22 03 E8 41 23 00 C8 41 2F 99 41 30 05 41 31 00 64 41 32 FF 38 41 33 64 41 3C 13 88 41 43 01 FE 41 44 80 00 41 45 40 41 46 5A 41 47 99 41 48 66 41 49 80 41 4A 40 41 4B C0 41 4C 20 41 4D 00 3C 41 4E 00 78 41 52 80 41 59 00 C8 41 5C 64 41 5D 69 80 41 5E 00 C8 41 61 87 41 62 82 41 63 01 F4 41 64 7D 82 87 8C 91 41 69 80 90 41 6A 66 41 6C 99 41 84 5A 41 8C 80 41 8E 7B 41 A6 00 01 E2 40" });
+const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 01 82 07 22 00 41 03 01 00 41 12 02 41 13 31 41 1D 55 41 1E 01 41 1C 06 41 1F 01 2C 41 51 04 41 14 80 90 41 24 80 00 20 00 41 34 80 00 7F 00 41 0C 1A F8 41 05 7B 41 0F 46 41 0D 28 41 0E 80 41 42 34 98 41 11 80 41 21 01 F4 41 22 03 E8 41 23 00 C8 41 2F 99 41 30 05 41 31 00 64 41 32 FF 38 41 33 64 41 3C 13 88 41 43 01 FE 41 44 80 00 41 45 40 41 46 5A 41 47 99 41 48 66 41 49 80 41 4A 40 41 4B C0 41 4C 20 41 4D 00 3C 41 4E 00 78 41 52 80 41 59 00 C8 41 5C 64 41 5D 69 80 41 5E 00 C8 41 61 87 41 62 82 41 63 01 F4 41 64 7D 82 87 8C 91 41 69 3F 80 40 90 20 10 80 41 6A 66 41 6C 99 41 84 5A 41 8C 80 41 8E 7B 41 A6 00 01 E2 40" });
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "回転数PIDをデコードできません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "coolant_temp")?.value === 83, "冷却水温PIDをデコードできません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "intake_air_temp")?.value === 30, "吸気温PIDをデコードできません");
@@ -17383,8 +17381,8 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "engine_percent_t
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_percent_torque_point2")?.value === 10, "Engine percent torque point 2 was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_percent_torque_point3")?.value === 15, "Engine percent torque point 3 was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_percent_torque_point4")?.value === 20, "Engine percent torque point 4 was not decoded");
-check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_egr_pid69")?.value === 50.196, "PID 69 commanded EGR was not decoded");
-check(decodedLivePids.monitorValues.find((item) => item.id === "egr_error_pid69")?.value === 12.5, "PID 69 EGR error was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "egr_system_pid69_raw")?.value === "3F 80 40 90 20 10 80", "PID 69 complete RAW was not preserved");
+check(!decodedLivePids.monitorValues.some((item) => ["commanded_egr_pid69", "egr_error_pid69"].includes(item.id)), "PID 69 invented numeric EGR readings");
 check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_diesel_intake_air_flow")?.value === 40, "Commanded diesel intake air flow PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_throttle_control")?.value === 60, "Commanded throttle control PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "manifold_surface_temp")?.value === 50, "Manifold surface temperature PID was not decoded");
