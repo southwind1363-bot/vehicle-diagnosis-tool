@@ -26,6 +26,8 @@ PC・タブレットの購入は今の作業の前提にしない。別端末で
 
 ## 変更履歴
 
+2026-10-10 iPhone native経路の点検: PID69の2バイト換算とPID6A/6Cの1バイト換算が別実装に残ることをソース確認。完全長応答は拒否されるため、Web旧版の架空車速とは区別する。RAW専用型→connector→envelope→preview→保存までの[修正案](NATIVE-CONTROL-RAW-REVIEW.md)を具体化した。人工native envelopeからWeb取込・保存往復148項目が合格。Swift実行・CI・BLE試験ではない。本体3.13.646とSwift実装は変更なし。
+
 2026-10-10 3.13.646 PID6A/6CのRAW保存修正: 承認済みの5バイトRAW化を本体へ適用し、対応ビットの誤換算と内部データからの架空車速生成を防止。新RAW用IDを追加し、旧IDおよびPIDのみの外部数値は維持。旧数値の再確認注記をライブ/FFへ表示する。回帰4,157項目と注記8項目、実JSON取込からの390/1280px・明暗・ライブ/FF・保存不変を確認。保存schema・送信許可一覧は変更なし。修正範囲はWeb/ローカル配布のJavaScript解析。iPhone native decoderの別実装は未修正で、同じ対応済みとは扱わない。
 
 検証: 全体OBD 7,447項目/エラー0、bridge 384・offline 183・data 203 JSON/3,878 DTC・package 766・workstation 1,369が合格。PORT 3001の6資産がHTTP 200で一致。配布ZIPを独立展開し851ファイル/16,970,277 bytesを照合（SHA256 `FFA04D35FDD245A59F44406ED979B309B88B09B25FD6611A8EAA04177EE5B104`）。実機試験ではない。
