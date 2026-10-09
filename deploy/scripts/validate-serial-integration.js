@@ -236,6 +236,8 @@ for (const eol of ["\r\n", "\r", "\n"]) {
   const attempts = client.context.obdDevSession.readoutAttempts;
   const scanCapture = client.context.obdDevSession.coreRawReadoutCapture;
   check(scanCapture.inspect().status === "finished" && scanCapture.inspect().count === 4, "Core scan must aggregate four same-generation records");
+  check(scanCapture.inspect().formatReview?.issues.includes("framing_mismatch") && !scanCapture.inspect().formatReview.parserAllowed,
+    "Normal synthetic core scan must disclose raw terminator mismatch without enabling parsing");
   const rawRecords = scanCapture.take();
   check(JSON.stringify(rawRecords.map(row => row.command)) === JSON.stringify(["03", "07", "0A", "0101"]), "Core raw records lost command order");
   check(rawRecords.every(row => row.profile === null && !row.profileVerified && !row.executionEnabled && !row.realTransportProofAvailable), "Aggregation must not infer profile or vehicle authority");
@@ -613,6 +615,46 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
   }
   context.obdDevSession.previewMode = "fixture"; render();
   check(panel.hidden && status.textContent === "", "Preview must not show runtime raw observations");
+}
+
+{
+  const current = { port: {}, reader: {}, writer: {}, settingsTicket: null, revision: 1, connected: true, unlocked: true };
+  const context = vm.createContext({ readWebSerialCaptureContext: () => ({ ...current }), obdDevSession: {} });
+  load(context, ["createWebSerialReadoutCapture", "createReadOnlySettingsObservation"]);
+  const settings = context.createReadOnlySettingsObservation();
+  context.obdDevSession.settingsObservation = { owner: settings };
+  const commands = ["03", "07", "0A", "0101"], compact = "7E8024300AAAAAAAAAA\r>";
+  const cases = [
+    [compact, null], [compact.replace("\r", "\r\n"), null],
+    ["7E8 02 43 00 AA AA AA AA AA\r>", "spacing_conflict"],
+    ["03\r" + compact, "echo_conflict"], [compact.replace("\r", "\n"), "framing_mismatch"],
+    [compact.replace("\r>", ">"), "framing_mismatch"], [compact + "\r", "framing_mismatch"],
+    [compact.replace(">", ""), "framing_mismatch"], [compact + ">", "framing_mismatch"],
+    ["\t" + compact, "framing_mismatch"], ["\ufffd" + compact, "framing_mismatch"],
+    ["\r".repeat(256) + compact, "framing_mismatch"], [compact.toLowerCase(), "unsupported_line"],
+    [compact.replace("7E8", "800"), "unsupported_line"], [compact.replace("7E8", "18DAF110"), "unsupported_line"],
+    [compact.replace("\r", "00\r"), "unsupported_line"], ["PRIVATE_RAW_SENTINEL\r>", "unsupported_line"],
+    ["NO DATA\r>", "no_frame_evidence"], ["SEARCHING...\rBUS INIT: OK\r>", "no_frame_evidence"]
+  ];
+  for (const protocol of ["A6", "A7", null]) {
+    const ticket = settings.begin(); current.settingsTicket = ticket;
+    for (const command of ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"]) settings.recordInitialization(ticket, command, command === "ATZ" ? "fixture" : "OK");
+    if (protocol) settings.recordProtocol(ticket, protocol);
+    for (const [text, expectedIssue] of cases) {
+      const owner = context.createWebSerialReadoutCapture(commands);
+      for (const command of commands) check(owner.append({ command, transcript: text, startedAt: 1, completedAt: 1,
+        profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false }), "Lexical mismatch must not modify capture or diagnostics");
+      check(owner.inspect().formatReview === null, "Partial capture must not publish a format review");
+      check(owner.finish(), "Raw recording completion is independent of format review");
+      const review = owner.inspect().formatReview;
+      check(review.profile === null && !review.profileVerified && !review.parserAllowed && !review.executionEnabled, "Appearance must never establish a parser profile or permission");
+      if (expectedIssue) check(review.issues.includes(expectedIssue), expectedIssue + ": missing lexical discrepancy");
+      else check(review.compactLineCount === 4 && review.spacedLineCount === 0 && (protocol !== "A6" || !review.issues.length), "Compact shape should remain an observation only");
+      check(review.issues.includes("protocol_unconfirmed") === (protocol !== "A6"), "Protocol observation must be considered without inference");
+      check(!JSON.stringify(review).includes("PRIVATE_RAW_SENTINEL") && Object.isFrozen(review) && Object.isFrozen(review.issues), "Format review must be bounded, immutable and raw-free");
+      check(owner.take().length === 4 && owner.inspect().formatReview === null, "Review must neither consume raw records nor outlive consumption");
+    }
+  }
 }
 
 console.log(`validate-serial-integration: ${checks} checks passed`);

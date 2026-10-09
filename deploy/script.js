@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.637";
+const APP_VERSION = "3.13.638";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6185,7 +6185,20 @@ function renderObdCoreRawReadoutStatus() {
     : snapshot.status === "finished" ? "対象の原文4件を取得済み。"
       : snapshot.status === "collecting" ? `集約中（${snapshot.count}/4件）。`
         : `利用不可。${reasons[snapshot.reason] || "記録の利用条件を確認できません。"}`;
-  status.textContent = `${message} 対象は保存・保留・永久DTCとレディネスです。集約原文は表示・保存しません。応答形式が未確認のため、集約原文の解析は未接続です。4件取得は診断成功・故障なし・実車適合を意味しません。`;
+  const formatReasons = {
+    settings_unavailable: "設定観測を照合できません",
+    protocol_unconfirmed: "対応する通信番号が未確認です",
+    echo_conflict: "エコー無効の応答記録に対してコマンドのエコーがあります",
+    spacing_conflict: "空白無効の応答記録に対して空白区切りの行があります",
+    framing_mismatch: "改行・終端または文字の形式が限定解析器の条件に合いません",
+    unsupported_line: "限定解析器の対象として照合できない行があります",
+    no_frame_evidence: "ヘッダーとデータの文字形を確認できない応答があります"
+  };
+  const review = snapshot?.formatReview;
+  const formatMessage = review ? ` 形式照合: ${review.issues.length
+    ? review.issues.map(code => formatReasons[code] || "照合条件が未確認です").join("。")
+    : "限定した文字形の不一致は見つかりませんでした。ただし通信設定の証明ではありません"}。CAN整形・DLC表示・アドレス方式は未確認です。` : "";
+  status.textContent = `${message}${formatMessage} 対象は保存・保留・永久DTCとレディネスです。集約原文は表示・保存しません。応答形式が未確認のため、集約原文の解析は未接続です。4件取得は診断成功・故障なし・実車適合を意味しません。`;
   panel.hidden = false;
 }
 
@@ -9943,6 +9956,42 @@ function createWebSerialReadoutCapture(commands) {
       || Object.keys(context).some(key => context[key] !== latest[key])) { discard("context_changed"); return false; }
     return true;
   };
+  // Lexical comparison only. Never select a parser profile from the appearance of bytes.
+  const reviewFormat = () => {
+    if (phase !== "finished" || expected.join(",") !== "03,07,0A,0101") return null;
+    const settings = obdDevSession.settingsObservation;
+    const observed = settings?.owner.inspect(context.settingsTicket);
+    const summary = observed?.ok ? observed.summary : null;
+    const issues = new Set();
+    if (!summary) issues.add("settings_unavailable");
+    else if (summary.protocol11bitReported !== true) issues.add("protocol_unconfirmed");
+    let compactLineCount = 0, spacedLineCount = 0;
+    for (const record of records) {
+      const text = record.transcript;
+      // Same bounded CR/CRLF and terminal-prompt contract as the existing limited parser.
+      const lines = text.replace(/\r\n/g, "\r").split("\r");
+      if (/[^\x20-\x7e\r]/.test(text.replace(/\r\n/g, "\r")) || lines.length > 256
+        || lines.at(-1) !== ">" || text.indexOf(">") !== text.length - 1) {
+        issues.add("framing_mismatch"); continue;
+      }
+      let frameShapeObserved = false;
+      for (const line of lines.slice(0, -1)) {
+        if (line === "" || ["SEARCHING...", "BUS INIT: OK", "NO DATA"].includes(line)) continue;
+        if (line === record.command) {
+          issues.add(summary?.acknowledgedCommands.includes("ATE0") ? "echo_conflict" : "unsupported_line"); continue;
+        }
+        const compact = /^[0-9A-F]{19}$/.test(line);
+        const spaced = /^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/.test(line);
+        if ((!compact && !spaced) || parseInt(line.slice(0, 3), 16) > 0x7ff) { issues.add("unsupported_line"); continue; }
+        frameShapeObserved = true;
+        if (compact) compactLineCount++;
+        else { spacedLineCount++; if (summary?.spacesOffAcknowledged) issues.add("spacing_conflict"); }
+      }
+      if (!frameShapeObserved) issues.add("no_frame_evidence");
+    }
+    return Object.freeze({ issues: Object.freeze([...issues]), compactLineCount, spacedLineCount,
+      profile: null, profileVerified: false, parserAllowed: false, executionEnabled: false });
+  };
   return Object.freeze({
     append(record) {
       if (!valid() || phase !== "collecting") return false;
@@ -9964,7 +10013,7 @@ function createWebSerialReadoutCapture(commands) {
     },
     inspect() {
       valid();
-      return Object.freeze({ status: phase, count: records.length, reason, profile: null, executionEnabled: false });
+      return Object.freeze({ status: phase, count: records.length, reason, formatReview: reviewFormat(), profile: null, executionEnabled: false });
     },
     take() {
       if (!valid() || phase !== "finished") return null;

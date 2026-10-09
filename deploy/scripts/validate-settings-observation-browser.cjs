@@ -69,11 +69,27 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
       await page.setViewportSize({ width, height: 900 });
       assert.match(await rawPanel.innerText(), /4件を取得済み/);
       assert.match(await rawPanel.innerText(), /解析は未接続/);
+      assert.match(await rawPanel.innerText(), /改行・終端または文字の形式/);
       assert.doesNotMatch(await page.locator('body').innerText(), /PRIVATE_RAW_SENTINEL/);
       assert.equal(await page.evaluate(() => obdDevSession.coreRawReadoutCapture.inspect().count), 4);
       await rawPanel.scrollIntoViewIfNeeded();
       assert.equal(await rawPanel.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
       await rawPanel.screenshot({ path: path.join(output, `raw-readout-status-${width}.png`) });
+    }
+    for (const [transcript, expected] of [
+      ['7E8024300AAAAAAAAAA\r>', /通信設定の証明ではありません/],
+      ['7E8 02 43 00 AA AA AA AA AA\r>', /空白無効の応答記録に対して空白区切り/],
+      ['NO DATA\r>', /文字形を確認できない応答/]
+    ]) {
+      await page.evaluate(text => {
+        const owner = createWebSerialReadoutCapture(['03', '07', '0A', '0101']);
+        obdDevSession.coreRawReadoutCapture = owner;
+        for (const command of ['03', '07', '0A', '0101']) owner.append({ command, transcript: text,
+          startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
+        owner.finish(); renderObdDeveloperGate();
+      }, transcript);
+      assert.match(await rawPanel.innerText(), expected);
+      assert.equal(await page.evaluate(() => obdDevSession.coreRawReadoutCapture.inspect().formatReview.parserAllowed), false);
     }
     await page.evaluate(() => {
       const settings = obdDevSession.settingsObservation;
