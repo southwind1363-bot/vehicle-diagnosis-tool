@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import { intakeControlRawDefinitions, applyIntakeControlRawProposal } from "./fixtures/intake-control-raw-proposal.js";
+
 
 const sourceUrl = new URL("../obd-readonly.js", import.meta.url);
 const definitionUrl = new URL("../data/obd-monitor-definitions.json", import.meta.url);
@@ -15,17 +15,19 @@ function load(code, rows) {
   obd.configureMonitorDefinitions(rows);
   return obd;
 }
-const current = load(source, definitions);
-const proposed = load(applyIntakeControlRawProposal(source), [...definitions, ...intakeControlRawDefinitions]);
+const intakeControlRawDefinitions = definitions.filter(row => ["intake_air_flow_pid6a_raw", "throttle_control_pid6c_raw"].includes(row.id));
+assert.equal(intakeControlRawDefinitions.length, 2);
+const current = load(source, definitions.filter(row => !intakeControlRawDefinitions.includes(row)));
+const proposed = load(source, definitions);
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
 for (const definition of intakeControlRawDefinitions) {
   const { pid, id } = definition;
   const legacyId = definitions.find(row => row.pid === pid).id;
   const example = `41 ${pid} 0F 80 41 0D 28`;
-  const old = current.decodeLivePidResponse({ raw: example }).monitorValues;
-  check(old.some(row => row.id === legacyId && row.value === 5.882), "Current support-byte misconversion changed; review audit");
-  check(old.some(row => row.id === "vehicle_speed" && row.value === 40), "Current false speed changed; review audit");
+  const old = proposed.decodeLivePidResponse({ raw: example }).monitorValues;
+  check(old.length === 1 && old[0].id === id && old[0].decoded === false, "Support byte became numeric evidence");
+  check(!old.some(row => row.id === "vehicle_speed"), "False speed invented");
   for (const [mode, header, decoder, status] of [
     ["live", "41", proposed.decodeLivePidResponse, "livePidReadoutStatus"],
     ["FF", "42", proposed.decodeFreezeFrameResponse, "freezeFrameReadoutStatus"]
@@ -70,6 +72,14 @@ for (const definition of intakeControlRawDefinitions) {
   }
 }
 check(fs.readFileSync(sourceUrl, "utf8") === source && fs.readFileSync(definitionUrl, "utf8") === definitionText, "Proposal changed production files");
-assert.throws(() => applyIntakeControlRawProposal(applyIntakeControlRawProposal(source)), /proposal_source_changed/);
-checks++;
-console.log(`Intake control RAW proposal: ${checks} checks passed; current bugs reproduced; isolated VM only`);
+
+console.log(`Intake control RAW regression: ${checks} checks passed; production RAW decoding and legacy dictionary compatibility`);
+
+const app = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
+const noteContext = vm.createContext({});
+vm.runInContext(app.match(/function formatObdLegacyControlReviewNote\([^)]*\) \{[\s\S]*?\r?\n\}/)[0], noteContext);
+for (const [id, pid] of [["commanded_diesel_intake_air_flow", "6A"], ["commanded_throttle_control", "6C"]]) {
+  for (const value of [0, 50.196, 100]) check(noteContext.formatObdLegacyControlReviewNote(Object.freeze({ id, value })).includes("旧PID" + pid + "数値"), "Missing legacy review note");
+  check(noteContext.formatObdLegacyControlReviewNote({ id, value: 0, decoded: false }) === "", "RAW marked numeric");
+}
+console.log("Intake control review notes: 8 checks passed");

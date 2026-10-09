@@ -40915,7 +40915,7 @@
     else if (pid === "1C") value = decodeObdStandard(a);
     else if (pid === "51") value = decodeFuelType(a);
     else if ([
-      "04", "11", "2C", "2E", "2F", "45", "47", "48", "49", "4A", "4B", "4C", "52", "5A", "5B", "6A", "6C", "A5"
+      "04", "11", "2C", "2E", "2F", "45", "47", "48", "49", "4A", "4B", "4C", "52", "5A", "5B", "A5"
     ].includes(pid)) value = a * 100 / 255;
     else if (["05", "0F", "46"].includes(pid)) value = a - 40;
     else if (["06", "07", "08", "09", "2D"].includes(pid)) value = (a - 128) * 100 / 128;
@@ -40944,6 +40944,11 @@
     else if (pid === "64") return decodeEnginePercentTorqueData(pid, dataBytes);
     else if (pid === "69") {
       const rawDefinition = monitorDefinitions.find((item) => item.id === "egr_system_pid69_raw");
+      return rawDefinition ? buildUndecodedPidValue(rawDefinition, pid, dataBytes) : null;
+    }
+    else if (["6A", "6C"].includes(pid)) {
+      const id = pid === "6A" ? "intake_air_flow_pid6a_raw" : "throttle_control_pid6c_raw";
+      const rawDefinition = monitorDefinitions.find((item) => item.id === id);
       return rawDefinition ? buildUndecodedPidValue(rawDefinition, pid, dataBytes) : null;
     }
     else if (pid === "84") value = a - 40;
@@ -40984,7 +40989,7 @@
     const oneBytePids = [
       "04", "05", "06", "07", "08", "09", "0A", "0B", "0D", "0E", "0F", "11", "12", "13", "1C", "1D", "1E",
       "2C", "2D", "2E", "2F", "30", "33", "45", "46", "47", "48", "49", "4A", "4B", "4C", "51", "52", "5A",
-      "5B", "5C", "61", "62", "6A", "6C", "84", "8C", "8E", "A5"
+      "5B", "5C", "61", "62", "84", "8C", "8E", "A5"
     ];
     const twoBytePids = [
       "02", "03", "0C", "10", "14", "15", "16", "17", "18", "19", "1A", "1B", "1F", "21", "22", "23",
@@ -40994,7 +40999,7 @@
     if (oneBytePids.includes(pid)) return 1;
     if (twoBytePids.includes(pid)) return 2;
     if (fourBytePids.includes(pid)) return 4;
-    if (pid === "64") return 5;
+    if (["64", "6A", "6C"].includes(pid)) return 5;
     // SAE J1979-DA OCT2011, Tables B83/B84/B85: support byte plus data bytes.
     // Keep these values RAW until individual sensor conversion is implemented.
     if (pid === "67") return 3;

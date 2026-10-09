@@ -330,6 +330,48 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(egrRestored.livePidSnapshot.monitorValues.find(row=>row.id==='egr_error_pid69').value,12.5);
     assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
     console.log('PID69 browser: full RAW, legacy zero and numeric review notes, live/FF, unchanged archives, mobile/desktop themes.');
+    for (const [pid, rawId, legacyId, label, value] of [
+      ['6A', 'intake_air_flow_pid6a_raw', 'commanded_diesel_intake_air_flow', '吸気流量制御応答 PID6A', 0],
+      ['6C', 'throttle_control_pid6c_raw', 'commanded_throttle_control', 'スロットル制御応答 PID6C', 12.5]
+    ]) {
+    const egrRaw = model.decodeLivePidResponse({ raw: `41 ${pid} 0F 80 41 0D 28`, source_ecu: '7E8' }).monitorValues[0];
+    const egrValues = [egrRaw, { id: legacyId, pid, value, source_ecu: '7E8' }];
+    const egrSession = model.buildDiagnosticScanSession({ livePidSnapshot: model.normalizeBridgeLivePidSnapshot({ values: egrValues }), freezeFrameSnapshot: model.normalizeFreezeFrameSnapshot({ values: egrValues.map(row => ({ ...row, freeze_frame_number: 2 })) }) });
+    const egrPicker = page.waitForEvent('filechooser');
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }).click();
+    await (await egrPicker).setFiles({ name: 'intake-raw-and-legacy.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(egrSession))) });
+    await page.waitForFunction(id => obdDevSession.lastSession?.livePidSnapshot?.monitorValues?.[0]?.id === id, rawId);
+    const egrBefore = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const [button, selector] of [['ライブデータの詳細を開く', '#obdMonitorGrid'], ['フリーズフレームの詳細を開く', '#obdSessionDetailFreezeFrame']]) {
+        await page.getByRole('button', { name: button, exact: true }).click();
+        const detail=page.locator(selector); await detail.waitFor({state:'visible'});
+        const text=await detail.innerText();
+        for(const expected of [label, '0F 80 41 0D 28', value + ' %', '旧PID' + pid + '数値', '7E8']) assert.ok(text.includes(expected), expected);
+        assert.equal((text.match(new RegExp('旧PID' + pid + '数値','g'))||[]).length,1);
+        assert.ok(!text.includes('0F 80 41 0D 28 %'));
+        if(selector.includes('FreezeFrame')) assert.ok(text.includes('FF #2'));
+        assert.ok(!text.includes('5.882'));
+        for(const dark of [false,true]) {
+          await page.evaluate(dark=>document.body.classList.toggle('dark',dark),dark);
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+          await detail.screenshot({path:path.join(output,'pid'+pid+'-'+selector.slice(1)+'-'+width+'-'+dark+'.png')});
+        }
+        await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      }
+    }
+    assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),egrBefore);
+    const egrArchive=await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+    const egrRestored=model.buildDiagnosticScanSessionFromJson(egrArchive);
+    assert.equal(egrRestored.livePidSnapshot.monitorValues.length,2);
+    assert.equal(egrRestored.livePidSnapshot.monitorValues[0].decoded,false);
+    assert.equal(egrRestored.livePidSnapshot.monitorValues.find(row=>row.id===legacyId).value,value);
+    assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
+    console.log('PID'+pid+' browser: full RAW, legacy note, unchanged archives and responsive views passed.');
+    }
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
   } catch (error) {
     if (page) { await page.screenshot({ path: path.join(output, 'failure.png') }); console.error('Screenshot:', path.join(output, 'failure.png'), 'Page errors:', errors); console.error('Freeze card:', await page.locator('#obdSessionDetailFreezeFrame').allTextContents()); }

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.645";
+const APP_VERSION = "3.13.646";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10693,11 +10693,11 @@ function formatObdTemperatureConversion(item = {}) {
   return values.length ? `換算表示（RAWから計算）: ${values.join(" / ")}。2011年定義による参考表示・車両適合未確認。` : "換算表示: 対応センサーの報告なし";
 }
 
-function formatObdPid69ReviewNote(item = {}) {
-  return ["commanded_egr_pid69", "egr_error_pid69"].includes(item.id)
-    && item.decoded !== false && item.undecodedRaw !== true
+function formatObdLegacyControlReviewNote(item = {}) {
+  const pid = { commanded_egr_pid69: "69", egr_error_pid69: "69", commanded_diesel_intake_air_flow: "6A", commanded_throttle_control: "6C" }[item.id];
+  return pid && item.decoded !== false && item.undecodedRaw !== true
     && typeof item.value === "number" && Number.isFinite(item.value)
-    ? "旧PID69数値：換算根拠を再確認。元応答がないため自動補正できません。"
+    ? `旧PID${pid}数値：換算根拠を再確認。元応答がないため自動補正できません。`
     : "";
 }
 
@@ -10709,7 +10709,7 @@ function formatObdFreezeFrameValueLine(item = {}) {
   const pid = typeof item.pid === "string" && /^[0-9A-F]{2}$/i.test(item.pid) ? `PID ${item.pid.toUpperCase()} / ` : "";
   const conversion = formatObdTemperatureConversion(item);
   const reading = conversion ? `RAW ${item.value}` : formatObdBridgeReadoutValue(item);
-  const review = formatObdPid69ReviewNote(item);
+  const review = formatObdLegacyControlReviewNote(item);
   return `${item.label || item.id || "項目"}: ${reading} [${pid}${ecu} / ${frame}]${raw}${conversion ? ` / ${conversion}` : ""}${review ? ` / ${review}` : ""}`;
 }
 
@@ -15983,7 +15983,7 @@ function renderObdMonitorValues(values, insights = []) {
 
     const note = document.createElement("span");
     note.className = "obd-monitor-note";
-    note.textContent = [item.supportNote || "メーカー整備書の基準値と比較してください。", formatObdPid69ReviewNote(item)].filter(Boolean).join(" ");
+    note.textContent = [item.supportNote || "メーカー整備書の基準値と比較してください。", formatObdLegacyControlReviewNote(item)].filter(Boolean).join(" ");
 
     card.append(category, displayLabel, reading, note);
     if (conversion) {

@@ -60,9 +60,9 @@ check(external.monitorValues[0]?.id==='commanded_egr_pid69' && external.monitorV
 const standard=proposed.decodeLivePidResponse({raw:'41 2C 80 41 2D 90'}).monitorValues;
 check(standard.some(r=>r.id==='commanded_egr' && r.value===50.196) && standard.some(r=>r.id==='egr_error' && r.value===12.5), 'PID 2C/2D changed');
 const app=fs.readFileSync(new URL('../script.js',import.meta.url),'utf8');
-const noteContext=vm.createContext({});vm.runInContext(app.match(/function formatObdPid69ReviewNote\([^)]*\) \{[\s\S]*?\r?\n\}/)[0],noteContext);
+const noteContext=vm.createContext({});vm.runInContext(app.match(/function formatObdLegacyControlReviewNote\([^)]*\) \{[\s\S]*?\r?\n\}/)[0],noteContext);
 for(const id of ['commanded_egr_pid69','egr_error_pid69']) for(const value of [0,12.5,-100]) {
- const row=Object.freeze({id,value});check(noteContext.formatObdPid69ReviewNote(row).includes('旧PID69数値'), 'Legacy numeric value lacks review note');
+ const row=Object.freeze({id,value});check(noteContext.formatObdLegacyControlReviewNote(row).includes('旧PID69数値'), 'Legacy numeric value lacks review note');
 }
-for(const row of [{id:'commanded_egr',value:20},{id:'egr_error_pid69',value:'12.5'},{id:'commanded_egr_pid69',value:20,decoded:false},{id:pid69RawDefinition.id,value:'3F 80 41 0D 28 00 80',decoded:false}]) check(noteContext.formatObdPid69ReviewNote(row)==='', 'Unrelated/RAW value labeled legacy numeric');
+for(const row of [{id:'commanded_egr',value:20},{id:'egr_error_pid69',value:'12.5'},{id:'commanded_egr_pid69',value:20,decoded:false},{id:pid69RawDefinition.id,value:'3F 80 41 0D 28 00 80',decoded:false}]) check(noteContext.formatObdLegacyControlReviewNote(row)==='', 'Unrelated/RAW value labeled legacy numeric');
 console.log(`PID69 RAW regression: ${checks} checks passed; production decoding and legacy dictionary compatibility`);
