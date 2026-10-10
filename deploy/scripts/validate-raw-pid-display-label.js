@@ -30,3 +30,26 @@ for (const [pid, id, length, scopeText] of [
 check(c.getObdMonitorDisplayLabel({ id: 'old_id' }) === 'old_id', 'ID fallback');
 check(c.getObdMonitorDisplayLabel({}) === '項目', 'empty fallback');
 console.log(`RAW scope labels: ${checks} checks passed; full-length RAW only, legacy labels and saved rows preserved`);
+
+const reviewCode = source.match(/function formatObdLegacyControlReviewNote\([^)]*\) \{[\s\S]*?\r?\n\}/)?.[0];
+assert.ok(reviewCode); vm.runInContext(reviewCode, c);
+const legacy = JSON.parse(fs.readFileSync(new URL('./fixtures/text-pid-legacy-3.13.651.json', import.meta.url), 'utf8'));
+const reviewStart = checks;
+for (const snapshot of [legacy.live_pid_snapshot, legacy.freeze_frame_snapshot]) {
+  for (const item of snapshot.monitor_values) {
+    const row = Object.freeze(item), before = JSON.stringify(row);
+    check(c.formatObdLegacyControlReviewNote(row).includes('16進形式の文字列'), row.pid + ': golden legacy caution');
+    check(JSON.stringify(row) === before, row.pid + ': legacy mutation');
+    check(c.formatObdLegacyControlReviewNote({ ...row, pid: row.pid.toLowerCase(), value: '  ab\t01  ' }).includes('16進形式'), row.pid + ': case/whitespace');
+    check(c.formatObdLegacyControlReviewNote({ ...row, value: '00' }).includes('16進形式'), row.pid + ': no unsupported length inference');
+    for (const change of [
+      { decoded: false }, { decoded: undefined }, { undecodedRaw: true }, { valueType: 'raw_hex' },
+      { valueType: 'number' }, { value: 0 }, { value: '0' }, { value: 'Regeneration active' },
+      { value: '' }, { value: 'GG' }, { value: '0x28' }, { value: '28,' }, { value: null },
+      { pid: '0D' }, { id: 'unknown' }, { service: '22' }, { scope: 'manufacturer-specific' }
+    ]) check(c.formatObdLegacyControlReviewNote({ ...row, ...change }) === '', row.pid + ': false caution ' + JSON.stringify(change));
+  }
+}
+check(c.formatObdLegacyControlReviewNote({}) === '', 'empty record');
+check(c.formatObdLegacyControlReviewNote({ id: 'commanded_egr_pid69', value: 3, decoded: true }).includes('旧PID69数値'), 'numeric legacy caution retained');
+console.log('Hex text review notes: ' + (checks - reviewStart) + ' checks passed; golden legacy records unchanged, RAW/semantic text excluded');

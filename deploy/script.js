@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.653";
+const APP_VERSION = "3.13.654";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10717,9 +10717,22 @@ function getObdMonitorDisplayLabel(item = {}) {
 
 function formatObdLegacyControlReviewNote(item = {}) {
   const pid = { commanded_egr_pid69: "69", egr_error_pid69: "69", commanded_diesel_intake_air_flow: "6A", commanded_throttle_control: "6C" }[item.id];
-  return pid && item.decoded !== false && item.undecodedRaw !== true
+  const numericReview = pid && item.decoded !== false && item.undecodedRaw !== true
     && typeof item.value === "number" && Number.isFinite(item.value)
     ? `旧PID${pid}数値：換算根拠を再確認。元応答がないため自動補正できません。`
+    : "";
+  if (numericReview) return numericReview;
+  const textPid = {
+    auxiliary_io_supported: "65", maf_sensor_status: "66", dpf_status: "7B",
+    nox_nte_status: "7D", pm_nte_status: "7E", nox_reagent_system: "85",
+    scr_inducement_status: "88", diesel_aftertreatment_status: "8B", wwh_obd_vehicle_info: "91"
+  }[item.id];
+  const matchesPid = typeof item.pid === "string" && item.pid.toUpperCase() === textPid;
+  return matchesPid && item.decoded === true && item.undecodedRaw !== true && item.valueType === "text"
+    && (!item.service || ["01", "02"].includes(item.service))
+    && (!item.scope || item.scope === "standard-generic")
+    && typeof item.value === "string" && /^[0-9a-f]{2}(?:\s+[0-9a-f]{2})*$/i.test(item.value.trim())
+    ? "16進形式の文字列として保存されています。「変換済み」の分類だけでは換算内容を確認できません。元の応答・整備書で確認してください。"
     : "";
 }
 

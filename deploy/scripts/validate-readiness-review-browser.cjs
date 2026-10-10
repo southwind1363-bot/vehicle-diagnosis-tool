@@ -424,7 +424,17 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             }
             await search.fill('');
           }
-          if (kind !== 'legacy') assert.ok(text.includes('未換算'));
+          const legacyNote = '16進形式の文字列として保存されています。';
+          if (kind === 'legacy') {
+            const rows = selector === '#obdMonitorGrid' ? detail.locator('.obd-monitor-card') : detail.locator('li');
+            for (const row of compound.livePidSnapshot.monitorValues) {
+              const entry = rows.filter({ hasText: row.label });
+              assert.ok((await entry.innerText()).includes(legacyNote), row.pid + ': legacy caution absent');
+            }
+          } else {
+            assert.ok(!text.includes(legacyNote), 'RAW row received legacy text caution');
+            assert.ok(text.includes('未換算'));
+          }
           if (selector.includes('FreezeFrame')) {
             assert.ok(text.includes((kind === 'legacy' ? '変換済み' : '未変換') + payloads.length), 'classification summary');
           }
