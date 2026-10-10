@@ -23,7 +23,10 @@ const snapshot = JSON.stringify(dtcs);
 const vehicle = { maker: "Toyota", model: "retained vehicle" };
 const observedArguments = [];
 let diagnosisInput;
+const coreContext = vm.createContext({window:{}});
+vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js",import.meta.url),"utf8"),coreContext);
 const context = vm.createContext({
+  window: coreContext.window,
   NO_DATA: "未記録",
   document: { querySelector: (selector) => nodes[selector.slice(1)], createElement: element },
   obdDetectedCodes: element(), MutationObserver: class { constructor(callback) { this.callback = callback; } observe(target, options) { subscriptions.push({ callback: this.callback, target, options }); } },
@@ -169,5 +172,20 @@ const limitedCard = context.createObdDtcCard({ ...linkedDtc, freezeFrameMatches:
   freezeFrameValueRefs: Array.from({ length: 7 }, (_, frameNumber) => ({ ...linkedBase, frameNumber })) }] }, [], vehicle);
 const limitedLine = limitedCard.children.find(child => child.textContent.startsWith('FF実測:')).textContent;
 check(limitedLine.includes('FF #5') && !limitedLine.includes('FF #6') && limitedLine.endsWith(' / ほか'), 'DTC-linked display limit lost');
+
+
+const routeBase={code:'P0171',ecu:'7E8',status:'stored'};
+for(const [a,b] of [[{networkBus:'CAN|A'},{networkBus:'CAN A'}], [{networkBus:'CAN',networkChannel:'-'},{networkBus:'CAN'}], [{gatewayRoute:'a|b'},{gatewayRoute:'a b'}], [{},{networkBus:'CAN'}]]) {
+ check(context.buildObdDtcDisplayKey({...routeBase,...a})!==context.buildObdDtcDisplayKey({...routeBase,...b}),'Different network scopes collapsed in display');
+}
+check(context.buildObdDtcDisplayKey({...routeBase,networkBus:' ＣＡＮ '})===context.buildObdDtcDisplayKey({...routeBase,network_bus:'can'}),'Canonical network aliases split in display');
+const scopedCard=context.createObdDtcCard({...routeBase,networkBus:'CAN|A',networkChannel:'1',gatewayRoute:'GW-A'},[],vehicle);
+const scopedState=scopedCard.children.find(child=>child.className==='obd-dtc-readout-state');
+for(const text of ['バス: CAN|A','チャネル: 1','経路: GW-A']){
+ check(scopedState.textContent.includes(text),'Missing scope label: '+text);
+ check(scopedCard.dataset.dtcSearch.includes(text),'Scope absent from search: '+text);
+}
+const conflictCard=context.createObdDtcCard({...routeBase,networkBus:'A',network_bus:'B'},[],vehicle);
+check(conflictCard.children.some(child=>child.textContent.includes('通信経路: 情報に矛盾あり')),'Scope conflict hidden');
 
 console.log(`DTC filter checks: ${checks} / Errors: 0`);

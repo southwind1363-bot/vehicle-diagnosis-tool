@@ -502,6 +502,35 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(linkedRestored.dtcSnapshot.dtcs[0].freezeFrameMatches.length, 7);
     assert.equal(linkedRestored.freezeFrameSnapshot.monitorValues.length, 9);
     assert.equal(linkedRestored.dtcSnapshot.dtcs[0].freezeFrameMatches[2].freezeFrameValueRefs[0].decoded, false);
+
+    const oldEnvelope=JSON.parse(fs.readFileSync(path.join(root,'scripts/fixtures/timeline-legacy-3.13.655.json'),'utf8')).mixedArchive;
+    const scopeArchive={...oldEnvelope,session:{dtc_snapshot:{dtc_readout_status:'reported',dtcs:['CAN|A','CAN A'].map(network_bus=>({code:'P0171',ecu:'7E8',status:'stored',network_bus}))}}};
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    const scopePicker=page.waitForEvent('filechooser');
+    page.once('dialog',dialog=>dialog.accept());
+    await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+    await (await scopePicker).setFiles({name:'separate-dtc-routes.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(scopeArchive))});
+    await page.waitForFunction(()=>obdDevSession.lastSession?.dtcSnapshot?.dtcs?.length===2 && obdDevSession.lastSession.dtcSnapshot.dtcs[0].code==='P0171');
+    await page.getByRole('button',{name:'DTC一覧',exact:true}).click();
+    const scopeCards=page.locator('#obdDetectedCodes .obd-dtc-card');
+    assert.equal(await scopeCards.count(),2);
+    const scopeBefore=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+    for(const bus of ['CAN|A','CAN A'])assert.equal(await scopeCards.filter({hasText:'バス: '+bus}).count(),1);
+    await page.locator('#obdDtcSearch').fill('CAN|A');
+    assert.equal(await page.locator('#obdDetectedCodes .obd-dtc-card:visible').count(),1);
+    await page.locator('#obdDtcSearch').fill('');
+    for(const width of [390,1280]){
+      await page.setViewportSize({width,height:844});
+      for(const dark of [false,true]){
+        await page.evaluate(dark=>document.body.classList.toggle('dark',dark),dark);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+        await scopeCards.first().screenshot({path:path.join(output,'dtc-network-'+width+'-'+dark+'.png')});
+      }
+    }
+    assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),scopeBefore);
+    const scopeExport=await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+    assert.deepEqual(JSON.parse(JSON.stringify(model.buildDiagnosticScanSessionFromJson(scopeExport).dtcSnapshot.dtcs)),JSON.parse(scopeBefore).dtcSnapshot.dtcs);
+    console.log('DTC network routes: two cards, distinct route labels/search, no session mutation and archive round trip passed.');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);

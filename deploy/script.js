@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.658";
+const APP_VERSION = "3.13.659";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -15690,7 +15690,10 @@ function buildObdDtcDisplayKey(item = null) {
   const ecu = String(dtc.ecu || dtc.ecu_id || dtc.ecuId || dtc.address || dtc.module || dtc.module_id || dtc.moduleId || "").trim().toUpperCase();
   const status = String(dtc.status || dtc.kind || dtc.dtc_status || dtc.dtcStatus || "").trim().toLowerCase();
   const reportedStatus = String(dtc.reportedStatus || dtc.reported_status || "").replace(/\s+/g, " ").trim().toLowerCase();
-  return `${code}:${subcode}:${oemDetailCode}:${ecu}:${status}:${reportedStatus}`;
+  const networkScope = window.ObdReadOnly.normalizeReadoutNetworkScope(dtc);
+  return JSON.stringify([code, subcode, oemDetailCode, ecu, status, reportedStatus, networkScope.conflict,
+    ...[networkScope.networkBus, networkScope.networkChannel, networkScope.gatewayRoute]
+      .map(value => value === null ? null : value.normalize("NFKC").toLowerCase())]);
 }
 
 function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride = null) {
@@ -15711,6 +15714,9 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const ecu = dtc.ecu || dtc.ecu_id || dtc.ecuId || dtc.address || dtc.module || dtc.module_id || dtc.moduleId || null;
   const ecuName = dtc.ecuName || dtc.ecu_name || dtc.name || dtc.label || dtc.displayName || dtc.display_name || null;
   const ecuDisplay = ecuName && ecu ? `${ecuName} / ${ecu}` : ecuName || ecu || null;
+  const networkScope = window.ObdReadOnly.normalizeReadoutNetworkScope(dtc);
+  const networkScopeLabel = networkScope.conflict ? "通信経路: 情報に矛盾あり" : [["バス", networkScope.networkBus], ["チャネル", networkScope.networkChannel], ["経路", networkScope.gatewayRoute]]
+    .filter(([, value]) => value !== null).map(([label, value]) => label + ": " + value).join(" / ");
   const displayCode = `${subcode ? `${code}:${subcode}` : oemDetailCode ? `${code}-${oemDetailCode}` : code}${ecuDisplay ? ` [${ecuDisplay}]` : ""}`;
   const hasSessionVehicleProfile = vehicleProfileOverride && typeof vehicleProfileOverride === "object";
   const vehicleProfile = hasSessionVehicleProfile
@@ -15728,7 +15734,7 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const firstCheck = registered?.firstChecks?.[0] || registered?.check_order?.[0] || modern?.check_order?.[0];
   const wrapper = document.createElement("article");
   wrapper.className = "obd-dtc-card";
-  wrapper.dataset.dtcSearch = [displayCode, code, subcode, oemDetailCode, ecuDisplay, status, statusLabel, reportedStatus]
+  wrapper.dataset.dtcSearch = [displayCode, code, subcode, oemDetailCode, ecuDisplay, networkScopeLabel, status, statusLabel, reportedStatus]
     .filter((value) => typeof value === "string" || typeof value === "number").join(" ");
 
   const head = document.createElement("div");
@@ -15748,6 +15754,7 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const readoutState = document.createElement("p");
   readoutState.className = "obd-dtc-readout-state";
   readoutState.textContent = statusLabel;
+  if (networkScopeLabel) readoutState.textContent += ` / ${networkScopeLabel}`;
   if (!hasKnownStatus && status !== "unknown") readoutState.textContent += ` / 分類値: ${status}`;
   wrapper.appendChild(readoutState);
 

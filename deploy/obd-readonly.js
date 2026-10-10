@@ -4859,7 +4859,7 @@
     ];
     const normalizeDtcEntryCodeFormat = (entry) => String(entry?.codeFormat || entry?.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
     const eligibleEntries = entries.filter((entry) => !normalizeReadoutNetworkScope(entry).conflict);
-    const getDtcEntryResolutionKey = (entry) => `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}::${getReadoutNetworkScopeKey(entry) || ""}`;
+    const getDtcEntryResolutionKey = (entry) => `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}::${getDtcReadoutNetworkScopeIdentity(entry) || ""}`;
     const scopedEntriesByKey = new Map();
     eligibleEntries.filter((entry) => entry.ecu).forEach((entry) => {
       const key = getDtcEntryResolutionKey(entry);
@@ -4868,7 +4868,7 @@
     const resolvedEntries = eligibleEntries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get(getDtcEntryResolutionKey(entry)) || entry);
     const seen = new Set();
     const dtcs = resolvedEntries.filter((entry) => {
-      const key = `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.ecu || ""}::${entry.status}::${getReadoutNetworkScopeKey(entry) || ""}`;
+      const key = `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.ecu || ""}::${entry.status}::${getDtcReadoutNetworkScopeIdentity(entry) || ""}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -5719,6 +5719,14 @@
       || READOUT_NETWORK_SCOPE_FIELDS.some((field) => mergedFields[field.name + "Conflict"]);
     const scope = { ...mergedFields, provided, conflict, eligible: provided && !conflict };
     return { ...row, ...readoutNetworkScopeFields(scope) };
+  }
+
+  function getDtcReadoutNetworkScopeIdentity(input = {}) {
+    const scope = normalizeReadoutNetworkScope(input);
+    if (scope.conflict) return null;
+    if (!scope.provided) return "";
+    return JSON.stringify([scope.networkBus, scope.networkChannel, scope.gatewayRoute]
+      .map(value => value === null ? null : value.normalize("NFKC").toLowerCase()));
   }
 
   function getReadoutNetworkScopeKey(input = {}) {
@@ -32185,7 +32193,7 @@
             ecu_responses: []
           }) : null;
           const childDtcs = Array.isArray(childDtcSnapshot?.dtcs) ? childDtcSnapshot.dtcs : [];
-          const networkScopeKey = getReadoutNetworkScopeKey(scopedEcuResponseRow);
+          const networkScopeKey = getDtcReadoutNetworkScopeIdentity(scopedEcuResponseRow);
           const responseIdentityKey = `${normalizeDtcResponseEcu(ecu)}::${intent || status}::${networkScopeKey === null ? `conflict-${rowIndex}` : networkScopeKey}`;
           return ecu ? [responseIdentityKey, {
             ...readoutNetworkScopeFields(rowNetworkScope),
@@ -32628,7 +32636,7 @@
       }));
     });
     const normalizeDtcIdentityFormat = (row) => String(row?.codeFormat || row?.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
-    const dtcTypedIdentity = (row) => `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${row.ecu || ""}::${getReadoutNetworkScopeKey(row) ?? "conflict"}`;
+    const dtcTypedIdentity = (row) => `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${row.ecu || ""}::${getDtcReadoutNetworkScopeIdentity(row) ?? "conflict"}`;
     const typedDtcFormatsByCode = new Map();
     rows
       .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
@@ -32643,7 +32651,7 @@
       const codeFormat = normalizeDtcIdentityFormat(row);
       return !(typedFormats?.size && (!codeFormat || typedFormats.has(codeFormat)));
     });
-    const dtcNetworkScopeIdentity = (row) => getReadoutNetworkScopeKey(row) ?? "conflict";
+    const dtcNetworkScopeIdentity = (row) => getDtcReadoutNetworkScopeIdentity(row) ?? "conflict";
     const reportedStatusIdentity = (row) => `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}::${dtcNetworkScopeIdentity(row)}`;
     const explicitReportedStatusIdentities = new Set(deduplicatedRows
       .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim())

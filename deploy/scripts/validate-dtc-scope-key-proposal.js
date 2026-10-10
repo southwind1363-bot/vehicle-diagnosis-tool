@@ -2,25 +2,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const source = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
-// Scope is limited to the two DTC normalizers. Production assets are not modified.
-const helper = `  function getDtcReadoutNetworkScopeIdentity(input = {}) {
-    const scope = normalizeReadoutNetworkScope(input);
-    if (scope.conflict) return null;
-    if (!scope.provided) return "";
-    return JSON.stringify([scope.networkBus, scope.networkChannel, scope.gatewayRoute]
-      .map(value => value === null ? null : value.normalize("NFKC").toLowerCase()));
-  }
-`;
-let proposedSource = source;
-for (const name of ['normalizeDtcSnapshot', 'normalizeBridgeDtcSnapshot']) {
-  const pattern = new RegExp('  function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?(?=\\r?\\n  function )');
-  const body = source.match(pattern)?.[0];
-  assert.ok(body && body.includes('getReadoutNetworkScopeKey('), name);
-  proposedSource = proposedSource.replace(body, body.replaceAll('getReadoutNetworkScopeKey(', 'getDtcReadoutNetworkScopeIdentity('));
-}
-proposedSource = proposedSource.replace('  function getReadoutNetworkScopeKey(', helper + '\n  function getReadoutNetworkScopeKey(');
-function load(text) { const context = vm.createContext({ window: {} }); vm.runInContext(text, context); return context.window.ObdReadOnly; }
-const before = load(source), after = load(proposedSource);
+// Production regression against frozen pre-change normalization results. No patched runtime.
+const context=vm.createContext({window:{}});vm.runInContext(source,context);
+const after=context.window.ObdReadOnly;
+const frozen=JSON.parse(fs.readFileSync(new URL('./fixtures/dtc-scope-3.13.658.json',import.meta.url),'utf8'));
+const before={normalizeReadoutNetworkScope:after.normalizeReadoutNetworkScope};
+for(const method of ['normalizeDtcSnapshot','normalizeBridgeDtcSnapshot'])before[method]=input=>{
+ const record=frozen.records.find(r=>r.method===method && JSON.stringify(r.input)===JSON.stringify(input));
+ assert.ok(record,'missing frozen baseline: '+method);return record.output;
+};
 const plain = x => JSON.parse(JSON.stringify(x));
 let checks = 0;
 const eq = (a, b, message) => { assert.deepEqual(plain(a), plain(b), message); checks++; };
@@ -71,4 +61,4 @@ const mixed=make({networkBus:'CAN|A'},{networkBus:'CAN A'});mixed.dtcs[1].status
 eq(before.normalizeDtcSnapshot(mixed).dtcs.length,1,'typed status collision baseline');
 eq(after.normalizeDtcSnapshot(mixed).dtcs.length,2,'unknown status on another route retained');
 eq(fs.readFileSync(new URL('../obd-readonly.js',import.meta.url),'utf8'),source,'runtime unchanged');
-console.log(`DTC scope proposal: ${checks} checks passed; two isolated normalizers; no runtime or vehicle I/O changes`);
+console.log(`DTC scope regression: ${checks} checks passed; production normalizers; frozen baseline and archive round trips; no vehicle I/O`);
