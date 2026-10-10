@@ -41024,6 +41024,14 @@
     if (["86", "87"].includes(pid)) return 5;
     if (pid === "89") return 41;
     if (pid === "8F") return 7;
+    // SAE J1979-DA OCT2011, Tables B81/B82/B103/B105/B106/B112/B115/B118/124.
+    // These text definitions keep their existing classification; only framing changes.
+    if (pid === "65") return 2;
+    if (["66", "91"].includes(pid)) return 5;
+    if (["7B", "8B"].includes(pid)) return 7;
+    if (["7D", "7E"].includes(pid)) return 1;
+    if (pid === "85") return 10;
+    if (pid === "88") return 13;
     return 0;
   }
 

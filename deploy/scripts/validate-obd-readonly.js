@@ -16909,9 +16909,9 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "control_module_v
 const livePayloadWithHeaderByte = obd.decodeLivePidResponse({ raw: "41 42 41 00 41 0D 28" });
 check(livePayloadWithHeaderByte.monitorValues.find((item) => item.id === "control_module_voltage")?.value === 16.64, "ライブPIDペイロード内の41を応答ヘッダとして誤読しています");
 check(livePayloadWithHeaderByte.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "ライブPIDペイロード後の次PIDを読み進められません");
-const liveUnknownLengthTextPid = obd.decodeLivePidResponse({ raw: "41 65 01 02 41 0D 28" });
-check(liveUnknownLengthTextPid.monitorValues.find((item) => item.id === "auxiliary_io_supported")?.value === "01 02", "長さ未定義の状態系PIDを値として保持できません");
-check(liveUnknownLengthTextPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "長さ未定義PIDの後続PIDを読み進められません");
+const liveFixedLengthTextPid = obd.decodeLivePidResponse({ raw: "41 65 01 02 41 0D 28" });
+check(liveFixedLengthTextPid.monitorValues.find((item) => item.id === "auxiliary_io_supported")?.value === "01 02", "固定長の状態系PIDを値として保持できません");
+check(liveFixedLengthTextPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "固定長PIDの後続PIDを読み進められません");
 const liveUndecodedNumberPid = obd.decodeLivePidResponse({ raw: "41 75 01 90 00 00 00 00 00 41 7A 01 00 64 00 00 00 00 41 0D 28" });
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90 00 00 00 00 00", "式未実装の数値PIDをRAW値として保持できません");
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.decoded === false, "式未実装の数値PIDに未換算フラグがありません");
@@ -17553,9 +17553,9 @@ check(decodedFreezeFrame.monitorValues.find((item) => item.id === "coolant_temp"
 const freezePayloadWithHeaderByte = obd.decodeFreezeFrameResponse({ raw: "42 42 00 42 00 42 0D 00 28" });
 check(freezePayloadWithHeaderByte.monitorValues.find((item) => item.id === "control_module_voltage")?.value === 16.896, "フリーズフレームペイロード内の42を応答ヘッダとして誤読しています");
 check(freezePayloadWithHeaderByte.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームペイロード後の次PIDを読み進められません");
-const freezeUnknownLengthTextPid = obd.decodeFreezeFrameResponse({ raw: "42 65 00 01 02 42 0D 00 28" });
-check(freezeUnknownLengthTextPid.monitorValues.find((item) => item.id === "auxiliary_io_supported")?.value === "01 02", "フリーズフレームで長さ未定義の状態系PIDを値として保持できません");
-check(freezeUnknownLengthTextPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームで長さ未定義PIDの後続PIDを読み進められません");
+const freezeFixedLengthTextPid = obd.decodeFreezeFrameResponse({ raw: "42 65 00 01 02 42 0D 00 28" });
+check(freezeFixedLengthTextPid.monitorValues.find((item) => item.id === "auxiliary_io_supported")?.value === "01 02", "フリーズフレームで固定長の状態系PIDを値として保持できません");
+check(freezeFixedLengthTextPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームで固定長PIDの後続PIDを読み進められません");
 const freezeUndecodedNumberPid = obd.decodeFreezeFrameResponse({ raw: "42 75 00 01 90 00 00 00 00 00 42 0D 00 28" });
 check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90 00 00 00 00 00", "フリーズフレームで式未実装の数値PIDをRAW値として保持できません");
 check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームで式未実装PIDの後続PIDを読み進められません");
