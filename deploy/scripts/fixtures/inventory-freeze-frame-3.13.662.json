@@ -1,0 +1,1559 @@
+{
+  "version": "3.13.662",
+  "evidence": [
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+        ]
+      },
+      "field": "networkBus",
+      "kind": "separator",
+      "left": {
+        "networkBus": "A|B",
+        "networkChannel": "CH1",
+        "gatewayRoute": "GW1"
+      },
+      "right": {
+        "networkBus": "A B",
+        "networkChannel": "CH1",
+        "gatewayRoute": "GW1"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+        "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|a b|ch1|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+        ]
+      },
+      "field": "networkBus",
+      "kind": "separator",
+      "left": {
+        "networkBus": "A B",
+        "networkChannel": "CH1",
+        "gatewayRoute": "GW1"
+      },
+      "right": {
+        "networkBus": "A|B",
+        "networkChannel": "CH1",
+        "gatewayRoute": "GW1"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|a b|ch1|gw1"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|a b|ch1|gw1"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|a b|ch1|gw1",
+        "stored|-|-|-|-|2|-|7E8|a b|ch1|gw1"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+        ]
+      },
+      "field": "networkBus",
+      "kind": "missing",
+      "left": {
+        "networkChannel": "CH1",
+        "gatewayRoute": "GW1"
+      },
+      "right": {
+        "networkBus": "-",
+        "networkChannel": "CH1",
+        "gatewayRoute": "GW1"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+        "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+          "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|-|ch1|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+        ]
+      },
+      "field": "networkBus",
+      "kind": "missing",
+      "left": {
+        "networkBus": "-",
+        "networkChannel": "CH1",
+        "gatewayRoute": "GW1"
+      },
+      "right": {
+        "networkChannel": "CH1",
+        "gatewayRoute": "GW1"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|-|ch1|gw1"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|-|ch1|gw1"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|-|ch1|gw1",
+        "stored|-|-|-|-|2|-|7E8|-|ch1|gw1"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+        ]
+      },
+      "field": "networkChannel",
+      "kind": "separator",
+      "left": {
+        "networkBus": "CAN",
+        "networkChannel": "A|B",
+        "gatewayRoute": "GW1"
+      },
+      "right": {
+        "networkBus": "CAN",
+        "networkChannel": "A B",
+        "gatewayRoute": "GW1"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+        "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|a b|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+        ]
+      },
+      "field": "networkChannel",
+      "kind": "separator",
+      "left": {
+        "networkBus": "CAN",
+        "networkChannel": "A B",
+        "gatewayRoute": "GW1"
+      },
+      "right": {
+        "networkBus": "CAN",
+        "networkChannel": "A|B",
+        "gatewayRoute": "GW1"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|can|a b|gw1"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|can|a b|gw1"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|can|a b|gw1",
+        "stored|-|-|-|-|2|-|7E8|can|a b|gw1"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+        ]
+      },
+      "field": "networkChannel",
+      "kind": "missing",
+      "left": {
+        "networkBus": "CAN",
+        "gatewayRoute": "GW1"
+      },
+      "right": {
+        "networkBus": "CAN",
+        "networkChannel": "-",
+        "gatewayRoute": "GW1"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+        "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+          "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|-|gw1"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+        ]
+      },
+      "field": "networkChannel",
+      "kind": "missing",
+      "left": {
+        "networkBus": "CAN",
+        "networkChannel": "-",
+        "gatewayRoute": "GW1"
+      },
+      "right": {
+        "networkBus": "CAN",
+        "gatewayRoute": "GW1"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|can|-|gw1"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|can|-|gw1"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|can|-|gw1",
+        "stored|-|-|-|-|2|-|7E8|can|-|gw1"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+        ]
+      },
+      "field": "gatewayRoute",
+      "kind": "separator",
+      "left": {
+        "networkBus": "CAN",
+        "networkChannel": "CH1",
+        "gatewayRoute": "A|B"
+      },
+      "right": {
+        "networkBus": "CAN",
+        "networkChannel": "CH1",
+        "gatewayRoute": "A B"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+        "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|ch1|a b"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+        ]
+      },
+      "field": "gatewayRoute",
+      "kind": "separator",
+      "left": {
+        "networkBus": "CAN",
+        "networkChannel": "CH1",
+        "gatewayRoute": "A B"
+      },
+      "right": {
+        "networkBus": "CAN",
+        "networkChannel": "CH1",
+        "gatewayRoute": "A|B"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|can|ch1|a b"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|can|ch1|a b"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|a b",
+        "stored|-|-|-|-|2|-|7E8|can|ch1|a b"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+        ]
+      },
+      "field": "gatewayRoute",
+      "kind": "missing",
+      "left": {
+        "networkBus": "CAN",
+        "networkChannel": "CH1"
+      },
+      "right": {
+        "networkBus": "CAN",
+        "networkChannel": "CH1",
+        "gatewayRoute": "-"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+        "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+      ]
+    },
+    {
+      "first": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+        ]
+      },
+      "second": {
+        "freezeFrameValueCount": 1,
+        "freezeFrameValueKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+        ],
+        "freezeFrameValueEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuEvidenceRecorded": true,
+        "freezeFrameValueReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameValueReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameValueUnresolvedEcuIds": [],
+        "freezeFrameValueUnresolvedEcuScopeKeys": [],
+        "freezeFrameValueReportedEcuKeys": [
+          "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordCount": 2,
+        "freezeFrameUdsRecordKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuEvidenceRecorded": true,
+        "freezeFrameUdsRecordReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameUdsRecordReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameUdsRecordUnresolvedEcuScopeKeys": [],
+        "freezeFrameUdsRecordReportedEcuKeys": [
+          "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+          "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerCount": 1,
+        "freezeFrameTriggerKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuEvidenceRecorded": true,
+        "freezeFrameTriggerReportedEcuIds": [
+          "7E8"
+        ],
+        "freezeFrameTriggerReportedEcuScopeKeys": [
+          "7E8|can|ch1|-"
+        ],
+        "freezeFrameTriggerUnresolvedEcuScopeKeys": [],
+        "freezeFrameTriggerReportedEcuKeys": [
+          "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+        ]
+      },
+      "field": "gatewayRoute",
+      "kind": "missing",
+      "left": {
+        "networkBus": "CAN",
+        "networkChannel": "CH1",
+        "gatewayRoute": "-"
+      },
+      "right": {
+        "networkBus": "CAN",
+        "networkChannel": "CH1"
+      },
+      "valueKeys": [
+        "engine_speed|0|7E8|rpm|1200|can|ch1|-"
+      ],
+      "triggerKeys": [
+        "P0300|-|generic_obd|unreported|0|7E8|can|ch1|-"
+      ],
+      "udsKeys": [
+        "snapshot|P0300|data|-|-|1|-|7E8|can|ch1|-",
+        "stored|-|-|-|-|2|-|7E8|can|ch1|-"
+      ]
+    }
+  ]
+}

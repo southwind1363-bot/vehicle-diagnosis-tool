@@ -8631,6 +8631,54 @@
     };
   }
 
+  const FREEZE_FRAME_INVENTORY_KEYS = Object.freeze({
+    ff_value_v2: { length: 5, ecuIndex: 2 },
+    ff_trigger_v2: { length: 6, ecuIndex: 5 },
+    ff_uds_record_v2: { length: 8, ecuIndex: 7 },
+    ff_scope_v2: { length: 1, ecuIndex: 0 }
+  });
+
+  function parseFreezeFrameInventoryKey(key, expectedPrefix = null) {
+    if (typeof key !== "string") return null;
+    const prefix = key.slice(0, key.indexOf(":"));
+    const definition = Object.hasOwn(FREEZE_FRAME_INVENTORY_KEYS, prefix) ? FREEZE_FRAME_INVENTORY_KEYS[prefix] : null;
+    if (!definition || (expectedPrefix && prefix !== expectedPrefix)) return null;
+    const parts = decodeLivePidInventoryParts(key, prefix + ":", definition.length);
+    if (!parts || parts.slice(0, definition.length).some((part) => typeof part !== "string" || !part || part.length > 2048)) return null;
+    if (prefix === "ff_uds_record_v2" && (!["snapshot", "stored"].includes(parts[0]) || !/^\d+$/.test(parts[5]) || Number(parts[5]) > 255)) return null;
+    const sourceEcu = normalizeComparableCanEcuAddress(parts[definition.ecuIndex]) || parts[definition.ecuIndex];
+    return { parts, prefix, sourceEcu, scopeKey: encodeLivePidInventoryKey("ff_scope_v2:", [sourceEcu, ...parts.slice(definition.length)]) };
+  }
+
+  function buildFreezeFrameInventoryKey(prefix, head, input) {
+    const scope = normalizeReadoutNetworkScope(input);
+    if (scope.conflict) return null;
+    const key = encodeLivePidInventoryKey(prefix + ":", [...head,
+      ...[scope.networkBus, scope.networkChannel, scope.gatewayRoute].map((part) => part === null ? null : part.normalize("NFKC").toLowerCase())]);
+    return parseFreezeFrameInventoryKey(key, prefix) ? key : null;
+  }
+
+  function readFreezeFrameInventoryKeyVersion(summary = {}) {
+    if (summary.freezeFrameKeyValidationFailed === true || summary.freeze_frame_key_validation_failed === true) return null;
+    const camel = summary.freezeFrameKeyVersion, snake = summary.freeze_frame_key_version;
+    if (camel !== undefined && snake !== undefined && camel !== snake) return null;
+    const version = camel ?? snake ?? 1;
+    if (![1, 2].includes(version)) return null;
+    for (const [family, prefix] of [["Value", "ff_value_v2"], ["Trigger", "ff_trigger_v2"], ["UdsRecord", "ff_uds_record_v2"]]) {
+      for (const suffix of ["Keys", "ReportedEcuKeys", "ReportedEcuScopeKeys", "UnresolvedEcuScopeKeys"]) {
+        const field = "freezeFrame" + family + suffix;
+        const alias = field.replace(/[A-Z]/g, (letter) => "_" + letter.toLowerCase());
+        const a = summary[field], b = summary[alias];
+        if ((a !== undefined && !Array.isArray(a)) || (b !== undefined && !Array.isArray(b))) return null;
+        if (a !== undefined && b !== undefined && JSON.stringify(a) !== JSON.stringify(b)) return null;
+        const scope = suffix.endsWith("ScopeKeys"), expectedPrefix = scope ? "ff_scope_v2" : prefix;
+        if (!(a || b || []).every((key) => version === 2 ? Boolean(parseFreezeFrameInventoryKey(key, expectedPrefix))
+          : typeof key === "string" && !/^ff_(value|trigger|uds_record|scope)_v2:/.test(key) && key.split("|").length === (scope ? 1 : FREEZE_FRAME_INVENTORY_KEYS[prefix].length) && key.split("|").every(Boolean))) return null;
+      }
+    }
+    return version;
+  }
+
   function buildCoreReadoutInventorySummary({
     readoutCoverage = null,
     dtcSnapshot = {},
@@ -8717,17 +8765,14 @@
         ? 1
         : 0;
     const freezeFrameTriggerKeys = [...new Set(freezeFrameTriggerEntries.map((entry) => {
-      const networkScopeKey = getReadoutNetworkScopeKey(entry);
-      if (networkScopeKey === null) return null;
-      return [
+      return buildFreezeFrameInventoryKey("ff_trigger_v2", [
         String(entry?.code || entry?.dtc || "").trim().toUpperCase(),
         String(entry?.subcode || entry?.sub_code || "").trim().toUpperCase() || "-",
         String(entry?.codeFormat || entry?.code_format || "generic_obd").trim().toLowerCase().replace(/[\s-]+/g, "_") || "generic_obd",
         normalizeDtcReportedStatus(entry?.reportedStatus || entry?.reported_status) || "unreported",
         Number.isInteger(entry?.frameNumber) ? String(entry.frameNumber) : Number.isInteger(entry?.frame_number) ? String(entry.frame_number) : "-",
         String(entry?.sourceEcu || entry?.source_ecu || "").trim().toUpperCase() || "-",
-        ...(networkScopeKey ? networkScopeKey.split("|") : [])
-      ].join("|");
+      ], entry);
     }).filter((key) => key && !key.startsWith("|")))].sort();
     const freezeFrameUdsSnapshotRecords = firstPopulatedInventoryArray(freezeFrameSnapshot?.udsDtcSnapshotRecords, freezeFrameSnapshot?.uds_dtc_snapshot_records);
     const freezeFrameUdsStoredDataRecords = firstPopulatedInventoryArray(freezeFrameSnapshot?.udsDtcStoredDataRecords, freezeFrameSnapshot?.uds_dtc_stored_data_records);
@@ -8904,9 +8949,7 @@
       const sourceEcu = String(value?.sourceEcu || value?.source_ecu || freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
       const unit = String(value?.unit || "").trim().toLowerCase().replace(/\|/g, " ") || "-";
       const reportedValue = String(rawValue).trim().replace(/\|/g, " ").slice(0, 96);
-      const networkScopeKey = getReadoutNetworkScopeKey(value);
-      if (networkScopeKey === null) return null;
-      return [id, frameNumber, sourceEcu, unit, reportedValue, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+      return buildFreezeFrameInventoryKey("ff_value_v2", [id, frameNumber, sourceEcu, unit, reportedValue], value);
     }).filter(Boolean))].sort();
     const recordedFreezeFrameValueKeys = freezeFrameValueEvidenceRecorded ? freezeFrameValueKeys : [];
     const freezeFrameEcuSnapshots = firstPopulatedInventoryArray(freezeFrameSnapshot?.freezeFrameEcuSnapshots, freezeFrameSnapshot?.freeze_frame_ecu_snapshots);
@@ -8914,9 +8957,7 @@
     const readFreezeFrameEcuId = (snapshot = {}) => normalizeFreezeFrameEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || null);
     const readFreezeFrameEcuScopeKey = (snapshot = {}) => {
       const ecuId = readFreezeFrameEcuId(snapshot);
-      const networkScopeKey = getReadoutNetworkScopeKey(snapshot);
-      if (!ecuId || networkScopeKey === null) return null;
-      return [ecuId, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+      return ecuId ? buildFreezeFrameInventoryKey("ff_scope_v2", [ecuId], snapshot) : null;
     };
     const reportedFreezeFrameEcuIds = [...new Set(freezeFrameEcuSnapshots
       .filter((snapshot) => String(snapshot?.freezeFrameReadoutStatus || snapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported")
@@ -8939,14 +8980,14 @@
         && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedFreezeFrameEcuIds.length > 0);
     const freezeFrameValueReportedEcuKeys = freezeFrameValueReportedEcuEvidenceRecorded
-      ? freezeFrameValueKeys.filter((key) => freezeFrameValueEvidenceRecorded || reportedFreezeFrameEcuScopeKeys.includes([normalizeFreezeFrameEcuId(String(key || "").split("|")[2]), ...String(key || "").split("|").slice(5, 8)].filter(Boolean).join("|")))
+      ? freezeFrameValueKeys.filter((key) => freezeFrameValueEvidenceRecorded || reportedFreezeFrameEcuScopeKeys.includes(parseFreezeFrameInventoryKey(key)?.scopeKey))
       : [];
     const freezeFrameTriggerReportedEcuEvidenceRecorded = freezeFrameTriggerEvidenceRecorded
       || (freezeFrameSnapshot?.blocked !== true && freezeFrameSnapshot?.isBlocked !== true && freezeFrameSnapshot?.is_blocked !== true
         && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedFreezeFrameEcuIds.length > 0);
     const freezeFrameTriggerReportedEcuKeys = freezeFrameTriggerReportedEcuEvidenceRecorded
-      ? freezeFrameTriggerKeys.filter((key) => freezeFrameTriggerEvidenceRecorded || reportedFreezeFrameEcuScopeKeys.includes([normalizeFreezeFrameEcuId(String(key || "").split("|")[5]), ...String(key || "").split("|").slice(6, 9)].filter(Boolean).join("|")))
+      ? freezeFrameTriggerKeys.filter((key) => freezeFrameTriggerEvidenceRecorded || reportedFreezeFrameEcuScopeKeys.includes(parseFreezeFrameInventoryKey(key)?.scopeKey))
       : [];
     const freezeFrameUdsRecordEvidenceRecorded = !freezeFrameResponseUnavailable
       && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported";
@@ -8960,16 +9001,13 @@
         const statusByte = String(record?.statusByte || record?.status_byte || "").trim().toUpperCase() || "-";
         const memory = String(record?.dtcMemorySelection || record?.dtc_memory_selection || "").trim().toUpperCase() || "-";
         const identifierCount = Number(record?.snapshotRecordIdentifierCount ?? record?.snapshot_record_identifier_count);
-        const networkScopeKey = getReadoutNetworkScopeKey(record);
-        if (networkScopeKey === null) return null;
-        return ["snapshot", code, type, statusByte, memory, String(recordNumber), Number.isInteger(identifierCount) ? String(identifierCount) : "-", sourceEcu, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+        return buildFreezeFrameInventoryKey("ff_uds_record_v2", ["snapshot", code, type, statusByte, memory, String(recordNumber), Number.isInteger(identifierCount) ? String(identifierCount) : "-", sourceEcu], record);
       }),
       ...freezeFrameUdsStoredDataRecords.map((record) => {
         const recordNumber = Number(record?.storedDataRecordNumber ?? record?.stored_data_record_number);
         const sourceEcu = String(record?.sourceEcu || record?.source_ecu || freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
-        const networkScopeKey = getReadoutNetworkScopeKey(record);
-        return Number.isInteger(recordNumber) && recordNumber >= 0 && recordNumber <= 255 && networkScopeKey !== null
-          ? ["stored", "-", "-", "-", "-", String(recordNumber), "-", sourceEcu, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|")
+        return Number.isInteger(recordNumber) && recordNumber >= 0 && recordNumber <= 255
+          ? buildFreezeFrameInventoryKey("ff_uds_record_v2", ["stored", "-", "-", "-", "-", String(recordNumber), "-", sourceEcu], record)
           : null;
       })
     ].filter(Boolean))].sort();
@@ -8979,7 +9017,7 @@
         && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedFreezeFrameEcuIds.length > 0);
     const freezeFrameUdsRecordReportedEcuKeys = freezeFrameUdsRecordReportedEcuEvidenceRecorded
-      ? freezeFrameUdsRecordKeys.filter((key) => freezeFrameUdsRecordEvidenceRecorded || reportedFreezeFrameEcuScopeKeys.includes([normalizeFreezeFrameEcuId(String(key || "").split("|")[7]), ...String(key || "").split("|").slice(8, 11)].filter(Boolean).join("|")))
+      ? freezeFrameUdsRecordKeys.filter((key) => freezeFrameUdsRecordEvidenceRecorded || reportedFreezeFrameEcuScopeKeys.includes(parseFreezeFrameInventoryKey(key)?.scopeKey))
       : [];
     const readinessEcuSnapshots = firstPopulatedInventoryArray(readinessSnapshot?.readinessEcuSnapshots, readinessSnapshot?.readiness_ecu_snapshots);
     const readinessResponseUnavailable = isInventoryResponseUnavailable(readinessSnapshot, readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status);
@@ -9308,6 +9346,8 @@
       freeze_frame_value_reported_ecu_evidence_recorded: freezeFrameValueReportedEcuEvidenceRecorded,
       freezeFrameValueReportedEcuIds: reportedFreezeFrameEcuIds,
       freeze_frame_value_reported_ecu_ids: [...reportedFreezeFrameEcuIds],
+      freezeFrameKeyVersion: 2,
+      freeze_frame_key_version: 2,
       freezeFrameValueReportedEcuScopeKeys: reportedFreezeFrameEcuScopeKeys,
       freeze_frame_value_reported_ecu_scope_keys: [...reportedFreezeFrameEcuScopeKeys],
       freezeFrameValueUnresolvedEcuIds: unresolvedFreezeFrameEcuIds,
@@ -22888,20 +22928,13 @@
       ...readIds(currentSummary, "livePidValueUnresolvedEcuIds")
     ].length > 0;
     const restrictLivePidComparisonToScopedEvidence = !completeLivePidValueComparisonEvidenceRecorded && hasLivePidValueEcuScopeEvidence;
-    const readFreezeFrameNetworkScopeKeyMode = (keys, legacyLength, scopedLength) => {
-      const lengths = [...new Set(keys.map((key) => String(key || "").split("|").length))];
-      if (lengths.length === 0) return "none";
-      if (lengths.every((length) => length === legacyLength)) return "unscoped";
-      if (lengths.every((length) => length === scopedLength)) return "scoped";
-      return "mixed";
-    };
-    const freezeFrameKeyModesCompatible = (importedKeys, currentKeys, legacyLength, scopedLength) => {
-      const importedMode = readFreezeFrameNetworkScopeKeyMode(importedKeys, legacyLength, scopedLength);
-      const currentMode = readFreezeFrameNetworkScopeKeyMode(currentKeys, legacyLength, scopedLength);
-      return importedMode === "none" || currentMode === "none" || importedMode === currentMode;
-    };
+    const importedFreezeFrameKeyVersion = readFreezeFrameInventoryKeyVersion(importedInventory);
+    const currentFreezeFrameKeyVersion = readFreezeFrameInventoryKeyVersion(currentSummary);
+    const freezeFrameKeyVersionsCompatible = importedFreezeFrameKeyVersion !== null && importedFreezeFrameKeyVersion === currentFreezeFrameKeyVersion;
     const normalizeFreezeFrameInventoryEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
     const readFreezeFrameInventoryEcuScopeKey = (key, ecuIndex, scopeStart, scopedLength) => {
+      const parsed = parseFreezeFrameInventoryKey(key);
+      if (parsed) return parsed.scopeKey;
       const parts = String(key || "").split("|");
       const ecuId = normalizeFreezeFrameInventoryEcuId(parts[ecuIndex]);
       if (!ecuId) return null;
@@ -22918,7 +22951,7 @@
       const explicitIds = readIds(summary, "freezeFrameTriggerReportedEcuIds").map(normalizeFreezeFrameInventoryEcuId).filter(Boolean);
       const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
         ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeFreezeFrameInventoryEcuId(String(key || "").split("|")[5])).filter(Boolean))].sort();
+        : [...new Set(allKeys.map((key) => (parseFreezeFrameInventoryKey(key)?.sourceEcu || normalizeFreezeFrameInventoryEcuId(String(key || "").split("|")[5]))).filter(Boolean))].sort();
       const explicitKeys = readIds(summary, "freezeFrameTriggerReportedEcuKeys");
       const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
       const explicitScopeKeys = readIds(summary, "freezeFrameTriggerReportedEcuScopeKeys");
@@ -22932,9 +22965,9 @@
     const comparableFreezeFrameTriggerEcuScopeKeys = completeFreezeFrameTriggerComparisonAvailable ? []
       : importedFreezeFrameTriggerReportedEcuScope.evidenceRecorded && currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded
         ? intersectFreezeFrameEcuScopeKeys(importedFreezeFrameTriggerReportedEcuScope.reportedEcuScopeKeys, currentFreezeFrameTriggerReportedEcuScope.reportedEcuScopeKeys) : [];
-    const comparableFreezeFrameTriggerEcuIds = [...new Set(comparableFreezeFrameTriggerEcuScopeKeys.map((key) => key.split("|")[0]).filter(Boolean))].sort();
+    const comparableFreezeFrameTriggerEcuIds = [...new Set(comparableFreezeFrameTriggerEcuScopeKeys.map((key) => (parseFreezeFrameInventoryKey(key, "ff_scope_v2")?.sourceEcu || key.split("|")[0])).filter(Boolean))].sort();
     const reportedEcuFreezeFrameTriggerComparisonAvailable = !completeFreezeFrameTriggerComparisonAvailable && comparableFreezeFrameTriggerEcuScopeKeys.length > 0;
-    const freezeFrameTriggerNetworkScopeKeyModesCompatible = freezeFrameKeyModesCompatible(importedAllFreezeFrameTriggerKeys, currentAllFreezeFrameTriggerKeys, 6, 9);
+    const freezeFrameTriggerNetworkScopeKeyModesCompatible = freezeFrameKeyVersionsCompatible;
     const freezeFrameTriggerComparisonAvailable = (completeFreezeFrameTriggerComparisonAvailable || reportedEcuFreezeFrameTriggerComparisonAvailable) && freezeFrameTriggerNetworkScopeKeyModesCompatible;
     const filterFreezeFrameTriggerKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => comparableFreezeFrameTriggerEcuScopeKeys.includes(readFreezeFrameInventoryEcuScopeKey(key, 5, 6, 9)));    const importedFreezeFrameTriggerKeys = completeFreezeFrameTriggerComparisonAvailable
       ? importedAllFreezeFrameTriggerKeys
@@ -22953,7 +22986,7 @@
       const explicitIds = readIds(summary, "freezeFrameValueReportedEcuIds").map(normalizeFreezeFrameInventoryEcuId).filter(Boolean);
       const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
         ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeFreezeFrameInventoryEcuId(String(key || "").split("|")[2])).filter(Boolean))].sort();
+        : [...new Set(allKeys.map((key) => (parseFreezeFrameInventoryKey(key)?.sourceEcu || normalizeFreezeFrameInventoryEcuId(String(key || "").split("|")[2]))).filter(Boolean))].sort();
       const explicitKeys = readIds(summary, "freezeFrameValueReportedEcuKeys");
       const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
       const explicitScopeKeys = readIds(summary, "freezeFrameValueReportedEcuScopeKeys");
@@ -22969,9 +23002,9 @@
     const comparableFreezeFrameEcuScopeKeys = completeFreezeFrameValueComparisonAvailable ? []
       : importedFreezeFrameReportedEcuScope.evidenceRecorded && currentFreezeFrameReportedEcuScope.evidenceRecorded
         ? intersectFreezeFrameEcuScopeKeys(importedFreezeFrameReportedEcuScope.reportedEcuScopeKeys, currentFreezeFrameReportedEcuScope.reportedEcuScopeKeys) : [];
-    const comparableFreezeFrameEcuIds = [...new Set(comparableFreezeFrameEcuScopeKeys.map((key) => key.split("|")[0]).filter(Boolean))].sort();
+    const comparableFreezeFrameEcuIds = [...new Set(comparableFreezeFrameEcuScopeKeys.map((key) => (parseFreezeFrameInventoryKey(key, "ff_scope_v2")?.sourceEcu || key.split("|")[0])).filter(Boolean))].sort();
     const reportedEcuFreezeFrameValueComparisonAvailable = !completeFreezeFrameValueComparisonAvailable && comparableFreezeFrameEcuScopeKeys.length > 0;
-    const freezeFrameValueNetworkScopeKeyModesCompatible = freezeFrameKeyModesCompatible(importedAllFreezeFrameValueKeys, currentAllFreezeFrameValueKeys, 5, 8);
+    const freezeFrameValueNetworkScopeKeyModesCompatible = freezeFrameKeyVersionsCompatible;
     const freezeFrameValueComparisonAvailable = (completeFreezeFrameValueComparisonAvailable || reportedEcuFreezeFrameValueComparisonAvailable) && freezeFrameValueNetworkScopeKeyModesCompatible;
     const filterFreezeFrameValueKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => comparableFreezeFrameEcuScopeKeys.includes(readFreezeFrameInventoryEcuScopeKey(key, 2, 5, 8)));    const importedFreezeFrameValueKeys = completeFreezeFrameValueComparisonAvailable
       ? importedAllFreezeFrameValueKeys
@@ -22993,7 +23026,7 @@
       const explicitIds = readIds(summary, "freezeFrameUdsRecordReportedEcuIds").map(normalizeFreezeFrameInventoryEcuId).filter(Boolean);
       const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
         ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeFreezeFrameInventoryEcuId(String(key || "").split("|")[7])).filter(Boolean))].sort();
+        : [...new Set(allKeys.map((key) => (parseFreezeFrameInventoryKey(key)?.sourceEcu || normalizeFreezeFrameInventoryEcuId(String(key || "").split("|")[7]))).filter(Boolean))].sort();
       const explicitKeys = readIds(summary, "freezeFrameUdsRecordReportedEcuKeys");
       const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
       const explicitScopeKeys = readIds(summary, "freezeFrameUdsRecordReportedEcuScopeKeys");
@@ -23007,9 +23040,9 @@
     const comparableFreezeFrameUdsRecordEcuScopeKeys = completeFreezeFrameUdsRecordComparisonAvailable ? []
       : importedFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded && currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded
         ? intersectFreezeFrameEcuScopeKeys(importedFreezeFrameUdsRecordReportedEcuScope.reportedEcuScopeKeys, currentFreezeFrameUdsRecordReportedEcuScope.reportedEcuScopeKeys) : [];
-    const comparableFreezeFrameUdsRecordEcuIds = [...new Set(comparableFreezeFrameUdsRecordEcuScopeKeys.map((key) => key.split("|")[0]).filter(Boolean))].sort();
+    const comparableFreezeFrameUdsRecordEcuIds = [...new Set(comparableFreezeFrameUdsRecordEcuScopeKeys.map((key) => (parseFreezeFrameInventoryKey(key, "ff_scope_v2")?.sourceEcu || key.split("|")[0])).filter(Boolean))].sort();
     const reportedEcuFreezeFrameUdsRecordComparisonAvailable = !completeFreezeFrameUdsRecordComparisonAvailable && comparableFreezeFrameUdsRecordEcuScopeKeys.length > 0;
-    const freezeFrameUdsRecordNetworkScopeKeyModesCompatible = freezeFrameKeyModesCompatible(importedAllFreezeFrameUdsRecordKeys, currentAllFreezeFrameUdsRecordKeys, 8, 11);
+    const freezeFrameUdsRecordNetworkScopeKeyModesCompatible = freezeFrameKeyVersionsCompatible;
     const freezeFrameUdsRecordComparisonAvailable = (completeFreezeFrameUdsRecordComparisonAvailable || reportedEcuFreezeFrameUdsRecordComparisonAvailable) && freezeFrameUdsRecordNetworkScopeKeyModesCompatible;
     const filterFreezeFrameUdsRecordKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => comparableFreezeFrameUdsRecordEcuScopeKeys.includes(readFreezeFrameInventoryEcuScopeKey(key, 7, 8, 11)));    const importedFreezeFrameUdsRecordKeys = completeFreezeFrameUdsRecordComparisonAvailable ? importedAllFreezeFrameUdsRecordKeys
       : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? filterFreezeFrameUdsRecordKeysByScope(importedFreezeFrameUdsRecordReportedEcuScope) : [];
@@ -23631,11 +23664,13 @@
       currentFreezeFrameValueReportedEcuEvidenceRecorded: currentFreezeFrameReportedEcuScope.evidenceRecorded,
       current_freeze_frame_value_reported_ecu_evidence_recorded: currentFreezeFrameReportedEcuScope.evidenceRecorded,
       freezeFrameValueComparisonAvailable,
+      freezeFrameValueComparisonBlockedByKeyVersion: !freezeFrameKeyVersionsCompatible && importedFreezeFrameReportedEcuScope.evidenceRecorded && currentFreezeFrameReportedEcuScope.evidenceRecorded,
+      freeze_frame_value_comparison_blocked_by_key_version: !freezeFrameKeyVersionsCompatible && importedFreezeFrameReportedEcuScope.evidenceRecorded && currentFreezeFrameReportedEcuScope.evidenceRecorded,
       freeze_frame_value_comparison_available: freezeFrameValueComparisonAvailable,
       freezeFrameValueNetworkScopeKeyModesCompatible,
       freeze_frame_value_network_scope_key_modes_compatible: freezeFrameValueNetworkScopeKeyModesCompatible,
-      freezeFrameValueComparisonScope: completeFreezeFrameValueComparisonAvailable ? "complete" : reportedEcuFreezeFrameValueComparisonAvailable ? "reported_ecus" : "unavailable",
-      freeze_frame_value_comparison_scope: completeFreezeFrameValueComparisonAvailable ? "complete" : reportedEcuFreezeFrameValueComparisonAvailable ? "reported_ecus" : "unavailable",
+      freezeFrameValueComparisonScope: freezeFrameValueComparisonAvailable ? (completeFreezeFrameValueComparisonAvailable ? "complete" : reportedEcuFreezeFrameValueComparisonAvailable ? "reported_ecus" : "unavailable") : "unavailable",
+      freeze_frame_value_comparison_scope: freezeFrameValueComparisonAvailable ? (completeFreezeFrameValueComparisonAvailable ? "complete" : reportedEcuFreezeFrameValueComparisonAvailable ? "reported_ecus" : "unavailable") : "unavailable",
       freezeFrameValueComparableEcuIds: comparableFreezeFrameEcuIds,
       freeze_frame_value_comparable_ecu_ids: [...comparableFreezeFrameEcuIds],
       freezeFrameValueComparableEcuScopeKeys: comparableFreezeFrameEcuScopeKeys,
@@ -23665,11 +23700,13 @@
       currentFreezeFrameUdsRecordReportedEcuEvidenceRecorded: currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded,
       current_freeze_frame_uds_record_reported_ecu_evidence_recorded: currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded,
       freezeFrameUdsRecordComparisonAvailable,
+      freezeFrameUdsRecordComparisonBlockedByKeyVersion: !freezeFrameKeyVersionsCompatible && importedFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded && currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded,
+      freeze_frame_uds_record_comparison_blocked_by_key_version: !freezeFrameKeyVersionsCompatible && importedFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded && currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded,
       freeze_frame_uds_record_comparison_available: freezeFrameUdsRecordComparisonAvailable,
       freezeFrameUdsRecordNetworkScopeKeyModesCompatible,
       freeze_frame_uds_record_network_scope_key_modes_compatible: freezeFrameUdsRecordNetworkScopeKeyModesCompatible,
-      freezeFrameUdsRecordComparisonScope: completeFreezeFrameUdsRecordComparisonAvailable ? "complete" : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? "reported_ecus" : "unavailable",
-      freeze_frame_uds_record_comparison_scope: completeFreezeFrameUdsRecordComparisonAvailable ? "complete" : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? "reported_ecus" : "unavailable",
+      freezeFrameUdsRecordComparisonScope: freezeFrameUdsRecordComparisonAvailable ? (completeFreezeFrameUdsRecordComparisonAvailable ? "complete" : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? "reported_ecus" : "unavailable") : "unavailable",
+      freeze_frame_uds_record_comparison_scope: freezeFrameUdsRecordComparisonAvailable ? (completeFreezeFrameUdsRecordComparisonAvailable ? "complete" : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? "reported_ecus" : "unavailable") : "unavailable",
       freezeFrameUdsRecordComparableEcuIds: comparableFreezeFrameUdsRecordEcuIds,
       freeze_frame_uds_record_comparable_ecu_ids: [...comparableFreezeFrameUdsRecordEcuIds],
       freezeFrameUdsRecordComparableEcuScopeKeys: comparableFreezeFrameUdsRecordEcuScopeKeys,
@@ -23753,11 +23790,13 @@
       currentFreezeFrameTriggerReportedEcuEvidenceRecorded: currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded,
       current_freeze_frame_trigger_reported_ecu_evidence_recorded: currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded,
       freezeFrameTriggerComparisonAvailable,
+      freezeFrameTriggerComparisonBlockedByKeyVersion: !freezeFrameKeyVersionsCompatible && importedFreezeFrameTriggerReportedEcuScope.evidenceRecorded && currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded,
+      freeze_frame_trigger_comparison_blocked_by_key_version: !freezeFrameKeyVersionsCompatible && importedFreezeFrameTriggerReportedEcuScope.evidenceRecorded && currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded,
       freeze_frame_trigger_comparison_available: freezeFrameTriggerComparisonAvailable,
       freezeFrameTriggerNetworkScopeKeyModesCompatible,
       freeze_frame_trigger_network_scope_key_modes_compatible: freezeFrameTriggerNetworkScopeKeyModesCompatible,
-      freezeFrameTriggerComparisonScope: completeFreezeFrameTriggerComparisonAvailable ? "complete" : reportedEcuFreezeFrameTriggerComparisonAvailable ? "reported_ecus" : "unavailable",
-      freeze_frame_trigger_comparison_scope: completeFreezeFrameTriggerComparisonAvailable ? "complete" : reportedEcuFreezeFrameTriggerComparisonAvailable ? "reported_ecus" : "unavailable",
+      freezeFrameTriggerComparisonScope: freezeFrameTriggerComparisonAvailable ? (completeFreezeFrameTriggerComparisonAvailable ? "complete" : reportedEcuFreezeFrameTriggerComparisonAvailable ? "reported_ecus" : "unavailable") : "unavailable",
+      freeze_frame_trigger_comparison_scope: freezeFrameTriggerComparisonAvailable ? (completeFreezeFrameTriggerComparisonAvailable ? "complete" : reportedEcuFreezeFrameTriggerComparisonAvailable ? "reported_ecus" : "unavailable") : "unavailable",
       freezeFrameTriggerComparableEcuIds: comparableFreezeFrameTriggerEcuIds,
       freeze_frame_trigger_comparable_ecu_ids: [...comparableFreezeFrameTriggerEcuIds],
       freezeFrameTriggerComparableEcuScopeKeys: comparableFreezeFrameTriggerEcuScopeKeys,
@@ -24075,6 +24114,10 @@
       freeze_frame_value_reported_ecu_ids: normalizeIds(summary.freezeFrameValueReportedEcuIds || summary.freeze_frame_value_reported_ecu_ids),
       freezeFrameValueUnresolvedEcuIds: normalizeIds(summary.freezeFrameValueUnresolvedEcuIds || summary.freeze_frame_value_unresolved_ecu_ids),
       freeze_frame_value_unresolved_ecu_ids: normalizeIds(summary.freezeFrameValueUnresolvedEcuIds || summary.freeze_frame_value_unresolved_ecu_ids),
+      freezeFrameKeyVersion: pickDefined(summary.freezeFrameKeyVersion, summary.freeze_frame_key_version, null),
+      freeze_frame_key_version: pickDefined(summary.freeze_frame_key_version, summary.freezeFrameKeyVersion, null),
+      freezeFrameKeyValidationFailed: readFreezeFrameInventoryKeyVersion(summary) === null,
+      freeze_frame_key_validation_failed: readFreezeFrameInventoryKeyVersion(summary) === null,
       freezeFrameValueReportedEcuScopeKeys: normalizeIds(summary.freezeFrameValueReportedEcuScopeKeys || summary.freeze_frame_value_reported_ecu_scope_keys),
       freeze_frame_value_reported_ecu_scope_keys: normalizeIds(summary.freezeFrameValueReportedEcuScopeKeys || summary.freeze_frame_value_reported_ecu_scope_keys),
       freezeFrameValueUnresolvedEcuScopeKeys: normalizeIds(summary.freezeFrameValueUnresolvedEcuScopeKeys || summary.freeze_frame_value_unresolved_ecu_scope_keys),

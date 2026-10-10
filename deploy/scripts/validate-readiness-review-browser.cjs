@@ -627,6 +627,38 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(restored.importedCoreReadoutInventoryComparisonSummary.livePidValueComparisonAvailable,kind==='v2');
     }
     console.log('Inventory v2 browser: legacy comparison explicitly unavailable, v2 same-route delta, actual JSON import and save, responsive themes passed.');
+    for (const kind of ['legacy','v2','routes']) {
+      const rows=(value,bus='A|B')=>({freeze_frame_readout_status:'reported',monitor_values:[{id:'engine_speed',source_ecu:'7E8',unit:'rpm',value,freeze_frame_number:0,network_bus:bus}]});
+      const baseline=kind==='legacy'?{freeze_frame_value_evidence_recorded:true,freeze_frame_value_keys:['engine_speed|0|7E8|rpm|800|a b|-|-']}:
+        model.buildDiagnosticScanSession({freeze_frame_snapshot:rows(800)}).coreReadoutInventorySummary;
+      const prepared=model.buildDiagnosticScanSession({freeze_frame_snapshot:rows(kind==='routes'?800:1200,kind==='routes'?'A B':'A|B'),core_readout_inventory_summary:baseline});
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      const choose=page.waitForEvent('filechooser');page.once('dialog',d=>d.accept());
+      await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+      await (await choose).setFiles({name:'ff-inventory-'+kind+'.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(prepared)))});
+      await page.waitForFunction(()=>obdDevSession.lastSession?.coreReadoutInventorySummary?.freezeFrameKeyVersion===2);
+      const state=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+      const comparison=JSON.parse(state).importedCoreReadoutInventoryComparisonSummary;
+      assert.equal(comparison.freezeFrameValueComparisonAvailable,kind!=='legacy');
+      assert.equal(comparison.freezeFrameValueAddedKeys.length,kind==='legacy'?0:1);
+      assert.equal(comparison.freezeFrameValueRemovedKeys.length,kind==='legacy'?0:1);
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      await page.getByRole('button',{name:'フリーズフレームの詳細を開く',exact:true}).click();
+      const note=page.locator('#obdSessionDetailFreezeFrame .obd-ff-comparison-note');
+      await note.waitFor({state:'visible'});
+      assert.ok((await note.innerText()).includes(kind==='legacy'?'比較できません。差分なしとは判定しません。':'測定値：比較対象内の追加 1件 / 削除 1件'));
+      for(const width of [390,1280])for(const dark of [false,true]){
+        await page.setViewportSize({width,height:844});await page.evaluate(d=>document.body.classList.toggle('dark',d),dark);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+        await note.screenshot({path:path.join(output,'ff-inventory-'+kind+'-'+width+'-'+dark+'.png')});
+      }
+      assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),state);
+      const saved=await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+      const restored=await page.evaluate(raw=>window.ObdReadOnly.buildDiagnosticScanSessionFromJson(raw),saved);
+      assert.equal(restored.importedCoreReadoutInventoryComparisonSummary.freezeFrameValueComparisonAvailable,kind!=='legacy');
+      assert.deepEqual(JSON.parse(JSON.stringify(restored.freezeFrameSnapshot.monitorValues)),JSON.parse(state).freezeFrameSnapshot.monitorValues);
+    }
+    console.log('FF inventory v2 browser: old comparison unavailable, same-route value changes and different routes distinguished, visible notice, JSON archive and responsive themes passed.');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.662";
+const APP_VERSION = "3.13.663";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -13141,6 +13141,33 @@ function formatNativeConnectorInterruption(code) {
   return normalized || "停止理由を記録できませんでした";
 }
 
+function readFreezeFrameInventoryDisplayParts(key, prefix) {
+  const text = String(key || "");
+  if (!text.startsWith(prefix + ":")) return text.split("|");
+  try { const parts = JSON.parse(text.slice(prefix.length + 1)); return Array.isArray(parts) ? parts : []; } catch { return []; }
+}
+
+function renderObdFreezeFrameInventoryComparison(session) {
+  const target = document.getElementById("obdSessionDetailFreezeFrame");
+  if (!target) return;
+  target.querySelector(".obd-ff-comparison-note")?.remove();
+  const comparison = session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary;
+  if (!comparison) return;
+  const labels = [["Value", "測定値"], ["Trigger", "起点DTC"], ["UdsRecord", "UDS記録"]];
+  const notes = labels.flatMap(([family, label]) => {
+    const field = "freezeFrame" + family;
+    if (comparison[field + "ComparisonBlockedByKeyVersion"]) return [label + "は保存記録の比較形式が旧版・不一致・不正のため比較できません。差分なしとは判定しません。"];
+    if (!comparison[field + "ComparisonAvailable"]) return [];
+    const added = comparison[field + "AddedKeys"] || [], removed = comparison[field + "RemovedKeys"] || [];
+    return [label + "：比較対象内の追加 " + added.length + "件 / 削除 " + removed.length + "件"];
+  });
+  if (!notes.length) return;
+  const note = document.createElement("p");
+  note.className = "empty-state obd-ff-comparison-note";
+  note.textContent = "保存記録との比較：" + notes.join(" / ");
+  target.append(note);
+}
+
 function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
   const totalValueCountDeltaValue = summary.totalValueCountDelta ?? summary.total_value_count_delta;
@@ -13250,13 +13277,13 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   if (!livePidValueComparisonAvailable && !livePidUnitMismatchKeys.length && (importedLivePidValueCount > 0 || currentLivePidValueCount > 0)) parts.push("PID値詳細比較不可");
   if (freezeFrameTriggerDelta) parts.push(`FF起点${freezeFrameTriggerDelta > 0 ? "+" : ""}${freezeFrameTriggerDelta}`);
   if (addedFreezeFrameTriggerKeys.length || removedFreezeFrameTriggerKeys.length) {
-    const displayKey = (key) => String(key || "").split("|")[0] || "DTC";
+    const displayKey = (key) => readFreezeFrameInventoryDisplayParts(key, "ff_trigger_v2")[0] || "DTC";
     parts.push(`FF起点:${[...addedFreezeFrameTriggerKeys.map((key) => `+${displayKey(key)}`), ...removedFreezeFrameTriggerKeys.map((key) => `-${displayKey(key)}`)].slice(0, 3).join(",")}`);
   }
   if (!freezeFrameTriggerComparisonAvailable && (importedFreezeFrameTriggerCount > 0 || currentFreezeFrameTriggerCount > 0)) parts.push("FF起点詳細比較不可");
   if (addedFreezeFrameValueKeys.length || removedFreezeFrameValueKeys.length) {
     const displayFreezeFrameValueKey = (key) => {
-      const [id, , , unit, value] = String(key || "").split("|");
+      const [id, , , unit, value] = readFreezeFrameInventoryDisplayParts(key, "ff_value_v2");
       return `${id || "PID"}:${value || "?"}${unit && unit !== "-" ? unit : ""}`;
     };
     parts.push(`FF値:${[...addedFreezeFrameValueKeys.map((key) => `+${displayFreezeFrameValueKey(key)}`), ...removedFreezeFrameValueKeys.map((key) => `-${displayFreezeFrameValueKey(key)}`)].slice(0, 3).join(",")}`);
@@ -13264,7 +13291,7 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   if (!freezeFrameValueComparisonAvailable && (importedFreezeFrameValueCount > 0 || currentFreezeFrameValueCount > 0)) parts.push("FF値詳細比較不可");
   if (addedFreezeFrameUdsRecordKeys.length || removedFreezeFrameUdsRecordKeys.length) {
     const displayFreezeFrameUdsRecordKey = (key) => {
-      const [kind, code, , , , recordNumber] = String(key || "").split("|");
+      const [kind, code, , , , recordNumber] = readFreezeFrameInventoryDisplayParts(key, "ff_uds_record_v2");
       return kind === "snapshot" ? `${code || "DTC"}#${recordNumber || "?"}` : `保存#${recordNumber || "?"}`;
     };
     parts.push(`UDS FF:${[...addedFreezeFrameUdsRecordKeys.map((key) => `+${displayFreezeFrameUdsRecordKey(key)}`), ...removedFreezeFrameUdsRecordKeys.map((key) => `-${displayFreezeFrameUdsRecordKey(key)}`)].slice(0, 3).join(",")}`);
@@ -14660,6 +14687,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   renderObdNextReadoutActions(session);
   renderObdBridgeSessionDetails(session);
   renderObdLiveInventoryComparison(session);
+  renderObdFreezeFrameInventoryComparison(session);
 }
 
 function renderObdLiveInventoryComparison(session) {
