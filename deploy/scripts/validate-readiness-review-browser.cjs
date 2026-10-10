@@ -563,6 +563,38 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.deepEqual(JSON.parse(JSON.stringify(model.buildDiagnosticScanSessionFromJson(saved).dtcSnapshot.dtcs)),JSON.parse(snapshot).dtcSnapshot.dtcs);
     }
     console.log('FF routes: correct per-route values, wrong trigger/value excluded, actual JSON import, responsive themes and archive restoration passed.');
+    for(const kind of ['ambiguous','mismatch']) {
+      const buses=kind==='ambiguous'?['CAN|A','CAN A']:['CAN|A'];
+      const response={ok:true,blocked:false,would_transmit:false,data:{
+        monitor_values:[{id:'engine_speed',value:9999,unit:'rpm',source_ecu:'7E8',...(kind==='mismatch'?{network_bus:'CAN A'}:{})}],
+        ecu_snapshots:buses.map((network_bus,i)=>({source_ecu:'7E8',network_bus,live_pid_readout_status:'reported',monitor_values:[{id:'engine_speed',value:(i+1)*1200,unit:'rpm'}]}))}};
+      // Exercise the browser's production normalizer before the real file import.
+      const archive=await page.evaluate(response=>{
+        const m=window.ObdReadOnly;
+        return JSON.stringify(m.buildBridgeSessionExportPayload(m.buildDiagnosticScanSession({live_pid_snapshot:m.normalizeBridgeLivePidSnapshot(response)})));
+      },response);
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      const choice=page.waitForEvent('filechooser');page.once('dialog',d=>d.accept());
+      await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+      await (await choice).setFiles({name:'live-scope-'+kind+'.json',mimeType:'application/json',buffer:Buffer.from(archive)});
+      await page.waitForFunction(()=>obdDevSession.lastSession?.livePidSnapshot?.monitorValues?.[0]?.value===1200);
+      const snapshot=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+      assert.deepEqual(JSON.parse(snapshot).livePidSnapshot.monitorValues.map(x=>x.value),kind==='ambiguous'?[1200,2400]:[1200]);
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      await page.getByRole('button',{name:'ライブデータの詳細を開く',exact:true}).click();
+      const grid=page.locator('#obdMonitorGrid');await grid.waitFor({state:'visible'});
+      const text=await grid.innerText();assert.ok(text.includes('1200'));assert.ok(!text.includes('9999'));
+      if(kind==='ambiguous')assert.ok(text.includes('2400'));
+      for(const width of [390,1280])for(const dark of [false,true]){
+        await page.setViewportSize({width,height:844});await page.evaluate(d=>document.body.classList.toggle('dark',d),dark);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+        await grid.screenshot({path:path.join(output,'live-scope-'+kind+'-'+width+'-'+dark+'.png')});
+      }
+      assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),snapshot);
+      const saved=await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+      assert.deepEqual(JSON.parse(JSON.stringify(model.buildDiagnosticScanSessionFromJson(saved).livePidSnapshot.monitorValues)),JSON.parse(snapshot).livePidSnapshot.monitorValues);
+    }
+    console.log('Live scope inheritance browser: production normalization, actual file import, correct values, excluded 9999, responsive themes and archive restoration passed.');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);

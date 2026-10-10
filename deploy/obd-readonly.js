@@ -5758,6 +5758,12 @@
     const firstLivePidArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
       || values.find(Array.isArray)
       || [];
+    const liveScopeMatches = (expected, observed) => {
+      const a=normalizeReadoutNetworkScope(expected), b=normalizeReadoutNetworkScope(observed);
+      if(a.conflict || b.conflict) return false;
+      if(!a.provided) return true;
+      return b.provided && getDtcReadoutNetworkScopeIdentity(expected) === getDtcReadoutNetworkScopeIdentity(observed);
+    };
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedLivePidPayload = Boolean(nestedData && [
       "values", "monitor_values", "monitorValues", "pid_values", "pidValues", "live_pid_values", "livePidValues", "live_data", "liveData", "items",
@@ -5990,7 +5996,7 @@
         return snapshotAddress && itemAddress && isComparableCanEcuAddressMatch(snapshotAddress, itemAddress);
       });
       const candidateScopes = new Map(candidates
-        .map((snapshot) => [getReadoutNetworkScopeKey(snapshot), snapshot])
+        .map((snapshot) => [getDtcReadoutNetworkScopeIdentity(snapshot), snapshot])
         .filter(([scopeKey]) => scopeKey !== null));
       return candidateScopes.size === 1 ? inheritReadoutNetworkScope(item, [...candidateScopes.values()][0]) : item;
     });
@@ -6006,7 +6012,7 @@
           const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
           const addressMatches = reportedSource === itemSource
             || Boolean(reportedAddress && itemAddress && isComparableCanEcuAddressMatch(reportedAddress, itemAddress));
-          return addressMatches && readoutNetworkScopeMatches(snapshot, item);
+          return addressMatches && liveScopeMatches(snapshot, item);
         });
       })
       : structuredMonitorValuesWithScope.filter((item) => normalizeReadoutNetworkScope(item).conflict === false);

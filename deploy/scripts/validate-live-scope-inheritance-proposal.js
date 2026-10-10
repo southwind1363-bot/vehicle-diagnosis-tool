@@ -3,24 +3,14 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const url=new URL('../obd-readonly.js',import.meta.url);
 const source=fs.readFileSync(url,'utf8');
-const start=source.indexOf('  function normalizeBridgeLivePidSnapshot(');
-const end=source.indexOf('  function ',start+12);
-assert.ok(start>=0 && end>start);
-const body=source.slice(start,end);
-assert.equal(body.split('getReadoutNetworkScopeKey(snapshot)').length-1,1);
-assert.equal(body.split('readoutNetworkScopeMatches(snapshot, item)').length-1,1);
-const replacement=body.replace('    const nestedData',
- '    const liveScopeMatches = (expected, observed) => {\n'
- +'      const a=normalizeReadoutNetworkScope(expected), b=normalizeReadoutNetworkScope(observed);\n'
- +'      if(a.conflict || b.conflict) return false;\n'
- +'      if(!a.provided) return true;\n'
- +'      return b.provided && getDtcReadoutNetworkScopeIdentity(expected) === getDtcReadoutNetworkScopeIdentity(observed);\n'
- +'    };\n    const nestedData')
- .replace('getReadoutNetworkScopeKey(snapshot)','getDtcReadoutNetworkScopeIdentity(snapshot)')
- .replace('readoutNetworkScopeMatches(snapshot, item)','liveScopeMatches(snapshot, item)');
-assert.ok(replacement.includes('const liveScopeMatches'));
-const load=s=>{const c={window:{}};vm.runInNewContext(s,c);return c.window.ObdReadOnly;};
-const before=load(source),after=load(source.slice(0,start)+replacement+source.slice(end));
+// Production regression against frozen normalization outputs; no runtime patch.
+const context={window:{}};vm.runInNewContext(source,context);
+const after=context.window.ObdReadOnly;
+const frozen=JSON.parse(fs.readFileSync(new URL('./fixtures/live-scope-3.13.660.json',import.meta.url),'utf8'));
+const before={...after,normalizeBridgeLivePidSnapshot(input){
+ const record=frozen.records.find(r=>JSON.stringify(r.input)===JSON.stringify(input));
+ assert.ok(record,'missing frozen baseline');return record.output;
+}};
 const plain=x=>JSON.parse(JSON.stringify(x));let checks=0;
 const eq=(a,b,label)=>{assert.deepEqual(plain(a),plain(b),label);checks++;};
 const make=(scopes,topScope={})=>({ok:true,blocked:false,would_transmit:false,data:{
@@ -67,4 +57,4 @@ const ordinaryRestored=before.buildDiagnosticScanSessionFromJson(JSON.stringify(
 eq(ordinary.livePidSnapshot.monitorValues.map(x=>x.sourceLine),[1,1],'existing child-local source line');
 eq(ordinaryRestored.livePidSnapshot.monitorValues.map(x=>x.sourceLine),[1,2],'existing import sequential source line');
 eq(fs.readFileSync(url,'utf8'),source,'runtime not modified');
-console.log('Live scope inheritance proposal: '+checks+' checks passed; isolated VM, no production edits or vehicle I/O');
+console.log('Live scope inheritance regression: '+checks+' checks passed; production code, frozen baseline, no vehicle I/O');
