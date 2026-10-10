@@ -372,7 +372,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
     console.log('PID'+pid+' browser: full RAW, legacy note, unchanged archives and responsive views passed.');
     }
-    const compoundPayloads = [['6B', '0F 41 0D 28 42'], ['6D', '3F 41 0D 28 42 0D 02 28 41 42 00'], ['6E', '0F 41 0D 28 42 0D 02 28 00'], ['6F', '03 41 42'], ['70', '3F 41 0D 28 42 0D 02 28 00 00'], ['71', '3F 41 0D 28 42 00'], ['72', '0F 41 0D 28 42'], ['73', '03 41 0D 28 42'], ['74', '03 41 0D 28 42'], ['75', '0F 41 0D 28 42 00 00']];
+    const compoundPayloads = [['6B', '0F 41 0D 28 42'], ['6D', '3F 41 0D 28 42 0D 02 28 41 42 00'], ['6E', '0F 41 0D 28 42 0D 02 28 00'], ['6F', '03 41 42'], ['70', '3F 41 0D 28 42 0D 02 28 00 00'], ['71', '3F 41 0D 28 42 00'], ['72', '0F 41 0D 28 42'], ['73', '03 41 0D 28 42'], ['74', '03 41 0D 28 42'], ['75', '0F 41 0D 28 42 00 00'], ['77', '0F 41 0D 28 42'], ['78', '0F 41 0D 28 42 0D 02 28 00'], ['79', '0F 42 0D 02 28 41 0D 28 00'], ['7A', '07 41 0D 28 42 00 00'], ['7C', '0F 41 0D 28 42 0D 02 28 00'], ['7F', '07 41 0D 28 42 0D 02 28 00 00 41 42 00']];
     const compound = model.buildDecodedObdScanSession({
       live_pid_response: { raw: compoundPayloads.map(([pid, raw]) => '41 ' + pid + ' ' + raw).join(' '), source_ecu: '7E8' },
       freeze_frame_response: { raw: compoundPayloads.map(([pid, raw]) => '42 ' + pid + ' 02 ' + raw).join(' '), source_ecu: '7E8' }
@@ -392,7 +392,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         const text = await detail.innerText();
         for (const [, raw] of compoundPayloads) {
           assert.ok(text.includes('RAW ' + raw), raw);
-          assert.ok(!text.includes(raw + ' °C') && !text.includes(raw + ' kPa') && !text.includes(raw + ' %') && !text.includes(raw + ' rpm'), 'RAW must not display a physical unit');
+          assert.ok(!text.includes(raw + ' °C') && !text.includes(raw + ' kPa') && !text.includes(raw + ' %') && !text.includes(raw + ' rpm') && !text.includes(raw + ' s'), 'RAW must not display a physical unit');
         }
         assert.ok(text.includes('未換算'));
         assert.ok(!text.includes('車速'));
@@ -414,7 +414,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       for (const [pid, raw] of compoundPayloads) assert.ok(snapshot.monitorValues.some(row => row.pid === pid && row.value === raw && row.decoded === false));
     }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
-    console.log('Compound RAW browser: 6B/6D/6E/6F/70-75 JSON import, complete live/FF bytes, no invented speed, responsive themes and archive preservation passed.');
+    console.log('Compound RAW browser: 16 PIDs including 77/78/79/7A/7C/7F JSON import, complete live/FF bytes, no invented speed, responsive themes and archive preservation passed.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
   } catch (error) {
     if (page) { await page.screenshot({ path: path.join(output, 'failure.png') }); console.error('Screenshot:', path.join(output, 'failure.png'), 'Page errors:', errors); console.error('Freeze card:', await page.locator('#obdSessionDetailFreezeFrame').allTextContents()); }

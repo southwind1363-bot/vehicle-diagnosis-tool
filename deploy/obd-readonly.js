@@ -41014,6 +41014,11 @@
     if (pid === "71") return 6;
     if (["72", "73", "74"].includes(pid)) return 5;
     if (pid === "75") return 7;
+    // SAE J1979-DA OCT2011, Tables B99-B102/B104/B107: retain complete RAW data.
+    if (pid === "77") return 5;
+    if (["78", "79", "7C"].includes(pid)) return 9;
+    if (pid === "7A") return 7;
+    if (pid === "7F") return 13;
     return 0;
   }
 
@@ -44686,7 +44691,7 @@
         item.aliases.some((alias) => isMonitorLabelMatch(labelPart, alias))
       );
       if (!definition) {
-        const rawPidMatch = line.trim().match(/^(mode\s*0?1\s+pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){1,13})$/i);
+        const rawPidMatch = line.trim().match(/^(mode\s*0?1\s+pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){1,15})$/i);
         if (!rawPidMatch) return;
         const requestLabel = rawPidMatch[1];
         const pid = rawPidMatch[2].toUpperCase();
@@ -44768,7 +44773,7 @@
 
   function extractTextFreezeFrameSnapshot(section = {}) {
     const response = (section.freezeLines || [])
-      .map((line) => String(line || "").trim().match(/^(mode\s*0?2\s+pid\s*|0?2\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){2,14})$/i))
+      .map((line) => String(line || "").trim().match(/^(mode\s*0?2\s+pid\s*|0?2\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){2,16})$/i))
       .map((match) => {
         if (!match) return null;
         const requestLabel = match[1];

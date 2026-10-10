@@ -16912,10 +16912,10 @@ check(livePayloadWithHeaderByte.monitorValues.find((item) => item.id === "vehicl
 const liveUnknownLengthTextPid = obd.decodeLivePidResponse({ raw: "41 65 01 02 41 0D 28" });
 check(liveUnknownLengthTextPid.monitorValues.find((item) => item.id === "auxiliary_io_supported")?.value === "01 02", "長さ未定義の状態系PIDを値として保持できません");
 check(liveUnknownLengthTextPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "長さ未定義PIDの後続PIDを読み進められません");
-const liveUndecodedNumberPid = obd.decodeLivePidResponse({ raw: "41 75 01 90 00 00 00 00 00 41 7A 00 64 41 0D 28" });
+const liveUndecodedNumberPid = obd.decodeLivePidResponse({ raw: "41 75 01 90 00 00 00 00 00 41 7A 01 00 64 00 00 00 00 41 0D 28" });
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90 00 00 00 00 00", "式未実装の数値PIDをRAW値として保持できません");
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.decoded === false, "式未実装の数値PIDに未換算フラグがありません");
-check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "dpf_differential_pressure")?.value === "00 64", "DPF系の式未実装PIDをRAW値として保持できません");
+check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "dpf_differential_pressure")?.value === "01 00 64 00 00 00 00", "DPF系の式未実装PIDをRAW値として保持できません");
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "式未実装PIDの後続PIDを読み進められません");
 check(liveUndecodedNumberPid.monitorValueSummary.undecodedRawCount === 2, "ライブPIDの未換算RAW件数を集計できません");
 check(liveUndecodedNumberPid.monitorValueSummary.undecoded_raw_count === 2 && liveUndecodedNumberPid.monitorValueSummary.total_count === liveUndecodedNumberPid.monitorValueSummary.totalCount, "Live PID summary did not expose snake_case count aliases");
