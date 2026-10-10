@@ -6358,14 +6358,14 @@
     const monitorComparisonUnit = (item) => String(item?.unit || "").trim().toLocaleLowerCase("en-US");
     const previousValuesByKey = new Map(
       (previousSample?.monitorValues || [])
-        .filter((item) => item?.id && Number.isFinite(item?.value) && monitorComparisonKey(item) !== null)
+        .filter((item) => item?.id && buildMonitorValueSummary([item]).numericCount === 1 && monitorComparisonKey(item) !== null)
         .map((item) => [monitorComparisonKey(item), item])
     );
     const previousBaseKeys = new Set((previousSample?.monitorValues || [])
-      .filter((item) => item?.id && Number.isFinite(item?.value) && normalizeReadoutNetworkScope(item).conflict === false)
+      .filter((item) => item?.id && buildMonitorValueSummary([item]).numericCount === 1 && normalizeReadoutNetworkScope(item).conflict === false)
       .map(monitorComparisonBaseKey));
     const latestComparableInputs = (comparisonAvailable ? latestSample?.monitorValues || [] : [])
-      .filter((item) => item?.id && Number.isFinite(item?.value) && monitorComparisonKey(item) !== null);
+      .filter((item) => item?.id && buildMonitorValueSummary([item]).numericCount === 1 && monitorComparisonKey(item) !== null);
     const networkScopeMismatchValueCount = latestComparableInputs
       .filter((item) => previousBaseKeys.has(monitorComparisonBaseKey(item)) && !previousValuesByKey.has(monitorComparisonKey(item)))
       .length;

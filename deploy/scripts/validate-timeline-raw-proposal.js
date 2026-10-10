@@ -2,29 +2,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-// Proposal only: patch isolated VM copies. Never write production code or use transport.
+// Approved migration regression. Production code only; no patched VM or transport.
 const coreSource = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
 const appSource = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
-const summaryCode = coreSource.match(/  function buildLivePidTimelineSummary\([^)]*\) \{[\s\S]*?\r?\n  \}/)?.[0];
-assert.ok(summaryCode);
-assert.equal((summaryCode.match(/Number\.isFinite\(item\?\.value\)/g) || []).length, 3);
-const proposedSummary = summaryCode.replaceAll('Number.isFinite(item?.value)', 'buildMonitorValueSummary([item]).numericCount === 1');
+const legacy = JSON.parse(fs.readFileSync(new URL('./fixtures/timeline-legacy-3.13.655.json', import.meta.url), 'utf8'));
 const chartCode = appSource.match(/function buildLivePidTimelineChartRows\([^)]*\) \{[\s\S]*?\r?\n\}/)?.[0];
 assert.ok(chartCode);
-const chartGuard = 'if (!item?.id || !Number.isFinite(item.value)) return;';
-assert.ok(chartCode.includes(chartGuard));
-const proposedChart = chartCode.replace(chartGuard, `if (!item?.id || !Number.isFinite(item.value)
-          || item.decoded === false || item.undecodedRaw === true || item.undecoded_raw === true
-          || ['raw_hex', 'text'].includes(item.valueType) || ['raw_hex', 'text'].includes(item.value_type)) return;`);
-function load(proposed) {
-  const context = vm.createContext({ window: {} });
-  vm.runInContext(proposed ? coreSource.replace(summaryCode, proposedSummary) : coreSource, context);
-  vm.runInContext(proposed ? proposedChart : chartCode, context);
-  const model = context.window.ObdReadOnly;
-  model.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL('../data/obd-monitor-definitions.json', import.meta.url), 'utf8')));
-  return { model, chart: context.buildLivePidTimelineChartRows };
-}
-const before = load(false), after = load(true);
+const context = vm.createContext({ window: {} });
+vm.runInContext(coreSource, context); vm.runInContext(chartCode, context);
+const model = context.window.ObdReadOnly;
+model.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL('../data/obd-monitor-definitions.json', import.meta.url), 'utf8')));
+const after = { model, chart: context.buildLivePidTimelineChartRows };
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -39,9 +27,9 @@ const cases = [
   [{ value: 'Regeneration active', valueType: 'text' }, false], [{ value: '0', valueType: 'text' }, false],
   [{ decoded: true, valueType: 'number' }, true], [{}, true]
 ];
-for (const [overrides, eligible] of cases) {
+for (const [index, [overrides, eligible]] of cases.entries()) {
   const input = pair(overrides), original = JSON.stringify(input);
-  const oldTimeline = before.model.normalizeLivePidTimeline(input);
+  const oldTimeline = legacy.cases[index].timeline;
   const timeline = after.model.normalizeLivePidTimeline(input);
   assert.deepEqual(plain(timeline), plain(oldTimeline)); checks++;
   const summary = after.model.buildLivePidTimelineSummary(timeline);
@@ -54,13 +42,12 @@ for (const [overrides, eligible] of cases) {
   check(JSON.stringify(input) === original, 'input was mutated');
   if (eligible) {
     check(summary.changes[0].delta === 100 && charts[0].minimum === 0 && charts[0].latest === 100, 'zero/valid delta changed');
-    assert.deepEqual(plain(summary), plain(before.model.buildLivePidTimelineSummary(input))); checks++;
+    assert.deepEqual(plain(summary), plain(legacy.cases[index].summary)); checks++;
   }
-  const oldSession = before.model.buildDiagnosticScanSession({ livePidTimeline: input });
-  const oldArchive = before.model.buildBridgeSessionExportPayload(oldSession);
+  const oldArchive = { ...legacy.mixedArchive, session: { live_pid_timeline: oldTimeline } };
   const restored = after.model.buildDiagnosticScanSessionFromJson(JSON.stringify(oldArchive));
   check(restored?.livePidTimeline?.samples?.length === 2, 'legacy archive lost samples');
-  assert.deepEqual(plain(restored.livePidTimeline.samples), plain(oldSession.livePidTimeline.samples)); checks++;
+  assert.deepEqual(plain(restored.livePidTimeline.samples), plain(oldTimeline.samples)); checks++;
   const again = after.model.buildDiagnosticScanSessionFromJson(JSON.stringify(after.model.buildBridgeSessionExportPayload(restored)));
   assert.deepEqual(plain(again.livePidTimeline.samples), plain(restored.livePidTimeline.samples)); checks++;
 }
@@ -71,20 +58,20 @@ for (const rawIndex of [0, 1]) {
 }
 const mixed = pair();
 mixed.samples.forEach((sample, step) => sample.monitorValues.push({ id: 'coolant_temp', label: 'Raw temperature', sourceEcu: '7E8', unit: '°C', value: 999 + step, decoded: false }));
-const oldSummary = before.model.buildLivePidTimelineSummary(mixed), newSummary = after.model.buildLivePidTimelineSummary(mixed);
-check(oldSummary.comparedValueCount === 2 && newSummary.comparedValueCount === 1, 'before/after comparison evidence');
-check(before.chart(before.model.normalizeLivePidTimeline(mixed)).length === 2 && after.chart(after.model.normalizeLivePidTimeline(mixed)).length === 1, 'before/after graph evidence');
+const newSummary = after.model.buildLivePidTimelineSummary(mixed);
+check(newSummary.comparedValueCount === 1, 'mixed comparison eligibility');
+check(after.chart(after.model.normalizeLivePidTimeline(mixed)).length === 1, 'mixed graph eligibility');
 check(newSummary.changes.length === 1 && newSummary.changes[0].id === 'engine_speed' && newSummary.changes[0].delta === 100, 'valid series lost');
 for (const overrides of [{ decoded: false }, { undecodedRaw: true }, { undecoded_raw: true }, { valueType: 'raw_hex' }, { value_type: 'raw_hex' }, { valueType: 'text' }, { value_type: 'text' }]) {
   check(after.chart(pair(overrides)).length === 0, 'direct display RAW/text flag ignored');
 }
 for (const change of [input => { input.samples[1].observationCondition = 'cold'; }, input => { input.samples[1].monitorValues[0].unit = 'rps'; }, input => { input.samples[1].monitorValues[0].sourceEcu = '7E9'; }]) {
   const input = pair(); change(input);
-  assert.deepEqual(plain(after.model.buildLivePidTimelineSummary(input)), plain(before.model.buildLivePidTimelineSummary(input))); checks++;
-  assert.deepEqual(plain(after.chart(input)), plain(before.chart(input))); checks++;
+  check(after.model.buildLivePidTimelineSummary(input).comparedValueCount === 0, 'incompatible pair compared');
+  check(after.chart(input).length === 0, 'incompatible pair graphed');
 }
-console.log(`Timeline RAW proposal: ${checks} checks passed; isolated VM only, samples and archive round trips retained, no production change or I/O.`);
-console.log('Example: numeric + numeric-shaped RAW -> compared 2 to 1, chart series 2 to 1; numeric delta +100 retained.');
+console.log(`Timeline RAW regression: ${checks} checks passed; production code, legacy samples and archive round trips retained, no vehicle I/O.`);
+console.log('Numeric + numeric-shaped RAW: only numeric series compared/graphed; delta +100 retained.');
 
 if (process.argv.includes('--browser')) {
   const path = await import('node:path');
@@ -98,7 +85,7 @@ if (process.argv.includes('--browser')) {
   const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true });
   const errors = [], blocked = [];
   try {
-    for (const proposed of [false, true]) {
+    {
       const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
       try {
         await context.addInitScript(() => {
@@ -114,8 +101,7 @@ if (process.argv.includes('--browser')) {
           const relative = path.relative(root, file);
           if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(file)) return route.fulfill({ status: 404, body: '' });
           const contentType = { '.js': 'text/javascript', '.json': 'application/json', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml' }[path.extname(file)] || 'text/plain';
-          const body = proposed && relative === 'obd-readonly.js' ? coreSource.replace(summaryCode, proposedSummary)
-            : proposed && relative === 'script.js' ? appSource.replace(chartCode, proposedChart) : fs.readFileSync(file);
+          const body = fs.readFileSync(file);
           await route.fulfill({ contentType, body });
         });
         const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
@@ -124,19 +110,19 @@ if (process.argv.includes('--browser')) {
         await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
         const picker = page.waitForEvent('filechooser');
         await page.getByRole('button', { name: '保存した読取結果を開く', exact: true }).click();
-        const oldSession = before.model.buildDiagnosticScanSession({ livePidTimeline: mixed });
-        const archive = before.model.buildBridgeSessionExportPayload(oldSession);
+        const archive = legacy.mixedArchive;
+        const oldTimeline = after.model.normalizeLivePidTimeline(archive.session.live_pid_timeline);
         await (await picker).setFiles({ name: 'numeric-and-raw-timeline.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(archive)) });
         await page.waitForFunction(() => obdDevSession.lastSession?.livePidTimeline?.samples?.length === 2);
         const sessionBefore = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
         await page.locator('.obd-results-nav').getByRole('button', { name: '追加データ', exact: true }).click();
         await page.locator('#obdReadoutDetailMenu').getByRole('button', { name: 'ライブ推移', exact: true }).click();
         const card = page.locator('#obdSessionDetailLiveTimeline');
-        assert.equal(await card.locator('.obd-timeline-chart-row').count(), proposed ? 1 : 2);
+        assert.equal(await card.locator('.obd-timeline-chart-row').count(), 1);
         const summary = await page.evaluate(() => window.ObdReadOnly.buildLivePidTimelineSummary(obdDevSession.lastSession.livePidTimeline));
-        assert.equal(summary.comparedValueCount, proposed ? 1 : 2);
+        assert.equal(summary.comparedValueCount, 1);
         const rows = card.locator('.obd-timeline-chart-row');
-        assert.equal(await rows.filter({ hasText: 'Raw temperature' }).count(), proposed ? 0 : 1);
+        assert.equal(await rows.filter({ hasText: 'Raw temperature' }).count(), 0);
         const numericRow = rows.filter({ hasText: 'Engine speed' });
         assert.equal(await numericRow.locator('.obd-timeline-chart-bar').count(), 2);
         assert.match(await numericRow.innerText(), /最小 0 rpm/);
@@ -147,16 +133,32 @@ if (process.argv.includes('--browser')) {
           for (const dark of [false, true]) {
             await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
-            await card.screenshot({ path: path.join(output, `${proposed ? 'proposal' : 'current'}-${width}-${dark}.png`) });
+            await card.screenshot({ path: path.join(output, `production-${width}-${dark}.png`) });
           }
         }
         assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), sessionBefore);
         const exported = await page.evaluate(() => JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
-        const restored = (proposed ? after : before).model.buildDiagnosticScanSessionFromJson(exported);
-        assert.deepEqual(plain(restored.livePidTimeline.samples), plain(oldSession.livePidTimeline.samples));
+        const restored = after.model.buildDiagnosticScanSessionFromJson(exported);
+        assert.deepEqual(plain(restored.livePidTimeline.samples), plain(oldTimeline.samples));
+        // Replacing a numeric chart with RAW-only records must remove stale series.
+        const rawTimeline = after.model.normalizeLivePidTimeline(pair({ decoded: false }));
+        const rawArchive = { ...legacy.mixedArchive, session: { live_pid_timeline: rawTimeline } };
+        await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+        const replacement = page.waitForEvent('filechooser');
+        page.once('dialog', dialog => dialog.accept());
+        await page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }).click();
+        await (await replacement).setFiles({ name: 'raw-only-timeline.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(rawArchive)) });
+        await page.waitForFunction(() => obdDevSession.lastSession?.livePidTimeline?.samples?.[0]?.monitorValues?.[0]?.decoded === false);
+        assert.equal(await page.locator('#obdSessionDetailLiveTimeline').count(), 0);
+        const rawState = await page.evaluate(() => ({ samples: obdDevSession.lastSession.livePidTimeline.samples,
+          summary: window.ObdReadOnly.buildLivePidTimelineSummary(obdDevSession.lastSession.livePidTimeline) }));
+        assert.deepEqual(plain(rawState.samples), plain(rawTimeline.samples));
+        assert.equal(rawState.summary.comparedValueCount, 0);
+        assert.equal(rawState.summary.changes.length, 0);
+
       } finally { await context.close(); }
     }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
-    console.log('Proposal browser: current 2 series/compared values -> proposed 1, zero and slider preserved, old archive restored unchanged, 390/1280 themes. Artifacts: ' + output);
+    console.log('Production browser: legacy archive retains samples, numeric-only series/compared value 1, zero and slider preserved, old archive restored unchanged, 390/1280 themes. Artifacts: ' + output);
   } finally { await browser.close(); }
 }
