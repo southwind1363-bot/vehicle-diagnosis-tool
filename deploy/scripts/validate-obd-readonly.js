@@ -26,6 +26,7 @@ import "./validate-quality-history-roundtrip.js";
 import "./validate-pid-numeric-input.js";
 import "./validate-temperature-pid-payload.js";
 import "./validate-compound-pid-payload.js";
+import "./validate-text-pid-raw-proposal.js";
 import "./validate-temperature-conversion-display.js";
 import "./validate-pid69-raw-proposal.js";
 import "./validate-scanner-navigation.js";

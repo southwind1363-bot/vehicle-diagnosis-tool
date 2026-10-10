@@ -40954,6 +40954,7 @@
     else if (pid === "84") value = a - 40;
     else if (pid === "8C") value = a * 100 / 255;
     else if (pid === "A6") value = doubleWord() === null ? null : doubleWord() / 10;
+    else if (["65", "66", "7B", "7D", "7E", "85", "88", "8B", "91"].includes(pid)) return buildUndecodedPidValue(definition, pid, dataBytes);
     else if (definition.valueType === "text") value = formatRawPidBytes(dataBytes);
     else if (definition.valueType === "number") return buildUndecodedPidValue(definition, pid, dataBytes);
     if (value === null || (typeof value === "number" && !Number.isFinite(value))) return null;
@@ -41025,7 +41026,7 @@
     if (pid === "89") return 41;
     if (pid === "8F") return 7;
     // SAE J1979-DA OCT2011, Tables B81/B82/B103/B105/B106/B112/B115/B118/124.
-    // These text definitions keep their existing classification; only framing changes.
+    // Preserve complete payloads; these uninterpreted bytes are classified as RAW.
     if (pid === "65") return 2;
     if (["66", "91"].includes(pid)) return 5;
     if (["7B", "8B"].includes(pid)) return 7;
