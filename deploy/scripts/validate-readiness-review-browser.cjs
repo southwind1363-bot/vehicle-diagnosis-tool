@@ -397,6 +397,33 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             assert.ok(text.includes((kind !== 'legacy' ? 'RAW ' : '') + raw), raw);
             assert.ok(!text.includes(raw + ' °C') && !text.includes(raw + ' kPa') && !text.includes(raw + ' %') && !text.includes(raw + ' rpm') && !text.includes(raw + ' s') && !text.includes(raw + ' ppm'), 'RAW must not display a physical unit');
           }
+          const scopeLabels = {
+            '66': 'MAFセンサー A/B（複合データ）', '7B': 'DPF バンク2 圧力（差圧・入口・出口）',
+            '7F': 'エンジン運転時間（複合データ）', '87': '吸気マニホールド絶対圧 A/B（複合データ）',
+            '89': 'AECD #11〜15 エンジン運転時間', '8F': 'PMセンサー バンク1/2（状態・値）',
+            '91': 'WWH-OBD ECU情報（状態・時間）'
+          };
+          for (const row of compound.livePidSnapshot.monitorValues) {
+            const corrected = scopeLabels[row.pid];
+            if (!corrected) continue;
+            const visibleLabel = kind === 'legacy' ? row.label : corrected;
+            assert.ok(text.includes(visibleLabel), 'visible scope/legacy label: ' + visibleLabel);
+            if (kind === 'legacy') assert.ok(!text.includes(corrected), 'legacy text was renamed');
+            if (selector === '#obdMonitorGrid') {
+              const card = detail.locator('.obd-monitor-card').filter({ hasText: visibleLabel });
+              await card.getByRole('checkbox', { name: visibleLabel + ' / ECU 7E8を選択', exact: true }).waitFor();
+              if (kind !== 'legacy') assert.ok((await card.innerText()).includes('未換算の応答全体です。'));
+            }
+            const search = selector === '#obdMonitorGrid' ? page.locator('#obdMonitorSearch') : detail.getByPlaceholder('例：回転数、0C 7E8、rpm');
+            for (const query of [visibleLabel, row.label]) {
+              await search.fill(query);
+              const visible = selector === '#obdMonitorGrid' ? detail.locator('.obd-monitor-card:visible') : detail.locator('li:visible');
+              assert.ok((await visible.allTextContents()).some(line => line.includes(visibleLabel)), 'new/old label search: ' + query);
+              if (selector === '#obdMonitorGrid') assert.equal(await visible.count(), 1, 'live search must narrow rows');
+              else assert.match(await detail.locator('[data-freeze-review-count]').innerText(), /記録値：1 \//, 'FF search must narrow rows');
+            }
+            await search.fill('');
+          }
           if (kind !== 'legacy') assert.ok(text.includes('未換算'));
           if (selector.includes('FreezeFrame')) {
             assert.ok(text.includes((kind === 'legacy' ? '変換済み' : '未変換') + payloads.length), 'classification summary');

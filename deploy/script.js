@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.652";
+const APP_VERSION = "3.13.653";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10693,6 +10693,28 @@ function formatObdTemperatureConversion(item = {}) {
   return values.length ? `換算表示（RAWから計算）: ${values.join(" / ")}。2011年定義による参考表示・車両適合未確認。` : "換算表示: 対応センサーの報告なし";
 }
 
+function getObdMonitorDisplayLabel(item = {}) {
+  const original = item.label || item.id || "項目";
+  if (!(item.decoded === false || item.undecodedRaw === true)) return original;
+  if (item.service && !["01", "02"].includes(item.service)) return original;
+  if (item.scope && item.scope !== "standard-generic") return original;
+  // Display only; SAE J1979-DA OCT2011 Tables B82/B103/B107/B114/B116/B122/124.
+  const definitions = {
+    "66": ["maf_sensor_status", 5, "MAFセンサー A/B（複合データ）"],
+    "7B": ["dpf_status", 7, "DPF バンク2 圧力（差圧・入口・出口）"],
+    "7F": ["engine_runtime_aux", 13, "エンジン運転時間（複合データ）"],
+    "87": ["intake_manifold_absolute_pressure_a", 5, "吸気マニホールド絶対圧 A/B（複合データ）"],
+    "89": ["engine_runtime_aecd", 41, "AECD #11〜15 エンジン運転時間"],
+    "8F": ["pm_sensor_bank1", 7, "PMセンサー バンク1/2（状態・値）"],
+    "91": ["wwh_obd_vehicle_info", 5, "WWH-OBD ECU情報（状態・時間）"]
+  };
+  const definition = definitions[typeof item.pid === "string" ? item.pid.toUpperCase() : ""];
+  const raw = typeof item.value === "string" ? item.value.trim() : "";
+  if (!definition || item.id !== definition[0] || !/^[0-9a-f]{2}(?:\s+[0-9a-f]{2})*$/i.test(raw)
+    || raw.split(/\s+/).length !== definition[1]) return original;
+  return definition[2];
+}
+
 function formatObdLegacyControlReviewNote(item = {}) {
   const pid = { commanded_egr_pid69: "69", egr_error_pid69: "69", commanded_diesel_intake_air_flow: "6A", commanded_throttle_control: "6C" }[item.id];
   return pid && item.decoded !== false && item.undecodedRaw !== true
@@ -10710,7 +10732,7 @@ function formatObdFreezeFrameValueLine(item = {}) {
   const conversion = formatObdTemperatureConversion(item);
   const reading = raw || conversion ? `RAW ${item.value}` : formatObdBridgeReadoutValue(item);
   const review = formatObdLegacyControlReviewNote(item);
-  return `${item.label || item.id || "項目"}: ${reading} [${pid}${ecu} / ${frame}]${raw}${conversion ? ` / ${conversion}` : ""}${review ? ` / ${review}` : ""}`;
+  return `${getObdMonitorDisplayLabel(item)}: ${reading} [${pid}${ecu} / ${frame}]${raw}${conversion ? ` / ${conversion}` : ""}${review ? ` / ${review}` : ""}`;
 }
 
 function createObdFreezeFrameReviewControls(values, rows) {
@@ -10724,7 +10746,7 @@ function createObdFreezeFrameReviewControls(values, rows) {
     ecu: value.sourceEcu || value.source_ecu || "ECU未記録",
     frame: getObdDisplayByteNumber(value.freezeFrameNumber ?? value.freeze_frame_number),
     raw: value.decoded === false || value.undecodedRaw === true,
-    text: normalize([value.label, value.id, value.pid, value.sourceEcu || value.source_ecu, value.category, value.unit]
+    text: normalize([getObdMonitorDisplayLabel(value), value.label, value.id, value.pid, value.sourceEcu || value.source_ecu, value.category, value.unit]
       .filter(item => typeof item === "string" || typeof item === "number").join(" ")) }));
   controls.hidden = entries.length === 0;
   const select = (labelText, options) => {
@@ -15956,14 +15978,14 @@ function renderObdMonitorValues(values, insights = []) {
     if (item.undecodedRaw === true) card.classList.add("is-raw");
 
     const sourceEcu = item.sourceEcu || item.source_ecu || null;
-    card.dataset.monitorSearch = [item.label, item.id, item.pid, sourceEcu, item.category, item.unit]
+    card.dataset.monitorSearch = [getObdMonitorDisplayLabel(item), item.label, item.id, item.pid, sourceEcu, item.category, item.unit]
       .filter((value) => typeof value === "string" || typeof value === "number").join(" ");
     const category = document.createElement("span");
     category.className = "obd-monitor-category";
     category.textContent = [item.category, sourceEcu ? `ECU ${sourceEcu}` : null].filter(Boolean).join(" / ") || "ライブデータ";
 
     const label = document.createElement("strong");
-    label.textContent = item.label;
+    label.textContent = getObdMonitorDisplayLabel(item);
     let displayLabel = label;
     if (selection && !selection.hidden) {
       displayLabel = document.createElement("label");
@@ -15971,7 +15993,7 @@ function renderObdMonitorValues(values, insights = []) {
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.dataset.monitorSelect = "";
-      checkbox.ariaLabel = `${item.label || item.id || "計測項目"}${sourceEcu ? ` / ECU ${sourceEcu}` : ""}を選択`;
+      checkbox.ariaLabel = `${getObdMonitorDisplayLabel(item)}${sourceEcu ? ` / ECU ${sourceEcu}` : ""}を選択`;
       displayLabel.append(checkbox, label);
     }
 
@@ -15983,7 +16005,9 @@ function renderObdMonitorValues(values, insights = []) {
 
     const note = document.createElement("span");
     note.className = "obd-monitor-note";
-    note.textContent = [item.supportNote || "メーカー整備書の基準値と比較してください。", formatObdLegacyControlReviewNote(item)].filter(Boolean).join(" ");
+    note.textContent = [getObdMonitorDisplayLabel(item) !== (item.label || item.id || "項目")
+      ? "未換算の応答全体です。個別の値や対応状況はまだ解釈していません。"
+      : item.supportNote || "メーカー整備書の基準値と比較してください。", formatObdLegacyControlReviewNote(item)].filter(Boolean).join(" ");
 
     card.append(category, displayLabel, reading, note);
     if (conversion) {

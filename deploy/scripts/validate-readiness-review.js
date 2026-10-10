@@ -13,7 +13,7 @@ class Element {
   focus() { this.focused = true; }
 }
 const context = vm.createContext({ window: { ObdReadOnly: { getReadinessMonitors: () => [{ id: "catalyst", diagnosticUse: "参考用途", notCompleteNote: "条件を確認", serviceManualRequired: true, source: "同梱出典" }] } }, document: { createElement: (tag) => new Element(tag) }, formatObdReadoutStatus: (value, fallback) => value || fallback });
-vm.runInContext(["buildObdReadinessDispositionLines", "formatReadoutErrorCodes", "createObdReferenceSearchControls", "createObdMode06ReviewControls", "getObdDisplayByteNumber", "createObdFreezeFrameReviewControls", "buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
+vm.runInContext(["getObdMonitorDisplayLabel", "buildObdReadinessDispositionLines", "formatReadoutErrorCodes", "createObdReferenceSearchControls", "createObdMode06ReviewControls", "getObdDisplayByteNumber", "createObdFreezeFrameReviewControls", "buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
 const all = (node) => [node, ...node.children.flatMap(all)];
 const snapshot = { readinessEcuSnapshots: [
   { sourceEcu: "7E8", milOn: true, readinessIgnitionType: "spark", monitors: [
