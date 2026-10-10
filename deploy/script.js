@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.646";
+const APP_VERSION = "3.13.647";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10708,7 +10708,7 @@ function formatObdFreezeFrameValueLine(item = {}) {
   const raw = item.decoded === false || item.undecodedRaw === true ? " / 未換算" : "";
   const pid = typeof item.pid === "string" && /^[0-9A-F]{2}$/i.test(item.pid) ? `PID ${item.pid.toUpperCase()} / ` : "";
   const conversion = formatObdTemperatureConversion(item);
-  const reading = conversion ? `RAW ${item.value}` : formatObdBridgeReadoutValue(item);
+  const reading = raw || conversion ? `RAW ${item.value}` : formatObdBridgeReadoutValue(item);
   const review = formatObdLegacyControlReviewNote(item);
   return `${item.label || item.id || "項目"}: ${reading} [${pid}${ecu} / ${frame}]${raw}${conversion ? ` / ${conversion}` : ""}${review ? ` / ${review}` : ""}`;
 }
@@ -15979,7 +15979,7 @@ function renderObdMonitorValues(values, insights = []) {
     reading.className = "obd-monitor-reading";
     const conversion = formatObdTemperatureConversion(item);
     reading.textContent = item.value === null || item.value === undefined || item.value === ""
-      ? "値未確認" : conversion ? `RAW ${item.value}` : `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
+      ? "値未確認" : item.decoded === false || item.undecodedRaw === true ? `RAW ${item.value} / 未換算` : conversion ? `RAW ${item.value}` : `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
 
     const note = document.createElement("span");
     note.className = "obd-monitor-note";

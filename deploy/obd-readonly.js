@@ -41004,6 +41004,11 @@
     // Keep these values RAW until individual sensor conversion is implemented.
     if (pid === "67") return 3;
     if (pid === "68" || pid === "69") return 7;
+    // SAE J1979-DA OCT2011, Tables B87/B89/B90/B91: preserve complete RAW records.
+    if (pid === "6B") return 5;
+    if (pid === "6D") return 11;
+    if (pid === "6E") return 9;
+    if (pid === "6F") return 3;
     return 0;
   }
 
@@ -44676,7 +44681,7 @@
         item.aliases.some((alias) => isMonitorLabelMatch(labelPart, alias))
       );
       if (!definition) {
-        const rawPidMatch = line.trim().match(/^(mode\s*0?1\s+pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){1,9})$/i);
+        const rawPidMatch = line.trim().match(/^(mode\s*0?1\s+pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){1,13})$/i);
         if (!rawPidMatch) return;
         const requestLabel = rawPidMatch[1];
         const pid = rawPidMatch[2].toUpperCase();
@@ -44758,7 +44763,7 @@
 
   function extractTextFreezeFrameSnapshot(section = {}) {
     const response = (section.freezeLines || [])
-      .map((line) => String(line || "").trim().match(/^(mode\s*0?2\s+pid\s*|0?2\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){2,10})$/i))
+      .map((line) => String(line || "").trim().match(/^(mode\s*0?2\s+pid\s*|0?2\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){2,14})$/i))
       .map((match) => {
         if (!match) return null;
         const requestLabel = match[1];

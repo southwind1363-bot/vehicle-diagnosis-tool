@@ -372,6 +372,49 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
     console.log('PID'+pid+' browser: full RAW, legacy note, unchanged archives and responsive views passed.');
     }
+    const compoundPayloads = [['6B', '0F 41 0D 28 42'], ['6D', '3F 41 0D 28 42 0D 02 28 41 42 00'], ['6E', '0F 41 0D 28 42 0D 02 28 00'], ['6F', '03 41 42']];
+    const compound = model.buildDecodedObdScanSession({
+      live_pid_response: { raw: compoundPayloads.map(([pid, raw]) => '41 ' + pid + ' ' + raw).join(' '), source_ecu: '7E8' },
+      freeze_frame_response: { raw: compoundPayloads.map(([pid, raw]) => '42 ' + pid + ' 02 ' + raw).join(' '), source_ecu: '7E8' }
+    });
+    const compoundPicker = page.waitForEvent('filechooser');
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }).click();
+    await (await compoundPicker).setFiles({ name: 'compound-raw.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(compound))) });
+    await page.waitForFunction(() => obdDevSession.lastSession?.livePidSnapshot?.monitorValues?.[0]?.id === 'egr_temp');
+    const compoundBefore = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const [button, selector] of [['ライブデータの詳細を開く', '#obdMonitorGrid'], ['フリーズフレームの詳細を開く', '#obdSessionDetailFreezeFrame']]) {
+        await page.getByRole('button', { name: button, exact: true }).click();
+        const detail = page.locator(selector); await detail.waitFor({ state: 'visible' });
+        const text = await detail.innerText();
+        for (const [, raw] of compoundPayloads) {
+          assert.ok(text.includes('RAW ' + raw), raw);
+          assert.ok(!text.includes(raw + ' °C') && !text.includes(raw + ' kPa'), 'RAW must not display a physical unit');
+        }
+        assert.ok(text.includes('未換算'));
+        assert.ok(!text.includes('車速'));
+        assert.ok(text.includes('7E8'));
+        if (selector.includes('FreezeFrame')) assert.ok(text.includes('FF #2'));
+        for (const dark of [false, true]) {
+          await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+          await detail.screenshot({ path: path.join(output, 'compound-' + selector.slice(1) + '-' + width + '-' + dark + '.png') });
+        }
+        await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      }
+    }
+    assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), compoundBefore);
+    const compoundArchive = await page.evaluate(() => JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+    const compoundRestored = model.buildDiagnosticScanSessionFromJson(compoundArchive);
+    for (const snapshot of [compoundRestored.livePidSnapshot, compoundRestored.freezeFrameSnapshot]) {
+      assert.equal(snapshot.monitorValues.length, 4);
+      for (const [pid, raw] of compoundPayloads) assert.ok(snapshot.monitorValues.some(row => row.pid === pid && row.value === raw && row.decoded === false));
+    }
+    assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+    console.log('Compound RAW browser: 6B/6D/6E/6F JSON import, complete live/FF bytes, no invented speed, responsive themes and archive preservation passed.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
   } catch (error) {
     if (page) { await page.screenshot({ path: path.join(output, 'failure.png') }); console.error('Screenshot:', path.join(output, 'failure.png'), 'Page errors:', errors); console.error('Freeze card:', await page.locator('#obdSessionDetailFreezeFrame').allTextContents()); }
