@@ -1,0 +1,162 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+// Proposal only: patch isolated VM copies. Never write production code or use transport.
+const coreSource = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
+const appSource = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
+const summaryCode = coreSource.match(/  function buildLivePidTimelineSummary\([^)]*\) \{[\s\S]*?\r?\n  \}/)?.[0];
+assert.ok(summaryCode);
+assert.equal((summaryCode.match(/Number\.isFinite\(item\?\.value\)/g) || []).length, 3);
+const proposedSummary = summaryCode.replaceAll('Number.isFinite(item?.value)', 'buildMonitorValueSummary([item]).numericCount === 1');
+const chartCode = appSource.match(/function buildLivePidTimelineChartRows\([^)]*\) \{[\s\S]*?\r?\n\}/)?.[0];
+assert.ok(chartCode);
+const chartGuard = 'if (!item?.id || !Number.isFinite(item.value)) return;';
+assert.ok(chartCode.includes(chartGuard));
+const proposedChart = chartCode.replace(chartGuard, `if (!item?.id || !Number.isFinite(item.value)
+          || item.decoded === false || item.undecodedRaw === true || item.undecoded_raw === true
+          || ['raw_hex', 'text'].includes(item.valueType) || ['raw_hex', 'text'].includes(item.value_type)) return;`);
+function load(proposed) {
+  const context = vm.createContext({ window: {} });
+  vm.runInContext(proposed ? coreSource.replace(summaryCode, proposedSummary) : coreSource, context);
+  vm.runInContext(proposed ? proposedChart : chartCode, context);
+  const model = context.window.ObdReadOnly;
+  model.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL('../data/obd-monitor-definitions.json', import.meta.url), 'utf8')));
+  return { model, chart: context.buildLivePidTimelineChartRows };
+}
+const before = load(false), after = load(true);
+let checks = 0;
+const check = (condition, message) => { assert.ok(condition, message); checks++; };
+const plain = value => JSON.parse(JSON.stringify(value));
+const pair = (overrides = {}) => ({ samples: [0, 1].map(step => ({
+  capturedAt: `2026-10-10T00:00:0${step}Z`, observationCondition: 'warm', livePidReadoutStatus: 'reported',
+  monitorValues: [{ id: 'engine_speed', label: 'Engine speed', sourceEcu: '7E8', unit: 'rpm', value: step * 100, ...overrides }]
+})) });
+const cases = [
+  [{ decoded: false }, false], [{ valueType: 'raw_hex' }, false], [{ value_type: 'raw_hex' }, false],
+  [{ valueType: 'text' }, false], [{ decoded: true, valueType: 'text' }, false],
+  [{ decoded: false, valueType: 'number' }, false], [{ value: '28 28', valueType: 'raw_hex' }, false],
+  [{ value: 'Regeneration active', valueType: 'text' }, false], [{ value: '0', valueType: 'text' }, false],
+  [{ decoded: true, valueType: 'number' }, true], [{}, true]
+];
+for (const [overrides, eligible] of cases) {
+  const input = pair(overrides), original = JSON.stringify(input);
+  const oldTimeline = before.model.normalizeLivePidTimeline(input);
+  const timeline = after.model.normalizeLivePidTimeline(input);
+  assert.deepEqual(plain(timeline), plain(oldTimeline)); checks++;
+  const summary = after.model.buildLivePidTimelineSummary(timeline);
+  const charts = after.chart(timeline);
+  check(summary.comparedValueCount === (eligible ? 1 : 0), 'numeric comparison eligibility: ' + JSON.stringify(overrides));
+  check(summary.changedValueCount === (eligible ? 1 : 0), 'difference eligibility');
+  check(charts.length === (eligible ? 1 : 0), 'graph eligibility');
+  check(summary.comparisonAvailable === true, 'capture-context comparison flag changed');
+  check(summary.vehicleCommandEnabled === false && summary.wouldTransmit === false, 'execution boundary');
+  check(JSON.stringify(input) === original, 'input was mutated');
+  if (eligible) {
+    check(summary.changes[0].delta === 100 && charts[0].minimum === 0 && charts[0].latest === 100, 'zero/valid delta changed');
+    assert.deepEqual(plain(summary), plain(before.model.buildLivePidTimelineSummary(input))); checks++;
+  }
+  const oldSession = before.model.buildDiagnosticScanSession({ livePidTimeline: input });
+  const oldArchive = before.model.buildBridgeSessionExportPayload(oldSession);
+  const restored = after.model.buildDiagnosticScanSessionFromJson(JSON.stringify(oldArchive));
+  check(restored?.livePidTimeline?.samples?.length === 2, 'legacy archive lost samples');
+  assert.deepEqual(plain(restored.livePidTimeline.samples), plain(oldSession.livePidTimeline.samples)); checks++;
+  const again = after.model.buildDiagnosticScanSessionFromJson(JSON.stringify(after.model.buildBridgeSessionExportPayload(restored)));
+  assert.deepEqual(plain(again.livePidTimeline.samples), plain(restored.livePidTimeline.samples)); checks++;
+}
+for (const rawIndex of [0, 1]) {
+  const input = pair(); input.samples[rawIndex].monitorValues[0].decoded = false;
+  check(after.model.buildLivePidTimelineSummary(input).comparedValueCount === 0, 'mixed numeric/RAW pair compared');
+  check(after.chart(after.model.normalizeLivePidTimeline(input)).length === 0, 'one valid point was graphed');
+}
+const mixed = pair();
+mixed.samples.forEach((sample, step) => sample.monitorValues.push({ id: 'coolant_temp', label: 'Raw temperature', sourceEcu: '7E8', unit: '°C', value: 999 + step, decoded: false }));
+const oldSummary = before.model.buildLivePidTimelineSummary(mixed), newSummary = after.model.buildLivePidTimelineSummary(mixed);
+check(oldSummary.comparedValueCount === 2 && newSummary.comparedValueCount === 1, 'before/after comparison evidence');
+check(before.chart(before.model.normalizeLivePidTimeline(mixed)).length === 2 && after.chart(after.model.normalizeLivePidTimeline(mixed)).length === 1, 'before/after graph evidence');
+check(newSummary.changes.length === 1 && newSummary.changes[0].id === 'engine_speed' && newSummary.changes[0].delta === 100, 'valid series lost');
+for (const overrides of [{ decoded: false }, { undecodedRaw: true }, { undecoded_raw: true }, { valueType: 'raw_hex' }, { value_type: 'raw_hex' }, { valueType: 'text' }, { value_type: 'text' }]) {
+  check(after.chart(pair(overrides)).length === 0, 'direct display RAW/text flag ignored');
+}
+for (const change of [input => { input.samples[1].observationCondition = 'cold'; }, input => { input.samples[1].monitorValues[0].unit = 'rps'; }, input => { input.samples[1].monitorValues[0].sourceEcu = '7E9'; }]) {
+  const input = pair(); change(input);
+  assert.deepEqual(plain(after.model.buildLivePidTimelineSummary(input)), plain(before.model.buildLivePidTimelineSummary(input))); checks++;
+  assert.deepEqual(plain(after.chart(input)), plain(before.chart(input))); checks++;
+}
+console.log(`Timeline RAW proposal: ${checks} checks passed; isolated VM only, samples and archive round trips retained, no production change or I/O.`);
+console.log('Example: numeric + numeric-shaped RAW -> compared 2 to 1, chart series 2 to 1; numeric delta +100 retained.');
+
+if (process.argv.includes('--browser')) {
+  const path = await import('node:path');
+  const os = await import('node:os');
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+  const { fileURLToPath } = await import('node:url');
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  const output = fs.mkdtempSync(path.join(os.tmpdir(), 'timeline-raw-proposal-'));
+  const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true });
+  const errors = [], blocked = [];
+  try {
+    for (const proposed of [false, true]) {
+      const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
+      try {
+        await context.addInitScript(() => {
+          localStorage.setItem('vehicle-diagnosis-notice-accepted-v1', 'accepted');
+          sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled');
+          Object.defineProperty(navigator, 'serial', { value: undefined, configurable: true });
+          Object.defineProperty(navigator, 'bluetooth', { value: undefined, configurable: true });
+        });
+        await context.route('**/*', async route => {
+          const url = new URL(route.request().url());
+          if (url.origin !== 'http://127.0.0.1' || route.request().method() !== 'GET') { blocked.push(url.href); return route.abort(); }
+          const file = path.resolve(root, '.' + (url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname)));
+          const relative = path.relative(root, file);
+          if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(file)) return route.fulfill({ status: 404, body: '' });
+          const contentType = { '.js': 'text/javascript', '.json': 'application/json', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml' }[path.extname(file)] || 'text/plain';
+          const body = proposed && relative === 'obd-readonly.js' ? coreSource.replace(summaryCode, proposedSummary)
+            : proposed && relative === 'script.js' ? appSource.replace(chartCode, proposedChart) : fs.readFileSync(file);
+          await route.fulfill({ contentType, body });
+        });
+        const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
+        await page.goto('http://127.0.0.1/');
+        await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+        await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+        const picker = page.waitForEvent('filechooser');
+        await page.getByRole('button', { name: '保存した読取結果を開く', exact: true }).click();
+        const oldSession = before.model.buildDiagnosticScanSession({ livePidTimeline: mixed });
+        const archive = before.model.buildBridgeSessionExportPayload(oldSession);
+        await (await picker).setFiles({ name: 'numeric-and-raw-timeline.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(archive)) });
+        await page.waitForFunction(() => obdDevSession.lastSession?.livePidTimeline?.samples?.length === 2);
+        const sessionBefore = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+        await page.locator('.obd-results-nav').getByRole('button', { name: '追加データ', exact: true }).click();
+        await page.locator('#obdReadoutDetailMenu').getByRole('button', { name: 'ライブ推移', exact: true }).click();
+        const card = page.locator('#obdSessionDetailLiveTimeline');
+        assert.equal(await card.locator('.obd-timeline-chart-row').count(), proposed ? 1 : 2);
+        const summary = await page.evaluate(() => window.ObdReadOnly.buildLivePidTimelineSummary(obdDevSession.lastSession.livePidTimeline));
+        assert.equal(summary.comparedValueCount, proposed ? 1 : 2);
+        const rows = card.locator('.obd-timeline-chart-row');
+        assert.equal(await rows.filter({ hasText: 'Raw temperature' }).count(), proposed ? 0 : 1);
+        const numericRow = rows.filter({ hasText: 'Engine speed' });
+        assert.equal(await numericRow.locator('.obd-timeline-chart-bar').count(), 2);
+        assert.match(await numericRow.innerText(), /最小 0 rpm/);
+        await numericRow.locator('input[type="range"]').press('Home');
+        assert.match(await numericRow.locator('.obd-timeline-selected-value').innerText(), /0 rpm/);
+        for (const width of [390, 1280]) {
+          await page.setViewportSize({ width, height: 844 });
+          for (const dark of [false, true]) {
+            await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+            await card.screenshot({ path: path.join(output, `${proposed ? 'proposal' : 'current'}-${width}-${dark}.png`) });
+          }
+        }
+        assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), sessionBefore);
+        const exported = await page.evaluate(() => JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+        const restored = (proposed ? after : before).model.buildDiagnosticScanSessionFromJson(exported);
+        assert.deepEqual(plain(restored.livePidTimeline.samples), plain(oldSession.livePidTimeline.samples));
+      } finally { await context.close(); }
+    }
+    assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+    console.log('Proposal browser: current 2 series/compared values -> proposed 1, zero and slider preserved, old archive restored unchanged, 390/1280 themes. Artifacts: ' + output);
+  } finally { await browser.close(); }
+}
