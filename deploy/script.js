@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.656";
+const APP_VERSION = "3.13.657";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -12516,7 +12516,7 @@ function renderObdBridgeSessionDetails(session = null) {
       label.className = "obd-timeline-chart-label";
       const unit = row.unit ? ` ${row.unit}` : "";
       const delta = Number.isFinite(row.delta) ? ` / 変化 ${row.delta >= 0 ? "+" : ""}${row.delta}${unit}` : "";
-      const sourceEcu = row.sourceEcu ? ` [${row.sourceEcu}]` : "";
+      const sourceEcu = (row.sourceEcu ? ` [${row.sourceEcu}]` : "") + (row.networkScopeLabel ? ` [${row.networkScopeLabel}]` : "");
       label.textContent = `${row.label}${sourceEcu}${unit} / 最小 ${row.minimum}${unit} / 最大 ${row.maximum}${unit} / 最新 ${row.latest}${unit}${delta}`;
       const bars = document.createElement("div");
       bars.className = "obd-timeline-chart-bars";
@@ -12748,8 +12748,14 @@ function buildLivePidTimelineChartRows(timeline = null) {
           || ['raw_hex', 'text'].includes(item.valueType) || ['raw_hex', 'text'].includes(item.value_type)) return;
         const sourceEcu = item.sourceEcu || item.source_ecu || null;
         const unit = item.unit || "";
-        const rowKey = `${item.id}::${normalizeCanAddressKey(sourceEcu)}::${normalizeUnit(unit)}`;
+        const scope = window.ObdReadOnly.normalizeReadoutNetworkScope(item);
+        if (scope.conflict) return;
+        const scopeValues = [scope.networkBus, scope.networkChannel, scope.gatewayRoute];
+        const rowKey = JSON.stringify([item.id, normalizeCanAddressKey(sourceEcu), normalizeUnit(unit),
+          ...scopeValues.map(value => value === null ? null : value.normalize("NFKC").toLowerCase())]);
         const row = rowsByKey.get(rowKey) || { id: item.id, label: item.label || item.id, unit, sourceEcu, source_ecu: sourceEcu, points: [] };
+        if (scope.provided) row.networkScopeLabel = [["バス", scope.networkBus], ["チャネル", scope.networkChannel], ["経路", scope.gatewayRoute]]
+          .filter(([, value]) => value !== null).map(([name, value]) => `${name}: ${value}`).join(" / ");
         row.points.push({ value: item.value, capturedAt: sample.capturedAt || sample.captured_at || null });
         rowsByKey.set(rowKey, row);
       });

@@ -45439,6 +45439,7 @@
     normalizeBridgeAdapterIdentity,
     normalizeBridgeDtcSnapshot,
     normalizeBridgeLivePidSnapshot,
+    normalizeReadoutNetworkScope,
     normalizeLivePidTimeline,
     buildLivePidTimelineSummary,
     normalizeBridgeSupportedPidSnapshot,

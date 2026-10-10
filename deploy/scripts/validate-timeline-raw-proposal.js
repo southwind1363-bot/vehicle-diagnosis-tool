@@ -156,9 +156,49 @@ if (process.argv.includes('--browser')) {
         assert.equal(rawState.summary.comparedValueCount, 0);
         assert.equal(rawState.summary.changes.length, 0);
 
+        // Identical PID/ECU on separate routes must remain independently selectable.
+        const networkTimeline = pair();
+        networkTimeline.samples.forEach((sample, step) => {
+          sample.monitorValues = ['CAN-A', 'CAN-B'].map((networkBus, index) => ({
+            ...sample.monitorValues[0], networkBus, networkChannel: 'channel-1', gatewayRoute: 'gateway/engine', value: index * 1000 + step * 100
+          }));
+        });
+        const networkArchive = { ...legacy.mixedArchive, session: { live_pid_timeline: after.model.normalizeLivePidTimeline(networkTimeline) } };
+        await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+        const networkPicker = page.waitForEvent('filechooser');
+        page.once('dialog', dialog => dialog.accept());
+        await page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }).click();
+        await (await networkPicker).setFiles({ name: 'network-timeline.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(networkArchive)) });
+        await page.waitForFunction(() => obdDevSession.lastSession?.livePidTimeline?.samples?.[0]?.monitorValues?.length === 2);
+        const networkSessionBefore = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+        await page.locator('.obd-results-nav').getByRole('button', { name: '追加データ', exact: true }).click();
+        await page.locator('#obdReadoutDetailMenu').getByRole('button', { name: 'ライブ推移', exact: true }).click();
+        assert.equal(await card.locator('.obd-timeline-chart-row').count(), 2);
+        for (const [bus, value] of [['CAN-A', 0], ['CAN-B', 1000]]) {
+          const row = card.locator('.obd-timeline-chart-row').filter({ hasText: 'バス: ' + bus });
+          assert.equal(await row.count(), 1);
+          assert.equal(await row.locator('.obd-timeline-chart-bar').count(), 2);
+          assert.match(await row.innerText(), /チャネル: channel-1 \/ 経路: gateway\/engine/);
+          await row.getByRole('slider', { name: new RegExp(bus) }).press('Home');
+          assert.ok((await row.locator('.obd-timeline-selected-value').innerText()).endsWith(value + ' rpm'));
+          assert.match(await row.innerText(), /変化 \+100 rpm/);
+        }
+        for (const width of [390, 1280]) {
+          await page.setViewportSize({ width, height: 844 });
+          for (const dark of [false, true]) {
+            await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+            await card.screenshot({ path: path.join(output, 'network-' + width + '-' + dark + '.png') });
+          }
+        }
+        assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), networkSessionBefore);
+        const networkExport = await page.evaluate(() => JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+        assert.deepEqual(plain(after.model.buildDiagnosticScanSessionFromJson(networkExport).livePidTimeline.samples), plain(networkArchive.session.live_pid_timeline.samples));
+
+
       } finally { await context.close(); }
     }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
-    console.log('Production browser: legacy archive retains samples, numeric-only series/compared value 1, zero and slider preserved, old archive restored unchanged, 390/1280 themes. Artifacts: ' + output);
+    console.log('Production browser: separate network series and controls verified; legacy archive retains samples, numeric-only series/compared value 1, zero and slider preserved, old archive restored unchanged, 390/1280 themes. Artifacts: ' + output);
   } finally { await browser.close(); }
 }
