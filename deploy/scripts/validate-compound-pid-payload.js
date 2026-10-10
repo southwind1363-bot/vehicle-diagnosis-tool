@@ -11,7 +11,7 @@ let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 const hex = (bytes) => bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
 
-for (const [pid, id, length] of [["6B", "egr_temp", 5], ["6D", "fuel_pressure_control", 11], ["6E", "injection_pressure_control", 9], ["6F", "turbo_inlet_pressure", 3]]) {
+for (const [pid, id, length] of [["6B", "egr_temp", 5], ["6D", "fuel_pressure_control", 11], ["6E", "injection_pressure_control", 9], ["6F", "turbo_inlet_pressure", 3], ["70", "boost_pressure_control", 10], ["71", "vgt_control", 6], ["72", "wastegate_control", 5], ["73", "exhaust_pressure", 5], ["74", "turbo_speed", 5], ["75", "turbo_temp", 7]]) {
   for (const [mode, header, decode, status] of [
     ["live", "41", obd.decodeLivePidResponse, "livePidReadoutStatus"],
     ["FF", "42", obd.decodeFreezeFrameResponse, "freezeFrameReadoutStatus"]
@@ -43,7 +43,7 @@ for (const [pid, id, length] of [["6B", "egr_temp", 5], ["6D", "fuel_pressure_co
   }
 }
 
-for (const [pid, payload] of [["6B", "0F 41 0D 28 42"], ["6D", "3F 41 0D 28 42 0D 02 28 41 42 00"], ["6E", "0F 41 0D 28 42 0D 02 28 00"], ["6F", "03 41 42"]]) {
+for (const [pid, payload] of [["6B", "0F 41 0D 28 42"], ["6D", "3F 41 0D 28 42 0D 02 28 41 42 00"], ["6E", "0F 41 0D 28 42 0D 02 28 00"], ["6F", "03 41 42"], ["70", "3F 41 0D 28 42 0D 02 28 00 00"], ["71", "3F 41 0D 28 42 00"], ["72", "0F 41 0D 28 42"], ["73", "03 41 0D 28 42"], ["74", "03 41 0D 28 42"], ["75", "0F 41 0D 28 42 00 00"]]) {
   const session = obd.buildDecodedObdScanSession({
     live_pid_response: { raw: `41 ${pid} ${payload}`, source_ecu: "7E8" },
     freeze_frame_response: { raw: `42 ${pid} 02 ${payload}`, source_ecu: "7E8" }

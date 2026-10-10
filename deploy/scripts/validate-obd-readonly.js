@@ -16912,8 +16912,8 @@ check(livePayloadWithHeaderByte.monitorValues.find((item) => item.id === "vehicl
 const liveUnknownLengthTextPid = obd.decodeLivePidResponse({ raw: "41 65 01 02 41 0D 28" });
 check(liveUnknownLengthTextPid.monitorValues.find((item) => item.id === "auxiliary_io_supported")?.value === "01 02", "長さ未定義の状態系PIDを値として保持できません");
 check(liveUnknownLengthTextPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "長さ未定義PIDの後続PIDを読み進められません");
-const liveUndecodedNumberPid = obd.decodeLivePidResponse({ raw: "41 75 01 90 41 7A 00 64 41 0D 28" });
-check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90", "式未実装の数値PIDをRAW値として保持できません");
+const liveUndecodedNumberPid = obd.decodeLivePidResponse({ raw: "41 75 01 90 00 00 00 00 00 41 7A 00 64 41 0D 28" });
+check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90 00 00 00 00 00", "式未実装の数値PIDをRAW値として保持できません");
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.decoded === false, "式未実装の数値PIDに未換算フラグがありません");
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "dpf_differential_pressure")?.value === "00 64", "DPF系の式未実装PIDをRAW値として保持できません");
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "式未実装PIDの後続PIDを読み進められません");
@@ -17556,8 +17556,8 @@ check(freezePayloadWithHeaderByte.monitorValues.find((item) => item.id === "vehi
 const freezeUnknownLengthTextPid = obd.decodeFreezeFrameResponse({ raw: "42 65 00 01 02 42 0D 00 28" });
 check(freezeUnknownLengthTextPid.monitorValues.find((item) => item.id === "auxiliary_io_supported")?.value === "01 02", "フリーズフレームで長さ未定義の状態系PIDを値として保持できません");
 check(freezeUnknownLengthTextPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームで長さ未定義PIDの後続PIDを読み進められません");
-const freezeUndecodedNumberPid = obd.decodeFreezeFrameResponse({ raw: "42 75 00 01 90 42 0D 00 28" });
-check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90", "フリーズフレームで式未実装の数値PIDをRAW値として保持できません");
+const freezeUndecodedNumberPid = obd.decodeFreezeFrameResponse({ raw: "42 75 00 01 90 00 00 00 00 00 42 0D 00 28" });
+check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90 00 00 00 00 00", "フリーズフレームで式未実装の数値PIDをRAW値として保持できません");
 check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームで式未実装PIDの後続PIDを読み進められません");
 check(freezeUndecodedNumberPid.monitorValueSummary.undecodedRawCount === 1, "フリーズフレームの未換算RAW件数を集計できません");
 check(freezeUndecodedNumberPid.monitorValueSummary.undecoded_raw_count === 1 && freezeUndecodedNumberPid.monitorValueSummary.numeric_count === freezeUndecodedNumberPid.monitorValueSummary.numericCount, "Freeze-frame summary did not expose snake_case count aliases");
@@ -18616,8 +18616,8 @@ check(decodedScanSessionEcuInfoItemsCamelAlias.ecuInfoSnapshot.itemCount === 2, 
 check(decodedScanSessionEcuInfoItemsCamelAlias.ecuInfoSnapshot.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-DECODED-CAMEL", "Decoded OBD session did not retain CVN from ecuInfoItems camelCase alias input");
 const rawPidScanSession = obd.buildDecodedObdScanSession({
   session_id: "raw-pid-session",
-  livePidResponse: { raw: "41 75 01 90 41 0D 28" },
-  freezeFrameResponse: { raw: "42 75 00 01 90" }
+  livePidResponse: { raw: "41 75 01 90 00 00 00 00 00 41 0D 28" },
+  freezeFrameResponse: { raw: "42 75 00 01 90 00 00 00 00 00" }
 });
 check(rawPidScanSession.monitorValueSummary.undecodedRawCount === 2, "診断セッションへ未換算RAW件数を統合できません");
 check(rawPidScanSession.warnings.includes("raw_pid_values_need_conversion"), "診断セッションへ未換算RAW警告を反映できません");

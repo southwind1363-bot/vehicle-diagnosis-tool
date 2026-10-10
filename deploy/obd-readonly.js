@@ -41009,6 +41009,11 @@
     if (pid === "6D") return 11;
     if (pid === "6E") return 9;
     if (pid === "6F") return 3;
+    // SAE J1979-DA OCT2011, Tables B92-B97: support, measurements and status bytes.
+    if (pid === "70") return 10;
+    if (pid === "71") return 6;
+    if (["72", "73", "74"].includes(pid)) return 5;
+    if (pid === "75") return 7;
     return 0;
   }
 
