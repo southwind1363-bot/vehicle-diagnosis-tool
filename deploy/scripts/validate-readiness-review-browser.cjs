@@ -459,6 +459,51 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
       console.log('Compound ' + kind + ' browser: ' + payloads.length + ' PIDs, complete live/FF bytes, RAW or preserved legacy classification, no invented speed, responsive themes and archives passed.');
     }
+    const linkedFixture = model.buildDiagnosticScanSession({
+      dtc_snapshot: { dtc_readout_status: 'reported', dtcs: [{ code: 'P0300', status: 'stored', ecu: '7E8' }] },
+      freeze_frame_snapshot: {
+        freeze_frame_readout_status: 'reported',
+        trigger_dtc_entries: Array.from({ length: 7 }, (_, frame_number) => ({ code: 'P0300', frame_number, source_ecu: '7E8' })),
+        monitor_values: [
+          ...Array.from({ length: 7 }, (_, freeze_frame_number) => ({ id: 'engine_speed',
+            value: freeze_frame_number === 2 ? '01 02' : 0, unit: 'rpm', decoded: freeze_frame_number !== 2,
+            freeze_frame_number, source_ecu: '7E8' })),
+          { id: 'engine_speed', value: 9999, unit: 'rpm', freeze_frame_number: 10, source_ecu: '7E8' },
+          { id: 'engine_speed', value: 6666, unit: 'rpm', freeze_frame_number: 0, source_ecu: '7E9' }
+        ]
+      }
+    });
+    assert.equal(linkedFixture.dtcSnapshot.dtcs[0].freezeFrameMatches.length, 7);
+    const linkedPicker = page.waitForEvent('filechooser');
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }).click();
+    await (await linkedPicker).setFiles({ name: 'linked-ff-context.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(linkedFixture))) });
+    await page.waitForFunction(() => obdDevSession.lastSession?.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatches?.length === 7);
+    const linkedBefore = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    await page.getByRole('button', { name: 'DTC一覧', exact: true }).click();
+    const linkedCard = page.locator('#obdDetectedCodes .obd-dtc-card').first();
+    await linkedCard.waitFor({ state: 'visible' });
+    const reading = linkedCard.locator('.obd-dtc-check').filter({ hasText: /^FF実測:/ });
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      const text = await reading.innerText();
+      for (const fragment of ['0 rpm [7E8 / FF #0]', '0 rpm [7E8 / FF #1]', 'RAW 01 02 [7E8 / FF #2] / 未換算', 'FF #5', ' / ほか'])
+        assert.ok(text.includes(fragment), 'linked FF display: ' + fragment);
+      for (const fragment of ['01 02 rpm', 'FF #6', '9999', '6666', '7E9']) assert.ok(!text.includes(fragment), 'linked FF mixed or exceeded limit: ' + fragment);
+      for (const dark of [false, true]) {
+        await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+        await linkedCard.screenshot({ path: path.join(output, 'dtc-linked-ff-' + width + '-' + dark + '.png') });
+      }
+    }
+    assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), linkedBefore);
+    const linkedArchive = await page.evaluate(() => JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+    const linkedRestored = model.buildDiagnosticScanSessionFromJson(linkedArchive);
+    assert.equal(linkedRestored.dtcSnapshot.dtcs[0].freezeFrameMatches.length, 7);
+    assert.equal(linkedRestored.freezeFrameSnapshot.monitorValues.length, 9);
+    assert.equal(linkedRestored.dtcSnapshot.dtcs[0].freezeFrameMatches[2].freezeFrameValueRefs[0].decoded, false);
+    assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+    console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
   } catch (error) {
     if (page) { await page.screenshot({ path: path.join(output, 'failure.png') }); console.error('Screenshot:', path.join(output, 'failure.png'), 'Page errors:', errors); console.error('Freeze card:', await page.locator('#obdSessionDetailFreezeFrame').allTextContents()); }

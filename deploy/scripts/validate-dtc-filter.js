@@ -24,6 +24,7 @@ const vehicle = { maker: "Toyota", model: "retained vehicle" };
 const observedArguments = [];
 let diagnosisInput;
 const context = vm.createContext({
+  NO_DATA: "未記録",
   document: { querySelector: (selector) => nodes[selector.slice(1)], createElement: element },
   obdDetectedCodes: element(), MutationObserver: class { constructor(callback) { this.callback = callback; } observe(target, options) { subscriptions.push({ callback: this.callback, target, options }); } },
   buildSelectedObdVehicleProfile: () => ({ maker: "different selection" }), withReportedDtcEcu: (profile) => profile,
@@ -35,7 +36,7 @@ const context = vm.createContext({
   formatDtcReference: (code, subcode) => `${code}:${subcode}`, activateTab: () => {},
   getInput: () => ({ retainedMarker: "input" }), buildDiagnosis: (input) => { diagnosisInput = input; return {}; }, renderDiagnosis: () => {}
 });
-vm.runInContext(["initializeObdReadoutFilter", "initializeObdDtcFilter", "formatObdBridgeDtcStatusLabel", "getObdDisplayByteNumber", "buildObdDtcDisplayKey", "createObdDtcCard", "handleDetectedDtcClick", "scrollToObdSection"].map(extract).join("\n"), context);
+vm.runInContext(["initializeObdReadoutFilter", "initializeObdDtcFilter", "formatObdBridgeDtcStatusLabel", "getObdDisplayByteNumber", "getObdMonitorDisplayLabel", "formatObdLegacyControlReviewNote", "formatObdTemperatureConversion", "formatObdFreezeFrameValueLine", "formatObdBridgeReadoutValue", "formatObdBridgeCompositeValue", "buildObdDtcDisplayKey", "createObdDtcCard", "handleDetectedDtcClick", "scrollToObdSection"].map(extract).join("\n"), context);
 context.initializeObdDtcFilter();
 check(nodes.obdDtcFilter.hidden && subscriptions.length === 1, "DTC filter must wait for cards");
 const cards = dtcs.map((dtc) => context.createObdDtcCard(dtc, dtcs, vehicle));
@@ -142,4 +143,31 @@ for (const field of ["extendedDataRecordNumber", "extended_data_record_number"])
     check(count === expected && JSON.stringify(dtcs) === before, "Extended-record count invented an observation or changed DTC input");
   }
 }
+
+// DTC-linked FF display must not collapse equal values from distinct evidence.
+const linkedBase = { id: 'engine_speed', label: 'エンジン回転数', value: 0, unit: 'rpm', decoded: true, frameNumber: 0, sourceEcu: '7E8' };
+const linkedRefs = [linkedBase, { ...linkedBase, frameNumber: 1 }, { ...linkedBase, sourceEcu: '7E9' },
+  { ...linkedBase, value: '01 02', decoded: false }, { ...linkedBase, decoded: false }, { ...linkedBase }];
+const linkedDtc = { code: 'P0300', ecu: '7E8', freezeFrameMatchCount: 1,
+  freezeFrameMatches: [{ frameNumber: 0, freezeFrameValueRefs: linkedRefs }] };
+const linkedBefore = JSON.stringify(linkedDtc);
+const linkedCard = context.createObdDtcCard(linkedDtc, [linkedDtc], vehicle);
+const linkedLine = linkedCard.children.find(child => child.textContent.startsWith('FF実測:')).textContent;
+for (const fragment of ['0 rpm [7E8 / FF #0]', '0 rpm [7E8 / FF #1]', '0 rpm [7E9 / FF #0]',
+  'RAW 01 02 [7E8 / FF #0] / 未換算', 'RAW 0 [7E8 / FF #0] / 未換算'])
+  check(linkedLine.includes(fragment), 'DTC-linked FF lost context or RAW boundary: ' + fragment);
+check(linkedLine.split('エンジン回転数:').length - 1 === 5, 'Distinct evidence collapsed or identical duplicate retained');
+check(!linkedLine.includes('01 02 rpm'), 'Physical unit attached to RAW');
+check(JSON.stringify(linkedDtc) === linkedBefore, 'DTC-linked references changed during display');
+for (const [frameNumber, expected] of [[null, 'FF番号未記録'], [false, 'FF番号未記録'], [256, 'FF番号未記録'], ['255', 'FF #255']]) {
+  const row = { ...linkedBase, frameNumber, sourceEcu: null };
+  const card = context.createObdDtcCard({ ...linkedDtc, freezeFrameMatches: [{ freeze_frame_value_refs: [row] }] }, [], vehicle);
+  const line = card.children.find(child => child.textContent.startsWith('FF実測:')).textContent;
+  check(line.includes('[ECU未記録 / ' + expected + ']'), 'DTC-linked reference invented ECU/frame');
+}
+const limitedCard = context.createObdDtcCard({ ...linkedDtc, freezeFrameMatches: [{
+  freezeFrameValueRefs: Array.from({ length: 7 }, (_, frameNumber) => ({ ...linkedBase, frameNumber })) }] }, [], vehicle);
+const limitedLine = limitedCard.children.find(child => child.textContent.startsWith('FF実測:')).textContent;
+check(limitedLine.includes('FF #5') && !limitedLine.includes('FF #6') && limitedLine.endsWith(' / ほか'), 'DTC-linked display limit lost');
+
 console.log(`DTC filter checks: ${checks} / Errors: 0`);

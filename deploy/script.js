@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.654";
+const APP_VERSION = "3.13.655";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -15917,11 +15917,12 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
     }
     const verifiedFreezeFrameValueRefs = [...new Map(freezeFrameMatches
       .flatMap((item) => item?.freezeFrameValueRefs || item?.freeze_frame_value_refs || [])
-      .map((item) => [`${item?.id || ""}::${String(item?.value ?? "")}::${item?.unit || ""}`, item])).values()];
+      // Equal readings from different frames, ECUs or decode states remain separate.
+      .map((item) => [JSON.stringify(item), item])).values()];
     if (verifiedFreezeFrameValueRefs.length) {
       const freezeFrameReadings = document.createElement("p");
       freezeFrameReadings.className = "obd-dtc-check";
-      freezeFrameReadings.textContent = `FF実測: ${verifiedFreezeFrameValueRefs.slice(0, 6).map((item) => `${item.label || item.id} ${item.value ?? NO_DATA}${item.unit ? ` ${item.unit}` : ""}${item.decoded === false ? " (未換算)" : ""}`).join(" / ")}${verifiedFreezeFrameValueRefs.length > 6 ? " / ほか" : ""}`;
+      freezeFrameReadings.textContent = `FF実測: ${verifiedFreezeFrameValueRefs.slice(0, 6).map((item) => formatObdFreezeFrameValueLine({ ...item, freezeFrameNumber: item.frameNumber ?? item.frame_number })).join(" / ")}${verifiedFreezeFrameValueRefs.length > 6 ? " / ほか" : ""}`;
       wrapper.appendChild(freezeFrameReadings);
     }
     const udsSnapshotEvidence = [...new Set(freezeFrameMatches
