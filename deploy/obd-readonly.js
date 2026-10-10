@@ -8584,6 +8584,53 @@
     };
   }
 
+  // Versioned inventory identities preserve separators and missing route fields.
+  function encodeLivePidInventoryKey(prefix, parts) {
+    return prefix + JSON.stringify(parts).replaceAll("|", "\\u007c");
+  }
+
+  function decodeLivePidInventoryParts(key, prefix, headLength) {
+    if (typeof key !== "string" || !key.startsWith(prefix) || key.length > 10000) return null;
+    let parts;
+    try { parts = JSON.parse(key.slice(prefix.length)); } catch { return null; }
+    if (!Array.isArray(parts) || parts.length !== headLength + 3) return null;
+    if (parts.slice(headLength).some((value, index) => value !== null
+      && (typeof value !== "string" || !value || value.length > [120, 120, 160][index]))) return null;
+    return parts;
+  }
+
+  function buildLivePidInventoryScopeKey(sourceEcu, input) {
+    const scope = normalizeReadoutNetworkScope(input);
+    if (!sourceEcu || scope.conflict) return null;
+    const parts = [scope.networkBus, scope.networkChannel, scope.gatewayRoute]
+      .map((value) => value === null ? null : value.normalize("NFKC").toLowerCase());
+    // Normalization can expand compatibility characters beyond the key limits.
+    if (parts.some((value, index) => value !== null && value.length > [120, 120, 160][index])) return null;
+    return encodeLivePidInventoryKey("live_pid_scope_v2:", [sourceEcu, ...parts]);
+  }
+
+  function parseLivePidInventoryScopeKey(key) {
+    const parts = decodeLivePidInventoryParts(key, "live_pid_scope_v2:", 1);
+    if (!parts || typeof parts[0] !== "string" || !parts[0] || parts[0].length > 64) return null;
+    return { parts, sourceEcu: parts[0], canonicalKey: encodeLivePidInventoryKey("live_pid_scope_v2:", parts) };
+  }
+
+  function parseLivePidInventoryValueKey(key) {
+    const parts = decodeLivePidInventoryParts(key, "live_pid_value_v2:", 4);
+    if (!parts || parts.slice(0, 3).some((value, index) => typeof value !== "string" || !value || value.length > [96, 64, 48][index])
+      || typeof parts[3] !== "number" || !Number.isFinite(parts[3])) return null;
+    const [id, sourceEcu, unit, value, networkBus, networkChannel, gatewayRoute] = parts;
+    const scopeParts = parts.slice(4);
+    return {
+      id, sourceEcu, unit, value, networkBus, networkChannel, gatewayRoute,
+      hasNetworkScope: scopeParts.some((part) => part !== null),
+      sourceScopeKey: encodeLivePidInventoryKey("live_pid_scope_v2:", [normalizeComparableCanEcuAddress(sourceEcu) || sourceEcu, ...scopeParts]),
+      measurementKey: JSON.stringify([id, sourceEcu, ...scopeParts]),
+      measurementUnitKey: JSON.stringify([id, sourceEcu, ...scopeParts, unit]),
+      canonicalKey: encodeLivePidInventoryKey("live_pid_value_v2:", parts)
+    };
+  }
+
   function buildCoreReadoutInventorySummary({
     readoutCoverage = null,
     dtcSnapshot = {},
@@ -8794,18 +8841,18 @@
       const unit = String(value?.unit || "").trim().toLowerCase().replace(/\|/g, " ").slice(0, 48);
       if (!id || !Number.isFinite(numericValue) || !unit) return null;
       const sourceEcu = String(value?.sourceEcu || value?.source_ecu || livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu || "").trim().toUpperCase().replace(/\|/g, " ").slice(0, 64) || "-";
-      const networkScopeKey = getReadoutNetworkScopeKey(value);
+      const networkScopeKey = buildLivePidInventoryScopeKey(sourceEcu, value);
       if (networkScopeKey === null) return null;
-      return [id, sourceEcu, unit, String(numericValue), ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+      return encodeLivePidInventoryKey("live_pid_value_v2:", [id, sourceEcu, unit, numericValue, ...parseLivePidInventoryScopeKey(networkScopeKey).parts.slice(1)]);
     }).filter(Boolean))].sort();
     const recordedLivePidValueKeys = livePidValueEvidenceRecorded ? livePidValueKeys : [];
     const normalizeLivePidEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
     const readLivePidEcuId = (snapshot = {}) => normalizeLivePidEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || snapshot?.address || null);
     const readLivePidEcuScopeKey = (snapshot = {}) => {
       const ecuId = readLivePidEcuId(snapshot);
-      const networkScopeKey = getReadoutNetworkScopeKey(snapshot);
+      const networkScopeKey = buildLivePidInventoryScopeKey(ecuId, snapshot);
       if (!ecuId || networkScopeKey === null) return null;
-      return [ecuId, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+      return networkScopeKey;
     };
     const reportedLivePidEcuIds = [...new Set(livePidEcuSnapshots
       .filter((snapshot) => String(snapshot?.livePidReadoutStatus || snapshot?.live_pid_readout_status || "").trim().toLowerCase() === "reported")
@@ -8830,9 +8877,8 @@
     const livePidValueReportedEcuKeys = livePidValueReportedEcuEvidenceRecorded
       ? livePidValueKeys.filter((key) => {
         if (livePidValueEvidenceRecorded) return true;
-        const parts = String(key || "").split("|");
-        const ecuId = normalizeLivePidEcuId(parts[1]);
-        const valueScopeKey = parts.length === 7 ? [ecuId, parts[4], parts[5], parts[6]].join("|") : ecuId;
+        const parsed = parseLivePidInventoryValueKey(key);
+        const valueScopeKey = parsed ? encodeLivePidInventoryKey("live_pid_scope_v2:", [normalizeLivePidEcuId(parsed.sourceEcu), parsed.networkBus, parsed.networkChannel, parsed.gatewayRoute]) : null;
         return reportedLivePidEcuScopeKeys.includes(valueScopeKey);
       })
       : [];
@@ -9229,6 +9275,8 @@
       hasLivePidValues: countsById.live_pid_snapshot > 0,
       livePidValueCount: recordedLivePidValueKeys.length,
       live_pid_value_count: recordedLivePidValueKeys.length,
+      livePidKeyVersion: 2,
+      live_pid_key_version: 2,
       livePidValueKeys: recordedLivePidValueKeys,
       live_pid_value_keys: [...recordedLivePidValueKeys],
       livePidValueEvidenceRecorded,
@@ -22617,6 +22665,7 @@
       return value === true || ["true", "1", "yes"].includes(String(value || "").trim().toLowerCase());
     };
     const parseLivePidValueKey = (key) => {
+      if (typeof key === "string" && key.startsWith("live_pid_value_v2:")) return parseLivePidInventoryValueKey(key);
       const parts = String(key || "").trim().split("|");
       if (![4, 7].includes(parts.length)) return null;
       const [id, sourceEcu, unit, value, networkBus = null, networkChannel = null, gatewayRoute = null] = parts;
@@ -22654,6 +22703,7 @@
     const importedLivePidDiagnosticProtocol = normalizeProtocolProvenanceValue(readField(importedInventory, "livePidDiagnosticProtocol"));
     const currentLivePidDiagnosticProtocol = normalizeProtocolProvenanceValue(readField(currentSummary, "livePidDiagnosticProtocol"));
     const normalizeLivePidEcuScopeKey = (value) => {
+      if (typeof value === "string" && value.startsWith("live_pid_scope_v2:")) return parseLivePidInventoryScopeKey(value)?.canonicalKey || null;
       const parts = String(value || "").trim().split("|");
       if (![1, 4].includes(parts.length)) return null;
       const ecu = normalizeComparableCanEcuAddress(parts[0]) || parts[0].trim().toUpperCase();
@@ -22673,7 +22723,7 @@
       const reportedEcuScopeKeys = explicitScopeKeys.length > 0 || !completeEvidenceRecorded
         ? [...new Set(explicitScopeKeys.length > 0 ? explicitScopeKeys : explicitIds)].sort()
         : [...new Set(derivedScopeKeys)].sort();
-      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
+      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => parseLivePidInventoryScopeKey(key)?.sourceEcu || key.split("|")[0]))].sort();
       const explicitKeys = readIds(summary, "livePidValueReportedEcuKeys");
       const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
       return {
@@ -22697,8 +22747,32 @@
     const currentLivePidNetworkScopeKeyMode = readLivePidNetworkScopeKeyMode(
       currentLivePidValueEvidenceRecorded ? currentAllLivePidValueKeys : currentLivePidValueReportedEcuScope.reportedEcuKeys
     );
-    const livePidNetworkScopeKeyModesCompatible = importedLivePidNetworkScopeKeyMode === currentLivePidNetworkScopeKeyMode
-      && importedLivePidNetworkScopeKeyMode !== "mixed";
+    const readLivePidKeyVersion = (summary) => {
+      const camel = summary.livePidKeyVersion, snake = summary.live_pid_key_version;
+      if (camel !== undefined && snake !== undefined && camel !== snake) return null;
+      const version = camel ?? snake ?? 1;
+      if (![1, 2].includes(version)) return null;
+      for (const [camelField, snakeField] of [["livePidValueKeys", "live_pid_value_keys"], ["livePidValueReportedEcuKeys", "live_pid_value_reported_ecu_keys"], ["livePidValueReportedEcuScopeKeys", "live_pid_value_reported_ecu_scope_keys"], ["livePidValueUnresolvedEcuScopeKeys", "live_pid_value_unresolved_ecu_scope_keys"]]) {
+        const a = summary[camelField], b = summary[snakeField];
+        if ((a !== undefined && !Array.isArray(a)) || (b !== undefined && !Array.isArray(b))) return null;
+        if (a !== undefined && b !== undefined && JSON.stringify(a) !== JSON.stringify(b)) return null;
+      }
+      const values = [...(summary.livePidValueKeys || summary.live_pid_value_keys || []), ...(summary.livePidValueReportedEcuKeys || summary.live_pid_value_reported_ecu_keys || [])];
+      const reported = summary.livePidValueReportedEcuScopeKeys || summary.live_pid_value_reported_ecu_scope_keys || [];
+      const unresolved = summary.livePidValueUnresolvedEcuScopeKeys || summary.live_pid_value_unresolved_ecu_scope_keys || [];
+      if (!Array.isArray(reported) || !Array.isArray(unresolved)) return null;
+      const scopes = [...reported, ...unresolved];
+      if (version === 2) return values.every((key) => parseLivePidInventoryValueKey(key))
+        && scopes.every((key) => parseLivePidInventoryScopeKey(key)) ? 2 : null;
+      return values.every((key) => typeof key === "string" && key.split("|").length === 4 && parseLivePidValueKey(key))
+        && scopes.every((key) => typeof key === "string" && !key.includes("|") && !key.startsWith("live_pid_scope_v2:")) ? 1 : null;
+    };
+    const importedLivePidKeyVersion = readLivePidKeyVersion(importedInventory);
+    const currentLivePidKeyVersion = readLivePidKeyVersion(currentSummary);
+    const livePidNetworkScopeKeyModesCompatible = importedLivePidKeyVersion !== null
+      && importedLivePidKeyVersion === currentLivePidKeyVersion
+      && (importedLivePidKeyVersion === 2 || (importedLivePidNetworkScopeKeyMode === currentLivePidNetworkScopeKeyMode
+        && importedLivePidNetworkScopeKeyMode !== "mixed"));
     const livePidValueComparisonBlockedByScopeVersion = importedLivePidValueReportedEcuScope.evidenceRecorded
       && currentLivePidValueReportedEcuScope.evidenceRecorded
       && !livePidNetworkScopeKeyModesCompatible;
@@ -22708,7 +22782,7 @@
       : importedLivePidValueReportedEcuScope.evidenceRecorded && currentLivePidValueReportedEcuScope.evidenceRecorded
         ? importedLivePidValueReportedEcuScope.reportedEcuScopeKeys.filter((key) => currentLivePidValueReportedEcuScope.reportedEcuScopeKeys.includes(key))
         : [];
-    const comparableLivePidValueEcuIds = [...new Set(comparableLivePidValueEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
+    const comparableLivePidValueEcuIds = [...new Set(comparableLivePidValueEcuScopeKeys.map((key) => parseLivePidInventoryScopeKey(key)?.sourceEcu || key.split("|")[0]))].sort();
     const reportedEcuLivePidValueComparisonEvidenceRecorded = !completeLivePidValueComparisonEvidenceRecorded && comparableLivePidValueEcuScopeKeys.length > 0;
     const livePidValueComparisonEvidenceRecorded = completeLivePidValueComparisonEvidenceRecorded || reportedEcuLivePidValueComparisonEvidenceRecorded;
     const filterLivePidValueKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
@@ -22768,7 +22842,7 @@
         .sort()
         .slice(0, 64)
         .map((key, index) => {
-          const parts = key.split("|");
+          const parts = importedLivePidKeyVersion === 2 ? JSON.parse(key) : key.split("|");
           const id = parts.shift();
           const sourceEcu = parts.shift();
           const unit = parts.pop();
@@ -22780,10 +22854,10 @@
             id,
             sourceEcu,
             source_ecu: sourceEcu,
-            ...(networkBus ? {
-              networkBus, network_bus: networkBus,
-              networkChannel, network_channel: networkChannel,
-              gatewayRoute, gateway_route: gatewayRoute,
+            ...([networkBus, networkChannel, gatewayRoute].some((value) => value !== null) ? {
+              ...(networkBus !== null ? { networkBus, network_bus: networkBus } : {}),
+              ...(networkChannel !== null ? { networkChannel, network_channel: networkChannel } : {}),
+              ...(gatewayRoute !== null ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
               networkScopeProvided: true, network_scope_provided: true,
               networkScopeConflict: false, network_scope_conflict: false,
               networkScopeEvidenceEligible: true, network_scope_evidence_eligible: true
@@ -23967,6 +24041,8 @@
       total_value_count: totalValueCount,
       livePidValueCount: toCount("livePidValueCount", "live_pid_value_count", 0),
       live_pid_value_count: toCount("livePidValueCount", "live_pid_value_count", 0),
+      livePidKeyVersion: pickDefined(summary.livePidKeyVersion, summary.live_pid_key_version, null),
+      live_pid_key_version: pickDefined(summary.live_pid_key_version, summary.livePidKeyVersion, null),
       livePidValueKeys: normalizeIds(summary.livePidValueKeys || summary.live_pid_value_keys),
       live_pid_value_keys: normalizeIds(summary.livePidValueKeys || summary.live_pid_value_keys),
       livePidValueEvidenceRecorded: pickDefined(summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true,

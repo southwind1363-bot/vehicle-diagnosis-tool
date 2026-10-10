@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.661";
+const APP_VERSION = "3.13.662";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -13235,11 +13235,17 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   if (rawDelta) parts.push(`raw${rawDelta > 0 ? "+" : ""}${rawDelta}`);
   if (addedLivePidValueKeys.length || removedLivePidValueKeys.length) {
     const displayLivePidValueKey = (key) => {
-      const [id, ecu, unit, value] = String(key || "").split("|");
+      let fields;
+      if (String(key || "").startsWith("live_pid_value_v2:")) {
+        try { fields = JSON.parse(key.slice("live_pid_value_v2:".length)); } catch { return "PID比較キー不正"; }
+        if (!Array.isArray(fields) || fields.length !== 7) return "PID比較キー不正";
+      } else fields = String(key || "").split("|");
+      const [id, ecu, unit, value] = fields;
       return `${id || "PID"}${ecu && ecu !== "-" ? `@${ecu}` : ""}:${value || "?"}${unit || ""}`;
     };
     parts.push(`PID値:${[...addedLivePidValueKeys.map((key) => `+${displayLivePidValueKey(key)}`), ...removedLivePidValueKeys.map((key) => `-${displayLivePidValueKey(key)}`)].slice(0, 3).join(",")}`);
   }
+  if (summary.livePidValueComparisonBlockedByScopeVersion === true || summary.live_pid_value_comparison_blocked_by_scope_version === true) parts.push("PID値詳細比較不可：識別形式が旧版・不一致・不正（差分なしとは判定しません）");
   if (livePidUnitMismatchKeys.length) parts.push("PID単位不一致のため比較不可");
   if (!livePidValueComparisonAvailable && !livePidUnitMismatchKeys.length && (importedLivePidValueCount > 0 || currentLivePidValueCount > 0)) parts.push("PID値詳細比較不可");
   if (freezeFrameTriggerDelta) parts.push(`FF起点${freezeFrameTriggerDelta > 0 ? "+" : ""}${freezeFrameTriggerDelta}`);
@@ -14653,7 +14659,30 @@ function renderObdDeveloperSessionSummary(session = null) {
   });
   renderObdNextReadoutActions(session);
   renderObdBridgeSessionDetails(session);
+  renderObdLiveInventoryComparison(session);
 }
+
+function renderObdLiveInventoryComparison(session) {
+  obdMonitorStatus.querySelector(".obd-live-comparison-note")?.remove();
+  if (session) {
+    const comparison = session.importedCoreReadoutInventoryComparisonSummary || session.imported_core_readout_inventory_comparison_summary;
+    const note = document.createElement("span");
+    note.className = "obd-live-comparison-note";
+    if (comparison?.livePidValueComparisonBlockedByScopeVersion || comparison?.live_pid_value_comparison_blocked_by_scope_version) {
+      note.textContent = " 保存記録の比較形式が旧版・不一致・不正のため、ライブ値の差分は比較できません。差分なしとは判定しません。";
+    } else if (comparison?.livePidValueComparisonAvailable || comparison?.live_pid_value_comparison_available) {
+      const rows = comparison.livePidValueDeltaRows || comparison.live_pid_value_delta_rows || [];
+      note.textContent = rows.length ? " 保存記録とのライブ値比較：" + rows.map((row) => {
+        const scope = [["バス", row.networkBus ?? row.network_bus], ["チャネル", row.networkChannel ?? row.network_channel], ["経路", row.gatewayRoute ?? row.gateway_route]]
+          .filter(([, value]) => value != null).map(([label, value]) => label + " " + value).join(" / ");
+        return row.id + " [ECU " + (row.sourceEcu || row.source_ecu || "不明") + (scope ? " / " + scope : "") + "] " + (row.importedValue ?? row.imported_value) + " → " + (row.currentValue ?? row.current_value) + " " + (row.unit || "") + "（差 " + row.delta + "）";
+      }).join(" / ") : " 保存記録とのライブ値比較：数値差分を比較できる同一項目・単位・ECU・経路の組み合わせはありません。";
+    }
+    if (note.textContent) obdMonitorStatus.append(note);
+  }
+}
+
+
 
 function getObdOperationImplementationStatus(item) {
   if (item.commandClass === "state-changing") {

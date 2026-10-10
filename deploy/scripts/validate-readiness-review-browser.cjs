@@ -595,6 +595,38 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.deepEqual(JSON.parse(JSON.stringify(model.buildDiagnosticScanSessionFromJson(saved).livePidSnapshot.monitorValues)),JSON.parse(snapshot).livePidSnapshot.monitorValues);
     }
     console.log('Live scope inheritance browser: production normalization, actual file import, correct values, excluded 9999, responsive themes and archive restoration passed.');
+    for(const kind of ['legacy','v2']) {
+      const rows=value=>({live_pid_readout_status:'reported',observation_condition:'warm',protocol:'ISO15765',monitor_values:[{id:'engine_speed',source_ecu:'7E8',unit:'rpm',value,network_bus:'CAN|A'}]});
+      const baseline=kind==='v2'?model.buildDiagnosticScanSession({live_pid_snapshot:rows(800)}).coreReadoutInventorySummary:
+        {schema_version:'core_readout_inventory_v1',live_pid_value_evidence_recorded:true,live_pid_observation_condition:'warm',live_pid_diagnostic_protocol:'ISO15765',live_pid_value_keys:['engine_speed|7E8|rpm|800|can a|-|-']};
+      const prepared=model.buildDiagnosticScanSession({live_pid_snapshot:rows(1200),core_readout_inventory_summary:baseline});
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      const choose=page.waitForEvent('filechooser');page.once('dialog',d=>d.accept());
+      await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+      await (await choose).setFiles({name:'inventory-'+kind+'.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(prepared)))});
+      await page.waitForFunction(()=>obdDevSession.lastSession?.coreReadoutInventorySummary?.livePidKeyVersion===2);
+      const state=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+      const cmp=JSON.parse(state).importedCoreReadoutInventoryComparisonSummary;
+      assert.equal(cmp.livePidValueComparisonAvailable,kind==='v2');
+      assert.equal(cmp.livePidValueDeltaRows.length,kind==='v2'?1:0);
+      if(kind==='v2')assert.equal(cmp.livePidValueDeltaRows[0].delta,400);
+      await page.locator('.obd-results-nav').getByRole('button',{name:'ライブ値',exact:true}).click();
+      const details=page.locator('#obdMonitorStatus .obd-live-comparison-note');
+      await details.waitFor({state:'visible'});
+      const text=await details.innerText();
+      if(kind==='legacy')assert.ok(text.includes('差分は比較できません。差分なしとは判定しません。'));
+      else { assert.ok(text.includes('800 → 1200 rpm（差 400）'));assert.ok(!text.includes('PID値詳細比較不可：識別形式')); }
+      for(const width of [390,1280])for(const dark of [false,true]){
+        await page.setViewportSize({width,height:844});await page.evaluate(d=>document.body.classList.toggle('dark',d),dark);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+        await details.screenshot({path:path.join(output,'inventory-'+kind+'-'+width+'-'+dark+'.png')});
+      }
+      assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),state);
+      const saved=await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+      const restored=model.buildDiagnosticScanSessionFromJson(saved);
+      assert.equal(restored.importedCoreReadoutInventoryComparisonSummary.livePidValueComparisonAvailable,kind==='v2');
+    }
+    console.log('Inventory v2 browser: legacy comparison explicitly unavailable, v2 same-route delta, actual JSON import and save, responsive themes passed.');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
