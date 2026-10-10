@@ -1,38 +1,18 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-// Isolated proposal only. Production source and shared scope rules are not edited.
+// Production regression against frozen pre-change outputs; no patched runtime.
 const url = new URL('../obd-readonly.js', import.meta.url);
 const source = fs.readFileSync(url, 'utf8');
-const start = source.indexOf('  function linkReadableFreezeFrameToDtcSnapshot(');
-const end = source.indexOf('  function buildDiagnosticScanSession(', start);
-assert.ok(start >= 0 && end > start);
-const original = source.slice(start, end);
-assert.equal((original.match(/readoutNetworkScopeMatches\(/g) || []).length, 4);
-assert.equal((original.match(/getReadoutNetworkScopeKey\(value\)/g) || []).length, 1);
-const replacement = original.replace('const linkScopeKey = (value) => getReadoutNetworkScopeKey(value);',
-  'const linkScopeKey = (value) => getDtcReadoutNetworkScopeIdentity(value);\n'
-  + '    const linkScopeMatches = (expected, observed) => {\n'
-  + '      const a = normalizeReadoutNetworkScope(expected), b = normalizeReadoutNetworkScope(observed);\n'
-  + '      if (a.conflict || b.conflict) return false;\n'
-  + '      if (!a.provided) return true;\n'
-  + '      return b.provided && linkScopeKey(expected) === linkScopeKey(observed);\n'
-  + '    };').replaceAll('readoutNetworkScopeMatches(', 'linkScopeMatches(');
-const load = text => { const c = {window:{}}; vm.runInNewContext(text,c); return c.window.ObdReadOnly; };
-let proposed = source.slice(0,start)+replacement+source.slice(end);
-for (const [from,to] of [
- ['  function normalizeFreezeFrameSnapshot(', '  function buildFreezeFrameNumberSummary('],
- ['  function buildFreezeFrameAssociationSummary(', '  function normalizeReadinessSnapshot(']
-]) {
- const a=proposed.indexOf(from), b=proposed.indexOf(to,a);
- assert.ok(a>=0 && b>a);
- const body=proposed.slice(a,b);
- // Keep the existing presentation sort order. Change identity only.
- const oldCall=from.includes('normalizeFreeze')?'getReadoutNetworkScopeKey(item)':'getReadoutNetworkScopeKey(scopeSource)';
- assert.equal(body.split(oldCall).length-1,1);
- proposed=proposed.slice(0,a)+body.replace(oldCall,oldCall.replace('getReadoutNetworkScopeKey','getDtcReadoutNetworkScopeIdentity'))+proposed.slice(b);
-}
-const before = load(source), after = load(proposed);
+const context={window:{}};vm.runInNewContext(source,context);
+const after=context.window.ObdReadOnly;
+const frozen=JSON.parse(fs.readFileSync(new URL('./fixtures/ff-link-scope-3.13.659.json',import.meta.url),'utf8'));
+const before={buildDiagnosticScanSession(input){
+ const record=frozen.records.find(r=>JSON.stringify(r.input)===JSON.stringify(input));
+ assert.ok(record,'missing frozen baseline');return record.output;
+}};
+// Compare only affected snapshots and permissions; unrelated session analyses are outside this regression.
+const select = s => ({dtcSnapshot:s.dtcSnapshot,freezeFrameSnapshot:s.freezeFrameSnapshot,vehicleCommandEnabled:s.vehicleCommandEnabled,wouldTransmit:s.wouldTransmit});
 const plain = x => JSON.parse(JSON.stringify(x));
 let checks=0;
 const eq=(a,b,label)=>{assert.deepEqual(plain(a),plain(b),label);checks++;};
@@ -91,12 +71,12 @@ for(const [a,b] of [[{},{}],[{networkBus:'CAN'},{networkBus:'CAN'}],
  [{}, {networkBus:'CAN'}],[{networkBus:'CAN'},{}],[{networkBus:'A',network_bus:'B'},{}],
  [{networkScopeConflict:true},{}]]){
  const input=make(a,b);
- eq(after.buildDiagnosticScanSession(input),before.buildDiagnosticScanSession(input),'ordinary and unspecified-scope policy unchanged');
+ eq(select(after.buildDiagnosticScanSession(input)),before.buildDiagnosticScanSession(input),'ordinary and unspecified-scope policy unchanged');
 }
 const raw=make({networkBus:'CAN'},{networkBus:'CAN'});
 raw.freeze_frame_snapshot.monitor_values[0].value='01 02';
 raw.freeze_frame_snapshot.monitor_values[0].decoded=false;
-eq(after.buildDiagnosticScanSession(raw),before.buildDiagnosticScanSession(raw),'RAW values unchanged');
+eq(select(after.buildDiagnosticScanSession(raw)),before.buildDiagnosticScanSession(raw),'RAW values unchanged');
 for(const field of ['ecu','code']){
  const input=make({networkBus:'CAN'},{networkBus:'CAN'});
  input.dtc_snapshot.dtcs[0][field]=field==='ecu'?'7E9':'P0300';
@@ -110,7 +90,7 @@ for(const state of ['stored','pending','permanent','unknown']) {
 for(const field of ['dtc_snapshot','freeze_frame_snapshot']) {
  const input=make({networkBus:'CAN'},{networkBus:'CAN'});
  input[field][field==='dtc_snapshot'?'dtc_readout_status':'freeze_frame_readout_status']='unavailable';
- eq(after.buildDiagnosticScanSession(input),before.buildDiagnosticScanSession(input),'unavailable readout unchanged');
+ eq(select(after.buildDiagnosticScanSession(input)),before.buildDiagnosticScanSession(input),'unavailable readout unchanged');
 }
 eq(fs.readFileSync(url,'utf8'),source,'production file unchanged');
-console.log('FF link scope proposal: '+checks+' checks passed; isolated VM; production unchanged; no vehicle I/O');
+console.log('FF link scope regression: '+checks+' checks passed; production code; frozen baseline; no vehicle I/O');

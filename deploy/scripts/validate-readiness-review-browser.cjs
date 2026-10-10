@@ -531,6 +531,38 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const scopeExport=await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
     assert.deepEqual(JSON.parse(JSON.stringify(model.buildDiagnosticScanSessionFromJson(scopeExport).dtcSnapshot.dtcs)),JSON.parse(scopeBefore).dtcSnapshot.dtcs);
     console.log('DTC network routes: two cards, distinct route labels/search, no session mutation and archive round trip passed.');
+    for (const scenario of ['separate','wrong-trigger','wrong-value']) {
+      const buses=['CAN|A','CAN A'];
+      const input={dtc_snapshot:{dtc_readout_status:'reported',dtcs:(scenario==='separate'?buses:[buses[0]]).map(network_bus=>({code:'P0171',ecu:'7E8',status:'stored',network_bus}))},
+        freeze_frame_snapshot:{freeze_frame_readout_status:'reported',
+          trigger_dtc_entries:(scenario==='separate'?buses:[scenario==='wrong-trigger'?buses[1]:buses[0]]).map(network_bus=>({code:'P0171',source_ecu:'7E8',frame_number:0,network_bus})),
+          monitor_values:(scenario==='separate'?buses:[buses[1]]).map((network_bus,i)=>({id:'engine_speed',value:scenario==='separate'?(i+1)*1200:9999,unit:'rpm',source_ecu:'7E8',freeze_frame_number:0,network_bus}))}};
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      const choose=page.waitForEvent('filechooser');page.once('dialog',d=>d.accept());
+      await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+      await (await choose).setFiles({name:'ff-routes-'+scenario+'.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({...oldEnvelope,session:input}))});
+      await page.waitForFunction(()=>obdDevSession.lastSession?.freezeFrameSnapshot?.monitorValues?.length>0);
+      await page.getByRole('button',{name:'DTC一覧',exact:true}).click();
+      const cards=page.locator('#obdDetectedCodes .obd-dtc-card');
+      await cards.first().waitFor({state:'visible'});
+      assert.equal(await cards.count(),scenario==='separate'?2:1);
+      if(scenario==='separate') {
+        for(const [i,bus] of buses.entries()) {
+          const text=await cards.filter({hasText:'バス: '+bus}).innerText();
+          assert.ok(text.includes((i+1)*1200+' rpm'));assert.ok(!text.includes((2-i)*1200+' rpm'));
+        }
+      } else assert.ok(!(await cards.innerText()).includes('9999'));
+      const snapshot=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+      for(const width of [390,1280])for(const dark of [false,true]){
+        await page.setViewportSize({width,height:844});await page.evaluate(d=>document.body.classList.toggle('dark',d),dark);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+        await cards.first().screenshot({path:path.join(output,'ff-route-'+scenario+'-'+width+'-'+dark+'.png')});
+      }
+      assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),snapshot);
+      const saved=await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+      assert.deepEqual(JSON.parse(JSON.stringify(model.buildDiagnosticScanSessionFromJson(saved).dtcSnapshot.dtcs)),JSON.parse(snapshot).dtcSnapshot.dtcs);
+    }
+    console.log('FF routes: correct per-route values, wrong trigger/value excluded, actual JSON import, responsive themes and archive restoration passed.');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);

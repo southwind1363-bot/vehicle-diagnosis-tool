@@ -33313,7 +33313,7 @@
     const explicitTriggerDtcEntries = [...new Map([
       ...triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean).filter(matchesReportedFreezeFrameEcu),
       ...reportedFreezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || [])
-    ].map((item) => [`${item.code}::${item.subcode || item.sub_code || ""}::${item.oemDetailCode || item.oem_detail_code || ""}::${String(item.codeFormat || item.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_")}::${normalizeDtcReportedStatus(item.reportedStatus || item.reported_status) || ""}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}::${getReadoutNetworkScopeKey(item) ?? "conflict"}`, item])).values()];
+    ].map((item) => [`${item.code}::${item.subcode || item.sub_code || ""}::${item.oemDetailCode || item.oem_detail_code || ""}::${String(item.codeFormat || item.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_")}::${normalizeDtcReportedStatus(item.reportedStatus || item.reported_status) || ""}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}::${getDtcReadoutNetworkScopeIdentity(item) ?? "conflict"}`, item])).values()];
     const readoutEcuIds = [...new Set([
       ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
       ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
@@ -33561,7 +33561,7 @@
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 80) || null;
-    const groupKey = (frameNumber, sourceEcu, scopeSource) => `${frameNumber}::${String(sourceEcu || "").toUpperCase()}::${getReadoutNetworkScopeKey(scopeSource) ?? "conflict"}`;
+    const groupKey = (frameNumber, sourceEcu, scopeSource) => `${frameNumber}::${String(sourceEcu || "").toUpperCase()}::${getDtcReadoutNetworkScopeIdentity(scopeSource) ?? "conflict"}`;
     const groupsByKey = new Map();
     const ensureGroup = (frameNumber, sourceEcu, scopeSource) => {
       const networkScope = normalizeReadoutNetworkScope(scopeSource);
@@ -42313,7 +42313,13 @@
 
     const normalizeLinkPart = (value) => String(value ?? "").trim().replace(/^0x/i, "").toUpperCase();
     const normalizeLinkCodeFormat = (value) => String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
-    const linkScopeKey = (value) => getReadoutNetworkScopeKey(value);
+    const linkScopeKey = (value) => getDtcReadoutNetworkScopeIdentity(value);
+    const linkScopeMatches = (expected, observed) => {
+      const a = normalizeReadoutNetworkScope(expected), b = normalizeReadoutNetworkScope(observed);
+      if (a.conflict || b.conflict) return false;
+      if (!a.provided) return true;
+      return b.provided && linkScopeKey(expected) === linkScopeKey(observed);
+    };
     const linkEcuMatches = (left, right) => left === right || isComparableCanEcuAddressMatch(normalizeComparableCanEcuAddress(left), normalizeComparableCanEcuAddress(right));
     const triggerEntries = (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries)
       ? freezeFrameSnapshot.triggerDtcEntries
@@ -42360,7 +42366,7 @@
           && Number.isInteger(groupFrameNumber)
           && groupFrameNumber === entry.frameNumber
           && linkEcuMatches(groupSourceEcu, entry.sourceEcu)
-          && (associationSummaryVersion === "freeze_frame_association_summary_v2" ? !normalizeReadoutNetworkScope(entry).provided : readoutNetworkScopeMatches(entry, group))
+          && (associationSummaryVersion === "freeze_frame_association_summary_v2" ? !normalizeReadoutNetworkScope(entry).provided : linkScopeMatches(entry, group))
           && triggerIdentityKeys.includes(identityKey);
       }) || null;
     };
@@ -42388,11 +42394,11 @@
       const codeFormat = normalizeLinkCodeFormat(row?.codeFormat || row?.code_format);
       const reportedStatus = normalizeDtcReportedStatus(row?.reportedStatus || row?.reported_status);
       const ecu = normalizeLinkPart(row?.ecu || row?.sourceEcu || row?.source_ecu);
-      const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && linkEcuMatches(entry.sourceEcu, ecu) && readoutNetworkScopeMatches(row, entry) && (!entry.codeFormat || !codeFormat || entry.codeFormat === codeFormat) && (!entry.reportedStatus || entry.reportedStatus === reportedStatus));
+      const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && linkEcuMatches(entry.sourceEcu, ecu) && linkScopeMatches(row, entry) && (!entry.codeFormat || !codeFormat || entry.codeFormat === codeFormat) && (!entry.reportedStatus || entry.reportedStatus === reportedStatus));
       matches.forEach((entry) => matchedTriggerKeys.add(`${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.reportedStatus || ""}::${entry.sourceEcu}::${entry.frameNumber ?? ""}::${linkScopeKey(entry) ?? "conflict"}`));
       if (!matches.length) return row;
       const freezeFrameMatches = matches.map((entry) => {
-        const matchingUdsRecords = udsSnapshotRecords.filter((record) => record.code === entry.code && linkEcuMatches(record.sourceEcu, entry.sourceEcu) && record.frameNumber === entry.frameNumber && readoutNetworkScopeMatches(entry, record) && (!entry.codeFormat || !record.codeFormat || entry.codeFormat === record.codeFormat));
+        const matchingUdsRecords = udsSnapshotRecords.filter((record) => record.code === entry.code && linkEcuMatches(record.sourceEcu, entry.sourceEcu) && record.frameNumber === entry.frameNumber && linkScopeMatches(entry, record) && (!entry.codeFormat || !record.codeFormat || entry.codeFormat === record.codeFormat));
         const udsRecord = matchingUdsRecords.length === 1 ? matchingUdsRecords[0] : null;
         const verifiedValueGroup = findVerifiedValueGroup(entry);
         const freezeFrameValueIds = verifiedValueGroup
@@ -42406,7 +42412,7 @@
             return Number.isInteger(itemFrameNumber)
               && itemFrameNumber === entry.frameNumber
               && linkEcuMatches(itemSourceEcu, entry.sourceEcu)
-              && readoutNetworkScopeMatches(entry, item)
+              && linkScopeMatches(entry, item)
               && freezeFrameValueIds.includes(itemId);
           })
           .map((item) => {
