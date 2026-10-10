@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.663";
+const APP_VERSION = "3.13.664";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -13168,6 +13168,26 @@ function renderObdFreezeFrameInventoryComparison(session) {
   target.append(note);
 }
 
+function renderObdReadinessEcuInventoryComparison(session) {
+  const comparison = session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary;
+  for (const [targetId, families] of [["obdSessionDetailReadiness", [["readinessMonitor", "監視状態"]]],
+    ["obdSessionDetailEcuInfo", [["ecuInfoItem", "項目"], ["ecuInfoKeyValue", "CAL ID/CVN"], ["mode09SupportedType", "対応情報種別"]]]]) {
+    const target = document.getElementById(targetId);
+    if (!target) continue;
+    target.querySelector(".obd-readout-comparison-note")?.remove();
+    if (!comparison) continue;
+    const notes = families.map(([field, label]) => {
+      if (comparison[field + "ComparisonBlockedByKeyVersion"] || comparison[field + "ComparisonBlockedByScopeVersion"]) return label + "は保存記録の比較形式が旧版・不一致・不正のため比較できません。差分なしとは判定しません。";
+      if (!comparison[field + "ComparisonAvailable"]) return label + "は共通する取得済み範囲を確認できないため比較できません。";
+      return label + "：比較対象内の追加 " + (comparison[field + "AddedKeys"] || []).length + "件 / 削除 " + (comparison[field + "RemovedKeys"] || []).length + "件";
+    });
+    const note = document.createElement("p");
+    note.className = "empty-state obd-readout-comparison-note";
+    note.textContent = "保存記録との比較：" + notes.join(" / ");
+    target.append(note);
+  }
+}
+
 function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
   const totalValueCountDeltaValue = summary.totalValueCountDelta ?? summary.total_value_count_delta;
@@ -13299,20 +13319,20 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   if (!freezeFrameUdsRecordComparisonAvailable && (importedFreezeFrameUdsRecordCount > 0 || currentFreezeFrameUdsRecordCount > 0)) parts.push("UDS FF詳細比較不可");
   if (addedReadinessMonitorKeys.length || removedReadinessMonitorKeys.length) {
     const displayReadinessKey = (key) => {
-      const [id, , , complete] = String(key || "").split("|");
+      const [id, , , complete] = readFreezeFrameInventoryDisplayParts(key, "readiness_monitor_v2");
       return `${id || "monitor"}:${complete === "complete" ? "完了" : complete === "not_complete" ? "未完" : "不明"}`;
     };
     parts.push(`RDY状態:${[...addedReadinessMonitorKeys.map((key) => `+${displayReadinessKey(key)}`), ...removedReadinessMonitorKeys.map((key) => `-${displayReadinessKey(key)}`)].slice(0, 3).join(",")}`);
   }
   if (!readinessMonitorComparisonAvailable && (importedReadinessMonitorCount > 0 || currentReadinessMonitorCount > 0)) parts.push("RDY詳細比較不可");
   if (addedEcuInfoItemKeys.length || removedEcuInfoItemKeys.length) {
-    const displayEcuInfoKey = (key) => String(key || "").split("|")[0] || "item";
+    const displayEcuInfoKey = (key) => readFreezeFrameInventoryDisplayParts(key, "ecu_info_item_v2")[0] || "item";
     parts.push(`ECU項目:${[...addedEcuInfoItemKeys.map((key) => `+${displayEcuInfoKey(key)}`), ...removedEcuInfoItemKeys.map((key) => `-${displayEcuInfoKey(key)}`)].slice(0, 3).join(",")}`);
   }
   if (!ecuInfoItemComparisonAvailable && (importedEcuInfoItemCount > 0 || currentEcuInfoItemCount > 0)) parts.push("ECU詳細比較不可");
   if (addedEcuInfoKeyValueKeys.length || removedEcuInfoKeyValueKeys.length) {
     const displayEcuInfoKeyValue = (key) => {
-      const [id, , ecu] = String(key || "").split("|");
+      const [id, , ecu] = readFreezeFrameInventoryDisplayParts(key, "ecu_info_value_v2");
       const label = id === "calibration_id" ? "CALID" : id === "calibration_verification_number" ? "CVN" : "ECU値";
       return `${label}${ecu && ecu !== "-" ? `@${ecu}` : ""}`;
     };
@@ -13321,7 +13341,7 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   if (!ecuInfoKeyValueComparisonAvailable && (importedEcuInfoKeyValueCount > 0 || currentEcuInfoKeyValueCount > 0)) parts.push("ECU値詳細比較不可");
   if (addedMode09SupportedTypeKeys.length || removedMode09SupportedTypeKeys.length) {
     const displayMode09SupportedTypeKey = (key) => {
-      const [infoType, ecu] = String(key || "").split("|");
+      const [infoType, ecu] = readFreezeFrameInventoryDisplayParts(key, "mode09_type_v2");
       return `${infoType || "情報"}${ecu && ecu !== "-" ? `@${ecu}` : ""}`;
     };
     parts.push(`Mode09対応:${[...addedMode09SupportedTypeKeys.map((key) => `+${displayMode09SupportedTypeKey(key)}`), ...removedMode09SupportedTypeKeys.map((key) => `-${displayMode09SupportedTypeKey(key)}`)].slice(0, 3).join(",")}`);
@@ -14688,6 +14708,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   renderObdBridgeSessionDetails(session);
   renderObdLiveInventoryComparison(session);
   renderObdFreezeFrameInventoryComparison(session);
+  renderObdReadinessEcuInventoryComparison(session);
 }
 
 function renderObdLiveInventoryComparison(session) {

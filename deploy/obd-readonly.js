@@ -8679,6 +8679,56 @@
     return version;
   }
 
+  const READOUT_INVENTORY_KEYS = Object.freeze({
+    readiness_monitor_v2: [4, 1], readiness_scope_v2: [1, 0],
+    ecu_info_item_v2: [3, 2], ecu_info_value_v2: [4, 2], mode09_type_v2: [2, 1], ecu_info_scope_v2: [1, 0]
+  });
+  function parseReadoutInventoryKey(key, expectedPrefix = null) {
+    if (typeof key !== "string") return null;
+    const prefix = key.slice(0, key.indexOf(":"));
+    if (!Object.hasOwn(READOUT_INVENTORY_KEYS, prefix) || (expectedPrefix && prefix !== expectedPrefix)) return null;
+    const [length, ecuIndex] = READOUT_INVENTORY_KEYS[prefix];
+    const parts = decodeLivePidInventoryParts(key, prefix + ":", length);
+    if (!parts || parts.slice(0, length).some((part) => typeof part !== "string" || !part || part.length > 240)) return null;
+    if (prefix === "readiness_monitor_v2" && (!["supported", "not_supported", "unknown"].includes(parts[2]) || !["complete", "not_complete", "unknown"].includes(parts[3]))) return null;
+    if (prefix === "mode09_type_v2" && !/^[0-9A-F]{2}$/.test(parts[0])) return null;
+    if (prefix === "ecu_info_value_v2" && (!["calibration_id", "calibration_verification_number"].includes(parts[0]) || redactSensitiveText(parts[3]) !== parts[3])) return null;
+    const sourceEcu = normalizeComparableCanEcuAddress(parts[ecuIndex]) || parts[ecuIndex].trim().toUpperCase();
+    if (!sourceEcu || sourceEcu.length > 80) return null;
+    parts[ecuIndex] = sourceEcu;
+    const route = parts.slice(length).map((part) => part === null ? null : part.normalize("NFKC").trim().toLowerCase());
+    if (route.some((part, index) => part !== null && (!part || part.length > [120, 120, 160][index]))) return null;
+    parts.splice(length, 3, ...route);
+    return { parts, sourceEcu, key: encodeLivePidInventoryKey(prefix + ":", parts),
+      scopeKey: encodeLivePidInventoryKey(prefix.startsWith("readiness_") ? "readiness_scope_v2:" : "ecu_info_scope_v2:", [sourceEcu, ...route]),
+      hasNetworkScope: route.some((part) => part !== null) };
+  }
+  function buildReadoutInventoryKey(prefix, head, input) {
+    const scope = normalizeReadoutNetworkScope(input);
+    if (scope.conflict) return null;
+    return parseReadoutInventoryKey(encodeLivePidInventoryKey(prefix + ":", [...head, scope.networkBus, scope.networkChannel, scope.gatewayRoute]), prefix)?.key || null;
+  }
+  function readReadoutInventoryKeyVersion(summary = {}, domain) {
+    const snakeDomain = domain === "readiness" ? "readiness" : "ecu_info";
+    if (summary[domain + "KeyValidationFailed"] === true || summary[snakeDomain + "_key_validation_failed"] === true) return null;
+    const a = summary[domain + "KeyVersion"], b = summary[snakeDomain + "_key_version"];
+    if (a !== undefined && b !== undefined && a !== b) return null;
+    const version = a ?? b ?? 1;
+    if (![1, 2].includes(version)) return null;
+    const families = domain === "readiness" ? [["readinessMonitor", "readiness_monitor_v2"]]
+      : [["ecuInfoItem", "ecu_info_item_v2"], ["ecuInfoKeyValue", "ecu_info_value_v2"], ["mode09SupportedType", "mode09_type_v2"]];
+    for (const [family, prefix] of families) for (const suffix of ["Keys", "ReportedEcuKeys", "ReportedEcuScopeKeys", "UnresolvedEcuScopeKeys"]) {
+      const field = family + suffix, alias = field.replace(/[A-Z]/g, (letter) => "_" + letter.toLowerCase());
+      const camel = summary[field], snake = summary[alias];
+      if ((camel !== undefined && !Array.isArray(camel)) || (snake !== undefined && !Array.isArray(snake))) return null;
+      if (camel !== undefined && snake !== undefined && JSON.stringify(camel) !== JSON.stringify(snake)) return null;
+      const scope = suffix.endsWith("ScopeKeys"), expected = scope ? (domain === "readiness" ? "readiness_scope_v2" : "ecu_info_scope_v2") : prefix;
+      if (!(camel || snake || []).every((key) => version === 2 ? Boolean(parseReadoutInventoryKey(key, expected))
+        : typeof key === "string" && !key.includes("_v2:") && key.split("|").length === (scope ? 1 : READOUT_INVENTORY_KEYS[prefix][0]) && key.split("|").every(Boolean))) return null;
+    }
+    return version;
+  }
+
   function buildCoreReadoutInventorySummary({
     readoutCoverage = null,
     dtcSnapshot = {},
@@ -8716,7 +8766,7 @@
     );
     const livePidMonitorValueSummary = resolveMonitorValueSummary(pidSummaryRows(livePidValueEntries, livePidSnapshot), livePidSnapshot?.monitorValueSummary, livePidSnapshot?.monitor_value_summary);
     const freezeFrameMonitorValueSummary = resolveMonitorValueSummary(pidSummaryRows(freezeFrameValueEntries, freezeFrameSnapshot), freezeFrameSnapshot?.monitorValueSummary, freezeFrameSnapshot?.monitor_value_summary);
-    const ecuInfoItemEntries = firstPopulatedInventoryArray(ecuInfoSnapshot?.items, ecuInfoSnapshot?.values, ecuInfoSnapshot?.ecu_info_items, ecuInfoSnapshot?.ecuInfoItems);
+    const ecuInfoItemEntries = firstPopulatedInventoryArray(ecuInfoSnapshot?.items, ecuInfoSnapshot?.values, ecuInfoSnapshot?.ecu_info_items, ecuInfoSnapshot?.ecuInfoItems).map((item) => inheritReadoutNetworkScope(item, ecuInfoSnapshot));
     const onboardMonitorTestEntries = firstPopulatedInventoryArray(
       onboardMonitorSnapshot?.tests,
       onboardMonitorSnapshot?.values,
@@ -9030,28 +9080,18 @@
       && String(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || "").trim().toLowerCase() === "reported"
       && (readinessEcuSnapshots.length === 0 || readinessEcuSnapshots.every((snapshot) => String(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status || "").trim().toLowerCase() === "reported"));
     const readinessStateToken = (value, positive, negative) => value === true ? positive : value === false ? negative : "unknown";
-    const readinessMonitorKeys = [...new Set(readinessMonitorEntries.map((monitor) => {
-      const monitorId = String(monitor?.id || monitor?.monitorId || monitor?.monitor_id || "").replace(/\|/g, " ").trim().toLowerCase();
-      if (!monitorId) return null;
-      const ecuId = String(monitor?.sourceEcu || monitor?.source_ecu || readinessSnapshot?.sourceEcu || readinessSnapshot?.source_ecu || "").replace(/\|/g, " ").trim().toUpperCase() || "-";
-      const networkScopeKey = getReadoutNetworkScopeKey(monitor);
-      if (networkScopeKey === null) return null;
-      const baseKey = [
-        monitorId,
-        ecuId,
-        readinessStateToken(monitor?.supported, "supported", "not_supported"),
-        readinessStateToken(monitor?.complete, "complete", "not_complete")
-      ];
-      return [...baseKey, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
-    }).filter(Boolean))].sort();
+    const readinessMonitorKeys = [...new Set(readinessMonitorEntries.map((monitor) => buildReadoutInventoryKey("readiness_monitor_v2", [
+      String(monitor?.id || monitor?.monitorId || monitor?.monitor_id || "").trim().toLowerCase(),
+      String(monitor?.sourceEcu || monitor?.source_ecu || readinessSnapshot?.sourceEcu || readinessSnapshot?.source_ecu || "-").trim().toUpperCase(),
+      readinessStateToken(monitor?.supported, "supported", "not_supported"),
+      readinessStateToken(monitor?.complete, "complete", "not_complete")
+    ], monitor)).filter(Boolean))].sort();
     const recordedReadinessMonitorKeys = readinessMonitorEvidenceRecorded ? readinessMonitorKeys : [];
     const normalizeReadinessEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
     const readReadinessEcuId = (snapshot = {}) => normalizeReadinessEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || null);
     const readReadinessEcuScopeKey = (snapshot = {}) => {
       const ecuId = readReadinessEcuId(snapshot);
-      const networkScopeKey = getReadoutNetworkScopeKey(snapshot);
-      if (!ecuId || networkScopeKey === null) return null;
-      return [ecuId, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+      return ecuId ? buildReadoutInventoryKey("readiness_scope_v2", [ecuId], snapshot) : null;
     };
     const reportedReadinessEcuIds = [...new Set(readinessEcuSnapshots
       .filter((snapshot) => String(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status || "").trim().toLowerCase() === "reported")
@@ -9076,9 +9116,7 @@
     const readinessMonitorReportedEcuKeys = readinessMonitorReportedEcuEvidenceRecorded
       ? readinessMonitorKeys.filter((key) => {
         if (readinessMonitorEvidenceRecorded) return true;
-        const parts = String(key || "").split("|");
-        const ecuId = normalizeReadinessEcuId(parts[1]);
-        const monitorScopeKey = parts.length === 7 ? [ecuId, ...parts.slice(4, 7)].join("|") : ecuId;
+        const monitorScopeKey = parseReadoutInventoryKey(key, "readiness_monitor_v2")?.scopeKey;
         return reportedReadinessEcuScopeKeys.includes(monitorScopeKey);
       })
       : [];    const ecuInfoEcuSnapshots = firstPopulatedInventoryArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots, ecuInfoSnapshot?.ecu_info_ecu_snapshots);
@@ -9086,11 +9124,11 @@
     const ecuInfoItemEvidenceRecorded = !ecuInfoResponseUnavailable
       && String(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported"
       && (ecuInfoEcuSnapshots.length === 0 || ecuInfoEcuSnapshots.every((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported"));
-    const ecuInfoItemKeys = [...new Set(ecuInfoItemEntries.map((item) => [
+    const ecuInfoItemKeys = [...new Set(ecuInfoItemEntries.map((item) => buildReadoutInventoryKey("ecu_info_item_v2", [
       String(item?.id || item?.itemId || item?.item_id || "").trim().toLowerCase(),
       String(item?.infoType || item?.info_type || item?.dataIdentifier || item?.data_identifier || "-").trim().toUpperCase() || "-",
       String(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || "").trim().toUpperCase() || "-"
-    ].join("|")).filter((key) => !key.startsWith("|")))].sort();
+    ], item)).filter(Boolean))].sort();
     const recordedEcuInfoItemKeys = ecuInfoItemEvidenceRecorded ? ecuInfoItemKeys : [];
     const normalizeEcuInfoEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
     const readEcuInfoEcuId = (snapshot = {}) => normalizeEcuInfoEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || snapshot?.address || null);
@@ -9102,12 +9140,18 @@
       .filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() !== "reported")
       .map(readEcuInfoEcuId)
       .filter(Boolean))].sort();
+    const readEcuInfoScopeKey = (snapshot) => {
+      const ecu = readEcuInfoEcuId(snapshot);
+      return ecu ? buildReadoutInventoryKey("ecu_info_scope_v2", [ecu], snapshot) : null;
+    };
+    const reportedEcuInfoEcuScopeKeys = [...new Set(ecuInfoEcuSnapshots.filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").toLowerCase() === "reported").map(readEcuInfoScopeKey).filter(Boolean))].sort();
+    const unresolvedEcuInfoEcuScopeKeys = [...new Set(ecuInfoEcuSnapshots.filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").toLowerCase() !== "reported").map(readEcuInfoScopeKey).filter(Boolean))].sort();
     const ecuInfoItemReportedEcuEvidenceRecorded = ecuInfoItemEvidenceRecorded
       || (ecuInfoSnapshot?.blocked !== true && ecuInfoSnapshot?.isBlocked !== true && ecuInfoSnapshot?.is_blocked !== true
         && String(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedEcuInfoEcuIds.length > 0);
     const ecuInfoItemReportedEcuKeys = ecuInfoItemReportedEcuEvidenceRecorded
-      ? ecuInfoItemKeys.filter((key) => ecuInfoItemEvidenceRecorded || reportedEcuInfoEcuIds.includes(normalizeEcuInfoEcuId(String(key || "").split("|")[2])))
+      ? ecuInfoItemKeys.filter((key) => ecuInfoItemEvidenceRecorded || reportedEcuInfoEcuScopeKeys.includes(parseReadoutInventoryKey(key, "ecu_info_item_v2")?.scopeKey))
       : [];
     const comparableEcuInfoValueIds = new Set(["calibration_id", "calibration_verification_number"]);
     const normalizeComparableEcuInfoValue = (value) => {
@@ -9126,13 +9170,13 @@
       if (!value) return null;
       const infoType = String(item?.infoType || item?.info_type || item?.dataIdentifier || item?.data_identifier || "-").trim().toUpperCase() || "-";
       const sourceEcu = String(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
-      return [id, infoType, sourceEcu, value].join("|");
+      return buildReadoutInventoryKey("ecu_info_value_v2", [id, infoType, sourceEcu, value], item);
     }).filter(Boolean))].sort();
     const ecuInfoKeyValueEvidenceRecorded = ecuInfoItemEvidenceRecorded;
     const recordedEcuInfoKeyValueKeys = ecuInfoKeyValueEvidenceRecorded ? ecuInfoKeyValueKeys : [];
     const ecuInfoKeyValueReportedEcuEvidenceRecorded = ecuInfoItemReportedEcuEvidenceRecorded;
     const ecuInfoKeyValueReportedEcuKeys = ecuInfoKeyValueReportedEcuEvidenceRecorded
-      ? ecuInfoKeyValueKeys.filter((key) => ecuInfoKeyValueEvidenceRecorded || reportedEcuInfoEcuIds.includes(normalizeEcuInfoEcuId(String(key || "").split("|")[2])))
+      ? ecuInfoKeyValueKeys.filter((key) => ecuInfoKeyValueEvidenceRecorded || reportedEcuInfoEcuScopeKeys.includes(parseReadoutInventoryKey(key, "ecu_info_value_v2")?.scopeKey))
       : [];
     const mode09SupportedTypeItems = ecuInfoItemEntries.filter((item) => {
       const id = String(item?.id || item?.itemId || item?.item_id || "").trim().toLowerCase();
@@ -9141,16 +9185,17 @@
     const mode09SupportedTypeEvidenceRecorded = ecuInfoItemEvidenceRecorded && mode09SupportedTypeItems.length > 0;
     const mode09SupportedTypeKeys = [...new Set(mode09SupportedTypeItems.flatMap((item) => {
       const sourceEcu = String(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
-      return decodeMode09SupportedInfoTypes(item?.value).ids.map((infoType) => `${infoType}|${sourceEcu}`);
+      return decodeMode09SupportedInfoTypes(item?.value).ids.map((infoType) => buildReadoutInventoryKey("mode09_type_v2", [infoType, sourceEcu], item)).filter(Boolean);
     }))].sort();
     const recordedMode09SupportedTypeKeys = mode09SupportedTypeEvidenceRecorded ? mode09SupportedTypeKeys : [];
+    const mode09SupportedTypeReportedEcuScopeKeys = [...new Set(mode09SupportedTypeItems.map(readEcuInfoScopeKey).filter((key) => key && (mode09SupportedTypeEvidenceRecorded || reportedEcuInfoEcuScopeKeys.includes(key))))].sort();
     const mode09SupportedTypeReportedEcuIds = [...new Set(mode09SupportedTypeItems
       .map((item) => normalizeEcuInfoEcuId(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || null))
       .filter((ecuId) => ecuId && (mode09SupportedTypeEvidenceRecorded || reportedEcuInfoEcuIds.includes(ecuId))))].sort();
     const mode09SupportedTypeReportedEcuEvidenceRecorded = mode09SupportedTypeEvidenceRecorded
       || (ecuInfoItemReportedEcuEvidenceRecorded && mode09SupportedTypeReportedEcuIds.length > 0);
     const mode09SupportedTypeReportedEcuKeys = mode09SupportedTypeReportedEcuEvidenceRecorded
-      ? mode09SupportedTypeKeys.filter((key) => mode09SupportedTypeEvidenceRecorded || mode09SupportedTypeReportedEcuIds.includes(normalizeEcuInfoEcuId(String(key || "").split("|")[1])))
+      ? mode09SupportedTypeKeys.filter((key) => mode09SupportedTypeEvidenceRecorded || mode09SupportedTypeReportedEcuScopeKeys.includes(parseReadoutInventoryKey(key, "mode09_type_v2")?.scopeKey))
       : [];
     const supportedPidEcuSnapshots = firstPopulatedInventoryArray(supportedPidMatrix?.supportedPidEcuSnapshots, supportedPidMatrix?.supported_pid_ecu_snapshots, supportedPidMatrix?.ecuSnapshots, supportedPidMatrix?.ecu_snapshots);
     const supportedPidResponseUnavailable = isInventoryResponseUnavailable(supportedPidMatrix, supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status);
@@ -9393,6 +9438,10 @@
       hasReadinessMonitors: countsById.readiness_snapshot > 0,
       readinessMonitorCount,
       readiness_monitor_count: readinessMonitorCount,
+      readinessKeyVersion: 2,
+      readiness_key_version: 2,
+      ecuInfoKeyVersion: 2,
+      ecu_info_key_version: 2,
       readinessMonitorKeys: recordedReadinessMonitorKeys,
       readiness_monitor_keys: [...recordedReadinessMonitorKeys],
       readinessMonitorEvidenceRecorded,
@@ -9422,6 +9471,10 @@
       ecu_info_item_reported_ecu_ids: [...reportedEcuInfoEcuIds],
       ecuInfoItemUnresolvedEcuIds: unresolvedEcuInfoEcuIds,
       ecu_info_item_unresolved_ecu_ids: [...unresolvedEcuInfoEcuIds],
+      ecuInfoItemReportedEcuScopeKeys: reportedEcuInfoEcuScopeKeys,
+      ecu_info_item_reported_ecu_scope_keys: [...reportedEcuInfoEcuScopeKeys],
+      ecuInfoItemUnresolvedEcuScopeKeys: unresolvedEcuInfoEcuScopeKeys,
+      ecu_info_item_unresolved_ecu_scope_keys: [...unresolvedEcuInfoEcuScopeKeys],
       ecuInfoItemReportedEcuKeys: ecuInfoItemReportedEcuKeys,
       ecu_info_item_reported_ecu_keys: [...ecuInfoItemReportedEcuKeys],
       ecuInfoKeyValueCount: recordedEcuInfoKeyValueKeys.length,
@@ -9432,6 +9485,10 @@
       ecu_info_key_value_evidence_recorded: ecuInfoKeyValueEvidenceRecorded,
       ecuInfoKeyValueReportedEcuEvidenceRecorded,
       ecu_info_key_value_reported_ecu_evidence_recorded: ecuInfoKeyValueReportedEcuEvidenceRecorded,
+      ecuInfoKeyValueReportedEcuScopeKeys: reportedEcuInfoEcuScopeKeys,
+      ecu_info_key_value_reported_ecu_scope_keys: [...reportedEcuInfoEcuScopeKeys],
+      ecuInfoKeyValueUnresolvedEcuScopeKeys: unresolvedEcuInfoEcuScopeKeys,
+      ecu_info_key_value_unresolved_ecu_scope_keys: [...unresolvedEcuInfoEcuScopeKeys],
       ecuInfoKeyValueReportedEcuKeys: ecuInfoKeyValueReportedEcuKeys,
       ecu_info_key_value_reported_ecu_keys: [...ecuInfoKeyValueReportedEcuKeys],
       mode09SupportedTypeCount: recordedMode09SupportedTypeKeys.length,
@@ -9444,6 +9501,10 @@
       mode09_supported_type_reported_ecu_evidence_recorded: mode09SupportedTypeReportedEcuEvidenceRecorded,
       mode09SupportedTypeReportedEcuIds: mode09SupportedTypeReportedEcuIds,
       mode09_supported_type_reported_ecu_ids: [...mode09SupportedTypeReportedEcuIds],
+      mode09SupportedTypeReportedEcuScopeKeys: mode09SupportedTypeReportedEcuScopeKeys,
+      mode09_supported_type_reported_ecu_scope_keys: [...mode09SupportedTypeReportedEcuScopeKeys],
+      mode09SupportedTypeUnresolvedEcuScopeKeys: unresolvedEcuInfoEcuScopeKeys,
+      mode09_supported_type_unresolved_ecu_scope_keys: [...unresolvedEcuInfoEcuScopeKeys],
       mode09SupportedTypeReportedEcuKeys: mode09SupportedTypeReportedEcuKeys,
       mode09_supported_type_reported_ecu_keys: [...mode09SupportedTypeReportedEcuKeys],
       hasOnboardMonitorTests: countsById.onboard_monitor_snapshot > 0,
@@ -22550,17 +22611,23 @@
       ecuInfoItemReportedEcuEvidenceRecorded: ["ecu_info_item_reported_ecu_evidence_recorded"],
       ecuInfoItemReportedEcuIds: ["ecu_info_item_reported_ecu_ids"],
       ecuInfoItemUnresolvedEcuIds: ["ecu_info_item_unresolved_ecu_ids"],
+      ecuInfoItemReportedEcuScopeKeys: ["ecu_info_item_reported_ecu_scope_keys"],
+      ecuInfoItemUnresolvedEcuScopeKeys: ["ecu_info_item_unresolved_ecu_scope_keys"],
       ecuInfoItemReportedEcuKeys: ["ecu_info_item_reported_ecu_keys"],
       ecuInfoKeyValueCount: ["ecu_info_key_value_count"],
       ecuInfoKeyValueKeys: ["ecu_info_key_value_keys"],
       ecuInfoKeyValueEvidenceRecorded: ["ecu_info_key_value_evidence_recorded"],
       ecuInfoKeyValueReportedEcuEvidenceRecorded: ["ecu_info_key_value_reported_ecu_evidence_recorded"],
+      ecuInfoKeyValueReportedEcuScopeKeys: ["ecu_info_key_value_reported_ecu_scope_keys"],
+      ecuInfoKeyValueUnresolvedEcuScopeKeys: ["ecu_info_key_value_unresolved_ecu_scope_keys"],
       ecuInfoKeyValueReportedEcuKeys: ["ecu_info_key_value_reported_ecu_keys"],
       mode09SupportedTypeCount: ["mode09_supported_type_count"],
       mode09SupportedTypeKeys: ["mode09_supported_type_keys"],
       mode09SupportedTypeEvidenceRecorded: ["mode09_supported_type_evidence_recorded"],
       mode09SupportedTypeReportedEcuEvidenceRecorded: ["mode09_supported_type_reported_ecu_evidence_recorded"],
       mode09SupportedTypeReportedEcuIds: ["mode09_supported_type_reported_ecu_ids"],
+      mode09SupportedTypeReportedEcuScopeKeys: ["mode09_supported_type_reported_ecu_scope_keys"],
+      mode09SupportedTypeUnresolvedEcuScopeKeys: ["mode09_supported_type_unresolved_ecu_scope_keys"],
       mode09SupportedTypeReportedEcuKeys: ["mode09_supported_type_reported_ecu_keys"],
       emptyIds: ["empty_ids"],
       emptyReadoutCount: ["empty_readout_count", "empty_count"],
@@ -22761,7 +22828,7 @@
       const explicitScopeKeys = readIds(summary, "livePidValueReportedEcuScopeKeys").map(normalizeLivePidEcuScopeKey).filter(Boolean);
       const derivedScopeKeys = allKeys.map((key) => parseLivePidValueKey(key)?.sourceScopeKey || null).filter(Boolean);
       const reportedEcuScopeKeys = explicitScopeKeys.length > 0 || !completeEvidenceRecorded
-        ? [...new Set(explicitScopeKeys.length > 0 ? explicitScopeKeys : explicitIds)].sort()
+        ? [...new Set(explicitScopeKeys.length > 0 ? explicitScopeKeys : readReadoutInventoryKeyVersion(summary, "readiness") === 2 ? [] : explicitIds)].sort()
         : [...new Set(derivedScopeKeys)].sort();
       const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => parseLivePidInventoryScopeKey(key)?.sourceEcu || key.split("|")[0]))].sort();
       const explicitKeys = readIds(summary, "livePidValueReportedEcuKeys");
@@ -23051,6 +23118,10 @@
     const freezeFrameUdsRecordAddedKeys = freezeFrameUdsRecordComparisonAvailable ? diffIds(currentFreezeFrameUdsRecordKeys, importedFreezeFrameUdsRecordKeys) : [];
     const freezeFrameUdsRecordRemovedKeys = freezeFrameUdsRecordComparisonAvailable ? diffIds(importedFreezeFrameUdsRecordKeys, currentFreezeFrameUdsRecordKeys) : [];
     const parseReadinessMonitorKey = (value) => {
+      if (typeof value === "string" && value.startsWith("readiness_monitor_v2:")) {
+        const parsed = parseReadoutInventoryKey(value, "readiness_monitor_v2");
+        return parsed ? { ...parsed, monitorId: parsed.parts[0], supported: parsed.parts[2], complete: parsed.parts[3], sourceScopeKey: parsed.scopeKey } : null;
+      }
       const parts = String(value || "").trim().split("|");
       if (![4, 7].includes(parts.length)) return null;
       const [rawMonitorId, rawEcu, supported, complete, ...networkParts] = parts;
@@ -23088,6 +23159,7 @@
       : [];
     const readReadinessKeys = (summary) => [...new Set(readRawReadinessKeys(summary).map(parseReadinessMonitorKey).filter(Boolean).map((item) => item.key))].sort();
     const normalizeReadinessEcuScopeKey = (value) => {
+      if (typeof value === "string" && value.startsWith("readiness_scope_v2:")) return parseReadoutInventoryKey(value, "readiness_scope_v2")?.scopeKey || null;
       const parts = String(value || "").trim().split("|");
       if (![1, 4].includes(parts.length)) return null;
       const ecu = normalizeComparableCanEcuAddress(parts[0]) || parts[0].trim().toUpperCase();
@@ -23109,8 +23181,8 @@
       const reportedEcuScopeKeys = explicitScopeKeys.length > 0 || !completeEvidenceRecorded
         ? [...new Set(explicitScopeKeys.length > 0 ? explicitScopeKeys : explicitIds)].sort()
         : [...new Set(derivedScopeKeys)].sort();
-      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
-      const explicitKeys = readIds(summary, "readinessMonitorReportedEcuKeys");
+      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => parseReadoutInventoryKey(key, "readiness_scope_v2")?.sourceEcu || key.split("|")[0]))].sort();
+      const explicitKeys = [...new Set(readIds(summary, "readinessMonitorReportedEcuKeys").map((key) => parseReadinessMonitorKey(key)?.key).filter(Boolean))].sort();
       const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
       return {
         evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "readinessMonitorReportedEcuEvidenceRecorded"),
@@ -23137,8 +23209,10 @@
     const currentReadinessNetworkScopeKeyMode = readReadinessNetworkScopeKeyMode(
       currentReadinessMonitorEvidenceRecorded ? currentRawReadinessMonitorKeys : currentReadinessReportedEcuScope.reportedEcuKeys
     );
-    const readinessNetworkScopeKeyModesCompatible = importedReadinessNetworkScopeKeyMode === currentReadinessNetworkScopeKeyMode
-      && !["mixed", "invalid"].includes(importedReadinessNetworkScopeKeyMode);
+    const importedReadinessKeyVersion = readReadoutInventoryKeyVersion(importedInventory, "readiness");
+    const currentReadinessKeyVersion = readReadoutInventoryKeyVersion(currentSummary, "readiness");
+    const readinessNetworkScopeKeyModesCompatible = importedReadinessKeyVersion !== null && importedReadinessKeyVersion === currentReadinessKeyVersion
+      && (importedReadinessKeyVersion === 2 || (["none", "unscoped"].includes(importedReadinessNetworkScopeKeyMode) && ["none", "unscoped"].includes(currentReadinessNetworkScopeKeyMode)));
     const readinessMonitorComparisonBlockedByScopeVersion = importedReadinessReportedEcuScope.evidenceRecorded
       && currentReadinessReportedEcuScope.evidenceRecorded
       && !readinessNetworkScopeKeyModesCompatible;
@@ -23148,7 +23222,7 @@
       : importedReadinessReportedEcuScope.evidenceRecorded && currentReadinessReportedEcuScope.evidenceRecorded
         ? importedReadinessReportedEcuScope.reportedEcuScopeKeys.filter((key) => currentReadinessReportedEcuScope.reportedEcuScopeKeys.includes(key))
         : [];
-    const comparableReadinessEcuIds = [...new Set(comparableReadinessEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
+    const comparableReadinessEcuIds = [...new Set(comparableReadinessEcuScopeKeys.map((key) => parseReadoutInventoryKey(key, "readiness_scope_v2")?.sourceEcu || key.split("|")[0]))].sort();
     const reportedEcuReadinessMonitorComparisonAvailable = !completeReadinessMonitorComparisonAvailable && comparableReadinessEcuScopeKeys.length > 0;
     const readinessMonitorComparisonAvailable = (completeReadinessMonitorComparisonAvailable || reportedEcuReadinessMonitorComparisonAvailable)
       && readinessNetworkScopeKeyModesCompatible;
@@ -23168,41 +23242,36 @@
       ? currentReadinessMonitorKeys.filter((key) => parseReadinessMonitorKey(key)?.complete === "not_complete").length
         - importedReadinessMonitorKeys.filter((key) => parseReadinessMonitorKey(key)?.complete === "not_complete").length
       : null;    const readEcuInfoKeys = (summary) => Array.isArray(readField(summary, "ecuInfoItemKeys"))
-      ? [...new Set(readField(summary, "ecuInfoItemKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      ? [...new Set(readField(summary, "ecuInfoItemKeys").map((key) => parseReadoutInventoryKey(key, "ecu_info_item_v2")?.key).filter(Boolean))].sort()
       : [];
     const importedEcuInfoItemEvidenceRecorded = readBoolean(importedInventory, "ecuInfoItemEvidenceRecorded");
     const currentEcuInfoItemEvidenceRecorded = readBoolean(currentSummary, "ecuInfoItemEvidenceRecorded");
-    const readEcuInfoItemReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
-      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
-        || String(value || "").trim().toUpperCase()
-        || null;
-      const explicitIds = readIds(summary, "ecuInfoItemReportedEcuIds").map(normalizeScopeId).filter(Boolean);
-      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
-        ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[2])).filter(Boolean))].sort();
-      const explicitKeys = readIds(summary, "ecuInfoItemReportedEcuKeys");
-      const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
-      return {
-        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "ecuInfoItemReportedEcuEvidenceRecorded"),
-        reportedEcuIds,
-        reportedEcuKeys
-      };
+    const ecuInfoKeyVersionsCompatible = readReadoutInventoryKeyVersion(importedInventory, "ecuInfo") === 2 && readReadoutInventoryKeyVersion(currentSummary, "ecuInfo") === 2;
+    const readEcuReportedScope = (summary, completeEvidenceRecorded, allKeys, family, prefix) => {
+      const explicitScopes = readIds(summary, family + "ReportedEcuScopeKeys").map((key) => parseReadoutInventoryKey(key, "ecu_info_scope_v2")?.scopeKey).filter(Boolean);
+      const derivedScopes = allKeys.map((key) => parseReadoutInventoryKey(key, prefix)?.scopeKey).filter(Boolean);
+      const reportedEcuScopeKeys = [...new Set(explicitScopes.length || !completeEvidenceRecorded ? explicitScopes : derivedScopes)].sort();
+      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => parseReadoutInventoryKey(key, "ecu_info_scope_v2")?.sourceEcu).filter(Boolean))].sort();
+      const explicitKeys = [...new Set(readIds(summary, family + "ReportedEcuKeys").map((key) => parseReadoutInventoryKey(key, prefix)?.key).filter(Boolean))].sort();
+      return { evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, family + "ReportedEcuEvidenceRecorded"), reportedEcuIds, reportedEcuScopeKeys,
+        reportedEcuKeys: explicitKeys.length || !completeEvidenceRecorded ? explicitKeys : allKeys };
     };
+    const readEcuInfoItemReportedEcuScope = (summary, complete, keys) => readEcuReportedScope(summary, complete, keys, "ecuInfoItem", "ecu_info_item_v2");
     const importedAllEcuInfoItemKeys = readEcuInfoKeys(importedInventory);
     const currentAllEcuInfoItemKeys = readEcuInfoKeys(currentSummary);
     const importedEcuInfoItemReportedEcuScope = readEcuInfoItemReportedEcuScope(importedInventory, importedEcuInfoItemEvidenceRecorded, importedAllEcuInfoItemKeys);
     const currentEcuInfoItemReportedEcuScope = readEcuInfoItemReportedEcuScope(currentSummary, currentEcuInfoItemEvidenceRecorded, currentAllEcuInfoItemKeys);
-    const completeEcuInfoItemComparisonAvailable = importedEcuInfoItemEvidenceRecorded && currentEcuInfoItemEvidenceRecorded;
-    const comparableEcuInfoItemEcuIds = completeEcuInfoItemComparisonAvailable
+    const completeEcuInfoItemComparisonAvailable = ecuInfoKeyVersionsCompatible && importedEcuInfoItemEvidenceRecorded && currentEcuInfoItemEvidenceRecorded;
+    const comparableEcuInfoItemEcuScopeKeys = completeEcuInfoItemComparisonAvailable
       ? []
       : importedEcuInfoItemReportedEcuScope.evidenceRecorded && currentEcuInfoItemReportedEcuScope.evidenceRecorded
-        ? importedEcuInfoItemReportedEcuScope.reportedEcuIds.filter((id) => currentEcuInfoItemReportedEcuScope.reportedEcuIds.includes(id))
+        ? importedEcuInfoItemReportedEcuScope.reportedEcuScopeKeys.filter((key) => currentEcuInfoItemReportedEcuScope.reportedEcuScopeKeys.includes(key))
         : [];
-    const reportedEcuInfoItemComparisonAvailable = !completeEcuInfoItemComparisonAvailable && comparableEcuInfoItemEcuIds.length > 0;
+    const comparableEcuInfoItemEcuIds = [...new Set(comparableEcuInfoItemEcuScopeKeys.map((key) => parseReadoutInventoryKey(key, "ecu_info_scope_v2")?.sourceEcu).filter(Boolean))].sort();
+    const reportedEcuInfoItemComparisonAvailable = ecuInfoKeyVersionsCompatible && !completeEcuInfoItemComparisonAvailable && comparableEcuInfoItemEcuScopeKeys.length > 0;
     const ecuInfoItemComparisonAvailable = completeEcuInfoItemComparisonAvailable || reportedEcuInfoItemComparisonAvailable;
     const filterEcuInfoItemKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
-      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[2]) || String(key || "").split("|")[2]?.trim().toUpperCase();
-      return comparableEcuInfoItemEcuIds.includes(ecu);
+      return comparableEcuInfoItemEcuScopeKeys.includes(parseReadoutInventoryKey(key, "ecu_info_item_v2")?.scopeKey);
     });
     const importedEcuInfoItemKeys = completeEcuInfoItemComparisonAvailable
       ? importedAllEcuInfoItemKeys
@@ -23219,21 +23288,13 @@
       ...readIds(currentSummary, "ecuInfoItemUnresolvedEcuIds")
     ].length > 0;
     const restrictEcuInfoComparisonToScopedEvidence = !completeEcuInfoItemComparisonAvailable && hasEcuInfoItemEcuScopeEvidence;
-    const ecuInfoMissingKeyDelta = restrictEcuInfoComparisonToScopedEvidence
+    const ecuInfoMissingKeyDelta = !ecuInfoKeyVersionsCompatible || restrictEcuInfoComparisonToScopedEvidence
       ? null
       : readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount");
-    const comparableEcuInfoKeyValueIds = new Set(["calibration_id", "calibration_verification_number"]);
-    const readEcuInfoKeyValueKeys = (summary) => Array.isArray(readField(summary, "ecuInfoKeyValueKeys"))
-      ? [...new Set(readField(summary, "ecuInfoKeyValueKeys").map((key) => {
-        const normalized = String(key || "").trim();
-        const [id, infoType, sourceEcu, value, ...extra] = normalized.split("|");
-        if (extra.length > 0 || !comparableEcuInfoKeyValueIds.has(String(id || "").trim().toLowerCase()) || !infoType || !sourceEcu || !value) return null;
-        return redactSensitiveText(normalized) === normalized ? normalized : null;
-      }).filter(Boolean))].sort()
-      : [];
+    const readEcuInfoKeyValueKeys = (summary) => [...new Set(readIds(summary, "ecuInfoKeyValueKeys").map((key) => parseReadoutInventoryKey(key, "ecu_info_value_v2")?.key).filter(Boolean))].sort();
     const importedEcuInfoKeyValueEvidenceRecorded = readBoolean(importedInventory, "ecuInfoKeyValueEvidenceRecorded");
     const currentEcuInfoKeyValueEvidenceRecorded = readBoolean(currentSummary, "ecuInfoKeyValueEvidenceRecorded");
-    const completeEcuInfoKeyValueComparisonAvailable = importedEcuInfoKeyValueEvidenceRecorded && currentEcuInfoKeyValueEvidenceRecorded;
+    const completeEcuInfoKeyValueComparisonAvailable = ecuInfoKeyVersionsCompatible && importedEcuInfoKeyValueEvidenceRecorded && currentEcuInfoKeyValueEvidenceRecorded;
     const reportedEcuInfoKeyValueComparisonAvailable = !completeEcuInfoKeyValueComparisonAvailable
       && reportedEcuInfoItemComparisonAvailable
       && readBoolean(importedInventory, "ecuInfoKeyValueReportedEcuEvidenceRecorded")
@@ -23243,8 +23304,7 @@
       ? readEcuInfoKeyValueKeys({ ecuInfoKeyValueKeys: readField(summary, "ecuInfoKeyValueReportedEcuKeys") })
       : [];
     const filterEcuInfoKeyValueKeysByScope = (keys) => keys.filter((key) => {
-      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[2]) || String(key || "").split("|")[2]?.trim().toUpperCase();
-      return comparableEcuInfoItemEcuIds.includes(ecu);
+      return comparableEcuInfoItemEcuScopeKeys.includes(parseReadoutInventoryKey(key, "ecu_info_value_v2")?.scopeKey);
     });
     const importedEcuInfoKeyValueKeys = completeEcuInfoKeyValueComparisonAvailable
       ? readEcuInfoKeyValueKeys(importedInventory)
@@ -23254,45 +23314,25 @@
       : reportedEcuInfoKeyValueComparisonAvailable ? filterEcuInfoKeyValueKeysByScope(readReportedEcuInfoKeyValueKeys(currentSummary)) : [];
     const ecuInfoKeyValueAddedKeys = ecuInfoKeyValueComparisonAvailable ? diffIds(currentEcuInfoKeyValueKeys, importedEcuInfoKeyValueKeys) : [];
     const ecuInfoKeyValueRemovedKeys = ecuInfoKeyValueComparisonAvailable ? diffIds(importedEcuInfoKeyValueKeys, currentEcuInfoKeyValueKeys) : [];
-    const readMode09SupportedTypeKeys = (summary) => Array.isArray(readField(summary, "mode09SupportedTypeKeys"))
-      ? [...new Set(readField(summary, "mode09SupportedTypeKeys").map((key) => {
-        const [infoType, sourceEcu, ...extra] = String(key || "").trim().split("|");
-        if (extra.length > 0 || !/^[0-9A-F]{2}$/i.test(infoType || "") || !sourceEcu) return null;
-        return `${infoType.toUpperCase()}|${sourceEcu.slice(0, 64).toUpperCase()}`;
-      }).filter(Boolean))].sort()
-      : [];
+    const readMode09SupportedTypeKeys = (summary) => [...new Set(readIds(summary, "mode09SupportedTypeKeys").map((key) => parseReadoutInventoryKey(key, "mode09_type_v2")?.key).filter(Boolean))].sort();
     const importedMode09SupportedTypeEvidenceRecorded = readBoolean(importedInventory, "mode09SupportedTypeEvidenceRecorded");
     const currentMode09SupportedTypeEvidenceRecorded = readBoolean(currentSummary, "mode09SupportedTypeEvidenceRecorded");
     const importedAllMode09SupportedTypeKeys = readMode09SupportedTypeKeys(importedInventory);
     const currentAllMode09SupportedTypeKeys = readMode09SupportedTypeKeys(currentSummary);
-    const readMode09SupportedTypeReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
-      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
-        || String(value || "").trim().toUpperCase()
-        || null;
-      const explicitIds = readIds(summary, "mode09SupportedTypeReportedEcuIds").map(normalizeScopeId).filter(Boolean);
-      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
-        ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[1])).filter(Boolean))].sort();
-      const explicitKeys = readIds(summary, "mode09SupportedTypeReportedEcuKeys");
-      return {
-        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "mode09SupportedTypeReportedEcuEvidenceRecorded"),
-        reportedEcuIds,
-        reportedEcuKeys: explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys]
-      };
-    };
+    const readMode09SupportedTypeReportedEcuScope = (summary, complete, keys) => readEcuReportedScope(summary, complete, keys, "mode09SupportedType", "mode09_type_v2");
     const importedMode09SupportedTypeReportedEcuScope = readMode09SupportedTypeReportedEcuScope(importedInventory, importedMode09SupportedTypeEvidenceRecorded, importedAllMode09SupportedTypeKeys);
     const currentMode09SupportedTypeReportedEcuScope = readMode09SupportedTypeReportedEcuScope(currentSummary, currentMode09SupportedTypeEvidenceRecorded, currentAllMode09SupportedTypeKeys);
-    const completeMode09SupportedTypeComparisonAvailable = importedMode09SupportedTypeEvidenceRecorded && currentMode09SupportedTypeEvidenceRecorded;
-    const comparableMode09SupportedTypeEcuIds = completeMode09SupportedTypeComparisonAvailable
+    const completeMode09SupportedTypeComparisonAvailable = ecuInfoKeyVersionsCompatible && importedMode09SupportedTypeEvidenceRecorded && currentMode09SupportedTypeEvidenceRecorded;
+    const comparableMode09SupportedTypeEcuScopeKeys = completeMode09SupportedTypeComparisonAvailable
       ? []
       : importedMode09SupportedTypeReportedEcuScope.evidenceRecorded && currentMode09SupportedTypeReportedEcuScope.evidenceRecorded
-        ? importedMode09SupportedTypeReportedEcuScope.reportedEcuIds.filter((id) => currentMode09SupportedTypeReportedEcuScope.reportedEcuIds.includes(id))
+        ? importedMode09SupportedTypeReportedEcuScope.reportedEcuScopeKeys.filter((key) => currentMode09SupportedTypeReportedEcuScope.reportedEcuScopeKeys.includes(key))
         : [];
-    const reportedEcuMode09SupportedTypeComparisonAvailable = !completeMode09SupportedTypeComparisonAvailable && comparableMode09SupportedTypeEcuIds.length > 0;
+    const comparableMode09SupportedTypeEcuIds = [...new Set(comparableMode09SupportedTypeEcuScopeKeys.map((key) => parseReadoutInventoryKey(key, "ecu_info_scope_v2")?.sourceEcu).filter(Boolean))].sort();
+    const reportedEcuMode09SupportedTypeComparisonAvailable = ecuInfoKeyVersionsCompatible && !completeMode09SupportedTypeComparisonAvailable && comparableMode09SupportedTypeEcuScopeKeys.length > 0;
     const mode09SupportedTypeComparisonAvailable = completeMode09SupportedTypeComparisonAvailable || reportedEcuMode09SupportedTypeComparisonAvailable;
     const filterMode09SupportedTypeKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
-      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[1]) || String(key || "").split("|")[1]?.trim().toUpperCase();
-      return comparableMode09SupportedTypeEcuIds.includes(ecu);
+      return comparableMode09SupportedTypeEcuScopeKeys.includes(parseReadoutInventoryKey(key, "mode09_type_v2")?.scopeKey);
     });
     const importedMode09SupportedTypeKeys = completeMode09SupportedTypeComparisonAvailable
       ? importedAllMode09SupportedTypeKeys
@@ -23863,6 +23903,10 @@
       imported_ecu_info_item_reported_ecu_evidence_recorded: importedEcuInfoItemReportedEcuScope.evidenceRecorded,
       currentEcuInfoItemReportedEcuEvidenceRecorded: currentEcuInfoItemReportedEcuScope.evidenceRecorded,
       current_ecu_info_item_reported_ecu_evidence_recorded: currentEcuInfoItemReportedEcuScope.evidenceRecorded,
+      ecuInfoItemComparisonBlockedByKeyVersion: !ecuInfoKeyVersionsCompatible,
+      ecu_info_item_comparison_blocked_by_key_version: !ecuInfoKeyVersionsCompatible,
+      ecuInfoItemComparableEcuScopeKeys: comparableEcuInfoItemEcuScopeKeys,
+      ecu_info_item_comparable_ecu_scope_keys: [...comparableEcuInfoItemEcuScopeKeys],
       ecuInfoItemComparisonAvailable,
       ecu_info_item_comparison_available: ecuInfoItemComparisonAvailable,
       ecuInfoItemComparisonScope: completeEcuInfoItemComparisonAvailable ? "complete" : reportedEcuInfoItemComparisonAvailable ? "reported_ecus" : "unavailable",
@@ -23887,6 +23931,10 @@
       imported_ecu_info_key_value_evidence_recorded: importedEcuInfoKeyValueEvidenceRecorded,
       currentEcuInfoKeyValueEvidenceRecorded,
       current_ecu_info_key_value_evidence_recorded: currentEcuInfoKeyValueEvidenceRecorded,
+      ecuInfoKeyValueComparisonBlockedByKeyVersion: !ecuInfoKeyVersionsCompatible,
+      ecu_info_key_value_comparison_blocked_by_key_version: !ecuInfoKeyVersionsCompatible,
+      ecuInfoKeyValueComparableEcuScopeKeys: comparableEcuInfoItemEcuScopeKeys,
+      ecu_info_key_value_comparable_ecu_scope_keys: [...comparableEcuInfoItemEcuScopeKeys],
       ecuInfoKeyValueComparisonAvailable,
       ecu_info_key_value_comparison_available: ecuInfoKeyValueComparisonAvailable,
       ecuInfoKeyValueComparisonScope: completeEcuInfoKeyValueComparisonAvailable ? "complete" : reportedEcuInfoKeyValueComparisonAvailable ? "reported_ecus" : "unavailable",
@@ -23915,6 +23963,10 @@
       imported_mode09_supported_type_reported_ecu_evidence_recorded: importedMode09SupportedTypeReportedEcuScope.evidenceRecorded,
       currentMode09SupportedTypeReportedEcuEvidenceRecorded: currentMode09SupportedTypeReportedEcuScope.evidenceRecorded,
       current_mode09_supported_type_reported_ecu_evidence_recorded: currentMode09SupportedTypeReportedEcuScope.evidenceRecorded,
+      mode09SupportedTypeComparisonBlockedByKeyVersion: !ecuInfoKeyVersionsCompatible,
+      mode09_supported_type_comparison_blocked_by_key_version: !ecuInfoKeyVersionsCompatible,
+      mode09SupportedTypeComparableEcuScopeKeys: comparableMode09SupportedTypeEcuScopeKeys,
+      mode09_supported_type_comparable_ecu_scope_keys: [...comparableMode09SupportedTypeEcuScopeKeys],
       mode09SupportedTypeComparisonAvailable,
       mode09_supported_type_comparison_available: mode09SupportedTypeComparisonAvailable,
       mode09SupportedTypeComparisonScope: completeMode09SupportedTypeComparisonAvailable ? "complete" : reportedEcuMode09SupportedTypeComparisonAvailable ? "reported_ecus" : "unavailable",
@@ -24114,6 +24166,14 @@
       freeze_frame_value_reported_ecu_ids: normalizeIds(summary.freezeFrameValueReportedEcuIds || summary.freeze_frame_value_reported_ecu_ids),
       freezeFrameValueUnresolvedEcuIds: normalizeIds(summary.freezeFrameValueUnresolvedEcuIds || summary.freeze_frame_value_unresolved_ecu_ids),
       freeze_frame_value_unresolved_ecu_ids: normalizeIds(summary.freezeFrameValueUnresolvedEcuIds || summary.freeze_frame_value_unresolved_ecu_ids),
+      readinessKeyVersion: pickDefined(summary.readinessKeyVersion, summary.readiness_key_version, null),
+      readiness_key_version: pickDefined(summary.readiness_key_version, summary.readinessKeyVersion, null),
+      readinessKeyValidationFailed: readReadoutInventoryKeyVersion(summary, "readiness") === null,
+      readiness_key_validation_failed: readReadoutInventoryKeyVersion(summary, "readiness") === null,
+      ecuInfoKeyVersion: pickDefined(summary.ecuInfoKeyVersion, summary.ecu_info_key_version, null),
+      ecu_info_key_version: pickDefined(summary.ecu_info_key_version, summary.ecuInfoKeyVersion, null),
+      ecuInfoKeyValidationFailed: readReadoutInventoryKeyVersion(summary, "ecuInfo") === null,
+      ecu_info_key_validation_failed: readReadoutInventoryKeyVersion(summary, "ecuInfo") === null,
       freezeFrameKeyVersion: pickDefined(summary.freezeFrameKeyVersion, summary.freeze_frame_key_version, null),
       freeze_frame_key_version: pickDefined(summary.freeze_frame_key_version, summary.freezeFrameKeyVersion, null),
       freezeFrameKeyValidationFailed: readFreezeFrameInventoryKeyVersion(summary) === null,
@@ -24186,6 +24246,10 @@
       ecu_info_item_reported_ecu_ids: normalizeIds(summary.ecuInfoItemReportedEcuIds || summary.ecu_info_item_reported_ecu_ids),
       ecuInfoItemUnresolvedEcuIds: normalizeIds(summary.ecuInfoItemUnresolvedEcuIds || summary.ecu_info_item_unresolved_ecu_ids),
       ecu_info_item_unresolved_ecu_ids: normalizeIds(summary.ecuInfoItemUnresolvedEcuIds || summary.ecu_info_item_unresolved_ecu_ids),
+      ecuInfoItemReportedEcuScopeKeys: normalizeIds(summary.ecuInfoItemReportedEcuScopeKeys || summary.ecu_info_item_reported_ecu_scope_keys),
+      ecu_info_item_reported_ecu_scope_keys: normalizeIds(summary.ecuInfoItemReportedEcuScopeKeys || summary.ecu_info_item_reported_ecu_scope_keys),
+      ecuInfoItemUnresolvedEcuScopeKeys: normalizeIds(summary.ecuInfoItemUnresolvedEcuScopeKeys || summary.ecu_info_item_unresolved_ecu_scope_keys),
+      ecu_info_item_unresolved_ecu_scope_keys: normalizeIds(summary.ecuInfoItemUnresolvedEcuScopeKeys || summary.ecu_info_item_unresolved_ecu_scope_keys),
       ecuInfoItemReportedEcuKeys: normalizeIds(summary.ecuInfoItemReportedEcuKeys || summary.ecu_info_item_reported_ecu_keys || (pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true ? summary.ecuInfoItemKeys || summary.ecu_info_item_keys : [])),
       ecu_info_item_reported_ecu_keys: normalizeIds(summary.ecuInfoItemReportedEcuKeys || summary.ecu_info_item_reported_ecu_keys || (pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true ? summary.ecuInfoItemKeys || summary.ecu_info_item_keys : [])),
       ecuInfoKeyValueCount: toCount("ecuInfoKeyValueCount", "ecu_info_key_value_count", 0),
@@ -24196,6 +24260,10 @@
       ecu_info_key_value_evidence_recorded: pickDefined(summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true,
       ecuInfoKeyValueReportedEcuEvidenceRecorded: pickDefined(summary.ecuInfoKeyValueReportedEcuEvidenceRecorded, summary.ecu_info_key_value_reported_ecu_evidence_recorded, summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true,
       ecu_info_key_value_reported_ecu_evidence_recorded: pickDefined(summary.ecuInfoKeyValueReportedEcuEvidenceRecorded, summary.ecu_info_key_value_reported_ecu_evidence_recorded, summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true,
+      ecuInfoKeyValueReportedEcuScopeKeys: normalizeIds(summary.ecuInfoKeyValueReportedEcuScopeKeys || summary.ecu_info_key_value_reported_ecu_scope_keys),
+      ecu_info_key_value_reported_ecu_scope_keys: normalizeIds(summary.ecuInfoKeyValueReportedEcuScopeKeys || summary.ecu_info_key_value_reported_ecu_scope_keys),
+      ecuInfoKeyValueUnresolvedEcuScopeKeys: normalizeIds(summary.ecuInfoKeyValueUnresolvedEcuScopeKeys || summary.ecu_info_key_value_unresolved_ecu_scope_keys),
+      ecu_info_key_value_unresolved_ecu_scope_keys: normalizeIds(summary.ecuInfoKeyValueUnresolvedEcuScopeKeys || summary.ecu_info_key_value_unresolved_ecu_scope_keys),
       ecuInfoKeyValueReportedEcuKeys: normalizeIds(summary.ecuInfoKeyValueReportedEcuKeys || summary.ecu_info_key_value_reported_ecu_keys || (pickDefined(summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true ? summary.ecuInfoKeyValueKeys || summary.ecu_info_key_value_keys : [])),
       ecu_info_key_value_reported_ecu_keys: normalizeIds(summary.ecuInfoKeyValueReportedEcuKeys || summary.ecu_info_key_value_reported_ecu_keys || (pickDefined(summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true ? summary.ecuInfoKeyValueKeys || summary.ecu_info_key_value_keys : [])),
       mode09SupportedTypeCount: toCount("mode09SupportedTypeCount", "mode09_supported_type_count", 0),
@@ -24208,6 +24276,10 @@
       mode09_supported_type_reported_ecu_evidence_recorded: pickDefined(summary.mode09SupportedTypeReportedEcuEvidenceRecorded, summary.mode09_supported_type_reported_ecu_evidence_recorded, summary.mode09SupportedTypeEvidenceRecorded, summary.mode09_supported_type_evidence_recorded, false) === true,
       mode09SupportedTypeReportedEcuIds: normalizeIds(summary.mode09SupportedTypeReportedEcuIds || summary.mode09_supported_type_reported_ecu_ids),
       mode09_supported_type_reported_ecu_ids: normalizeIds(summary.mode09SupportedTypeReportedEcuIds || summary.mode09_supported_type_reported_ecu_ids),
+      mode09SupportedTypeReportedEcuScopeKeys: normalizeIds(summary.mode09SupportedTypeReportedEcuScopeKeys || summary.mode09_supported_type_reported_ecu_scope_keys),
+      mode09_supported_type_reported_ecu_scope_keys: normalizeIds(summary.mode09SupportedTypeReportedEcuScopeKeys || summary.mode09_supported_type_reported_ecu_scope_keys),
+      mode09SupportedTypeUnresolvedEcuScopeKeys: normalizeIds(summary.mode09SupportedTypeUnresolvedEcuScopeKeys || summary.mode09_supported_type_unresolved_ecu_scope_keys),
+      mode09_supported_type_unresolved_ecu_scope_keys: normalizeIds(summary.mode09SupportedTypeUnresolvedEcuScopeKeys || summary.mode09_supported_type_unresolved_ecu_scope_keys),
       mode09SupportedTypeReportedEcuKeys: normalizeIds(summary.mode09SupportedTypeReportedEcuKeys || summary.mode09_supported_type_reported_ecu_keys || (pickDefined(summary.mode09SupportedTypeEvidenceRecorded, summary.mode09_supported_type_evidence_recorded, false) === true ? summary.mode09SupportedTypeKeys || summary.mode09_supported_type_keys : [])),
       mode09_supported_type_reported_ecu_keys: normalizeIds(summary.mode09SupportedTypeReportedEcuKeys || summary.mode09_supported_type_reported_ecu_keys || (pickDefined(summary.mode09SupportedTypeEvidenceRecorded, summary.mode09_supported_type_evidence_recorded, false) === true ? summary.mode09SupportedTypeKeys || summary.mode09_supported_type_keys : [])),
       supportedPidCount: toCount("supportedPidCount", "supported_pid_count", 0),

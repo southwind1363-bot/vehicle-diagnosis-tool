@@ -659,6 +659,49 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.deepEqual(JSON.parse(JSON.stringify(restored.freezeFrameSnapshot.monitorValues)),JSON.parse(state).freezeFrameSnapshot.monitorValues);
     }
     console.log('FF inventory v2 browser: old comparison unavailable, same-route value changes and different routes distinguished, visible notice, JSON archive and responsive themes passed.');
+    for (const kind of ['legacy','v2','routes','partial']) {
+      const snapshot=(bus,changed=false)=>({
+        readiness_snapshot:{readiness_readout_status:'reported',monitors:[{id:'misfire',source_ecu:'7E8',network_bus:bus,supported:true,complete:!changed}]},
+        ecu_info_snapshot:{ecu_info_readout_status:'reported',items:[{id:'calibration_id',info_type:'04',source_ecu:'7E8',network_bus:bus,value:changed?'CAL-B':'CAL-A'},{id:'supported_info_types_00',source_ecu:'7E8',network_bus:bus,value:'80 00 00 00'}]}
+      });
+      const partial=bus=>({ecu_info_snapshot:{ecu_info_ecu_snapshots:[
+        {source_ecu:'7E8',network_bus:bus,ecu_info_readout_status:'reported',items:[{id:'calibration_id',info_type:'04',value:'CAL-A'}]},
+        {source_ecu:'7E8',network_bus:bus==='CAN-PT'?'CAN-BODY':'CAN-PT',ecu_info_readout_status:'unparsed',items:[]}
+      ]}});
+      const baseline=kind==='legacy'?JSON.parse(fs.readFileSync(path.join(root,'scripts/fixtures/inventory-readiness-ecu-3.13.663.json'),'utf8')).inventories.scoped:
+        model.buildDiagnosticScanSession(kind==='partial'?partial('CAN-PT'):snapshot('A|B')).coreReadoutInventorySummary;
+      const prepared=model.buildDiagnosticScanSession({...kind==='partial'?partial('CAN-BODY'):snapshot(kind==='routes'?'A B':'A|B',kind==='v2'),core_readout_inventory_summary:baseline});
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      const choose=page.waitForEvent('filechooser');page.once('dialog',d=>d.accept());
+      await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+      await (await choose).setFiles({name:'readiness-ecu-'+kind+'.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(prepared)))});
+      await page.waitForFunction(()=>obdDevSession.lastSession?.coreReadoutInventorySummary?.ecuInfoKeyVersion===2);
+      const state=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+      const comparison=JSON.parse(state).importedCoreReadoutInventoryComparisonSummary;
+      assert.equal(comparison.ecuInfoKeyValueComparisonAvailable,['v2','routes'].includes(kind));
+      assert.equal(comparison.ecuInfoKeyValueAddedKeys.length,['v2','routes'].includes(kind)?1:0);
+      for(const [button,id] of [['レディネス','Readiness'],['ECU情報','EcuInfo']]) {
+        await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+        await page.getByRole('button',{name:button+'の詳細を開く',exact:true}).click();
+        const note=page.locator('#obdSessionDetail'+id+' .obd-readout-comparison-note');
+        await note.waitFor({state:'visible'});
+        const text=await note.innerText();
+        if(kind==='legacy')assert.ok(text.includes('比較できません。差分なしとは判定しません。'));
+        else if(kind==='partial')assert.ok(text.includes('共通する取得済み範囲'));
+        else assert.ok(text.includes('比較対象内の追加 1件 / 削除 1件'));
+        for(const width of [390,1280])for(const dark of [false,true]){
+          await page.setViewportSize({width,height:844});await page.evaluate(d=>document.body.classList.toggle('dark',d),dark);
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+          await note.screenshot({path:path.join(output,'readiness-ecu-'+kind+'-'+id+'-'+width+'-'+dark+'.png')});
+        }
+      }
+      assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),state);
+      const saved=await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+      const restored=await page.evaluate(raw=>window.ObdReadOnly.buildDiagnosticScanSessionFromJson(raw),saved);
+      assert.equal(restored.importedCoreReadoutInventoryComparisonSummary.ecuInfoKeyValueComparisonAvailable,['v2','routes'].includes(kind));
+      assert.deepEqual(restored.ecuInfoSnapshot.items,JSON.parse(state).ecuInfoSnapshot.items);
+    }
+    console.log('Readiness/ECU inventory v2: legacy blocked, acquired routes matched, value and route changes shown, real import/archive and responsive themes passed.');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);

@@ -1,0 +1,157 @@
+{
+  "version": "3.13.663",
+  "inventories": {
+    "unscoped": {
+      "readinessMonitorCount": 1,
+      "readiness_monitor_count": 1,
+      "readinessMonitorKeys": [
+        "misfire|7E8|supported|complete"
+      ],
+      "readiness_monitor_keys": [
+        "misfire|7E8|supported|complete"
+      ],
+      "readinessMonitorEvidenceRecorded": true,
+      "readiness_monitor_evidence_recorded": true,
+      "readinessMonitorReportedEcuEvidenceRecorded": true,
+      "readiness_monitor_reported_ecu_evidence_recorded": true,
+      "readinessMonitorReportedEcuIds": [],
+      "readiness_monitor_reported_ecu_ids": [],
+      "readinessMonitorReportedEcuScopeKeys": [],
+      "readiness_monitor_reported_ecu_scope_keys": [],
+      "readinessMonitorUnresolvedEcuIds": [],
+      "readiness_monitor_unresolved_ecu_ids": [],
+      "readinessMonitorUnresolvedEcuScopeKeys": [],
+      "readiness_monitor_unresolved_ecu_scope_keys": [],
+      "readinessMonitorReportedEcuKeys": [
+        "misfire|7E8|supported|complete"
+      ],
+      "readiness_monitor_reported_ecu_keys": [
+        "misfire|7E8|supported|complete"
+      ],
+      "ecuInfoItemCount": 2,
+      "ecuInfoItemKeys": [
+        "calibration_id|04|7E8",
+        "supported_info_types_00|-|7E8"
+      ],
+      "ecuInfoItemEvidenceRecorded": true,
+      "ecuInfoItemReportedEcuEvidenceRecorded": true,
+      "ecuInfoItemReportedEcuIds": [],
+      "ecuInfoItemUnresolvedEcuIds": [],
+      "ecuInfoItemReportedEcuKeys": [
+        "calibration_id|04|7E8",
+        "supported_info_types_00|-|7E8"
+      ],
+      "ecuInfoKeyValueCount": 1,
+      "ecuInfoKeyValueKeys": [
+        "calibration_id|04|7E8|CAL-A"
+      ],
+      "ecuInfoKeyValueEvidenceRecorded": true,
+      "ecuInfoKeyValueReportedEcuEvidenceRecorded": true,
+      "ecuInfoKeyValueReportedEcuKeys": [
+        "calibration_id|04|7E8|CAL-A"
+      ],
+      "mode09SupportedTypeCount": 1,
+      "mode09_supported_type_count": 1,
+      "mode09SupportedTypeKeys": [
+        "01|7E8"
+      ],
+      "mode09_supported_type_keys": [
+        "01|7E8"
+      ],
+      "mode09SupportedTypeEvidenceRecorded": true,
+      "mode09_supported_type_evidence_recorded": true,
+      "mode09SupportedTypeReportedEcuEvidenceRecorded": true,
+      "mode09_supported_type_reported_ecu_evidence_recorded": true,
+      "mode09SupportedTypeReportedEcuIds": [
+        "7E8"
+      ],
+      "mode09_supported_type_reported_ecu_ids": [
+        "7E8"
+      ],
+      "mode09SupportedTypeReportedEcuKeys": [
+        "01|7E8"
+      ],
+      "mode09_supported_type_reported_ecu_keys": [
+        "01|7E8"
+      ],
+      "readinessIncompleteCount": 0,
+      "ecuInfoMissingKeyCount": 0
+    },
+    "scoped": {
+      "readinessMonitorCount": 1,
+      "readiness_monitor_count": 1,
+      "readinessMonitorKeys": [
+        "misfire|7E8|supported|complete|can-pt|-|-"
+      ],
+      "readiness_monitor_keys": [
+        "misfire|7E8|supported|complete|can-pt|-|-"
+      ],
+      "readinessMonitorEvidenceRecorded": true,
+      "readiness_monitor_evidence_recorded": true,
+      "readinessMonitorReportedEcuEvidenceRecorded": true,
+      "readiness_monitor_reported_ecu_evidence_recorded": true,
+      "readinessMonitorReportedEcuIds": [],
+      "readiness_monitor_reported_ecu_ids": [],
+      "readinessMonitorReportedEcuScopeKeys": [],
+      "readiness_monitor_reported_ecu_scope_keys": [],
+      "readinessMonitorUnresolvedEcuIds": [],
+      "readiness_monitor_unresolved_ecu_ids": [],
+      "readinessMonitorUnresolvedEcuScopeKeys": [],
+      "readiness_monitor_unresolved_ecu_scope_keys": [],
+      "readinessMonitorReportedEcuKeys": [
+        "misfire|7E8|supported|complete|can-pt|-|-"
+      ],
+      "readiness_monitor_reported_ecu_keys": [
+        "misfire|7E8|supported|complete|can-pt|-|-"
+      ],
+      "ecuInfoItemCount": 2,
+      "ecuInfoItemKeys": [
+        "calibration_id|04|7E8",
+        "supported_info_types_00|-|7E8"
+      ],
+      "ecuInfoItemEvidenceRecorded": true,
+      "ecuInfoItemReportedEcuEvidenceRecorded": true,
+      "ecuInfoItemReportedEcuIds": [],
+      "ecuInfoItemUnresolvedEcuIds": [],
+      "ecuInfoItemReportedEcuKeys": [
+        "calibration_id|04|7E8",
+        "supported_info_types_00|-|7E8"
+      ],
+      "ecuInfoKeyValueCount": 1,
+      "ecuInfoKeyValueKeys": [
+        "calibration_id|04|7E8|CAL-A"
+      ],
+      "ecuInfoKeyValueEvidenceRecorded": true,
+      "ecuInfoKeyValueReportedEcuEvidenceRecorded": true,
+      "ecuInfoKeyValueReportedEcuKeys": [
+        "calibration_id|04|7E8|CAL-A"
+      ],
+      "mode09SupportedTypeCount": 1,
+      "mode09_supported_type_count": 1,
+      "mode09SupportedTypeKeys": [
+        "01|7E8"
+      ],
+      "mode09_supported_type_keys": [
+        "01|7E8"
+      ],
+      "mode09SupportedTypeEvidenceRecorded": true,
+      "mode09_supported_type_evidence_recorded": true,
+      "mode09SupportedTypeReportedEcuEvidenceRecorded": true,
+      "mode09_supported_type_reported_ecu_evidence_recorded": true,
+      "mode09SupportedTypeReportedEcuIds": [
+        "7E8"
+      ],
+      "mode09_supported_type_reported_ecu_ids": [
+        "7E8"
+      ],
+      "mode09SupportedTypeReportedEcuKeys": [
+        "01|7E8"
+      ],
+      "mode09_supported_type_reported_ecu_keys": [
+        "01|7E8"
+      ],
+      "readinessIncompleteCount": 0,
+      "ecuInfoMissingKeyCount": 0
+    }
+  }
+}
