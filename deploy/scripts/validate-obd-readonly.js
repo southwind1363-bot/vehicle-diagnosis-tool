@@ -29,6 +29,7 @@ import "./validate-compound-pid-payload.js";
 import "./validate-text-pid-raw-proposal.js";
 import "./validate-timeline-raw-proposal.js";
 import "./validate-timeline-network-chart.js";
+import "./validate-timeline-scope-key-proposal.js";
 import "./validate-temperature-conversion-display.js";
 import "./validate-raw-pid-display-label.js";
 import "./validate-pid69-raw-proposal.js";

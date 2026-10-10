@@ -6351,9 +6351,11 @@
     };
     const monitorComparisonBaseKey = (item) => (item?.id || "") + "::" + monitorComparisonEcu(item);
     const monitorComparisonKey = (item) => {
-      const scopeKey = getReadoutNetworkScopeKey(item);
-      if (scopeKey === null) return null;
-      return monitorComparisonBaseKey(item) + (scopeKey ? "::" + scopeKey : "");
+      const scope = normalizeReadoutNetworkScope(item);
+      if (scope.conflict) return null;
+      return JSON.stringify([monitorComparisonBaseKey(item),
+        ...[scope.networkBus, scope.networkChannel, scope.gatewayRoute]
+          .map(value => value === null ? null : value.normalize("NFKC").toLowerCase())]);
     };
     const monitorComparisonUnit = (item) => String(item?.unit || "").trim().toLocaleLowerCase("en-US");
     const previousValuesByKey = new Map(

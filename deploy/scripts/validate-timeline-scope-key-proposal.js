@@ -2,30 +2,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-// Review only: patch one function in an isolated VM. Do not write runtime assets.
+// Approved regression: actual runtime with frozen pre-change results, no patched code.
 const source = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
-const functionPattern = /  function buildLivePidTimelineSummary\([^)]*\) \{[\s\S]*?(?=\r?\n  function )/;
-const functionSource = source.match(functionPattern)?.[0];
-assert.ok(functionSource, 'production timeline summary function must be located');
-const oldKey = /    const monitorComparisonKey = \(item\) => \{[\s\S]*?\r?\n    \};/;
-const proposedKey = [
-  '    const monitorComparisonKey = (item) => {',
-  '      const scope = normalizeReadoutNetworkScope(item);',
-  '      if (scope.conflict) return null;',
-  '      return JSON.stringify([monitorComparisonBaseKey(item),',
-  '        ...[scope.networkBus, scope.networkChannel, scope.gatewayRoute]',
-  '          .map(value => value === null ? null : value.normalize("NFKC").toLowerCase())]);',
-  '    };'
-].join('\n');
-assert.equal((functionSource.match(new RegExp(oldKey.source, 'g')) || []).length, 1);
-const patchedFunction = functionSource.replace(oldKey, proposedKey);
-const patchedSource = source.replace(functionSource, patchedFunction);
-function load(text) {
-  const context = vm.createContext({ window: {} });
-  vm.runInContext(text, context);
-  return context.window.ObdReadOnly;
-}
-const current = load(source), proposal = load(patchedSource);
+const context = vm.createContext({ window: {} });
+vm.runInContext(source, context);
+const model = context.window.ObdReadOnly;
+const frozen = JSON.parse(fs.readFileSync(new URL('./fixtures/timeline-scope-3.13.657.json', import.meta.url), 'utf8'));
+const baseline = Object.fromEntries(['buildLivePidTimelineSummary', 'normalizeLivePidTimeline', 'buildDiagnosticScanSessionFromJson'].map(method => [method, input => {
+  const entry = frozen.entries.find(entry => entry.method === method && JSON.stringify(entry.input) === JSON.stringify(input));
+  assert.ok(entry, 'missing frozen baseline for ' + method);
+  return entry.output;
+}]));
 const plain = value => JSON.parse(JSON.stringify(value));
 let checks = 0;
 const equal = (actual, expected, message) => { assert.deepEqual(plain(actual), plain(expected), message); checks++; };
@@ -46,25 +33,25 @@ const collisionPairs = [
 for (const [left, right] of collisionPairs) {
   for (const [a, b] of [[left, right], [right, left]]) {
     const input = pair(a, b), before = JSON.stringify(input);
-    const oldSummary = current.buildLivePidTimelineSummary(input);
-    const newSummary = proposal.buildLivePidTimelineSummary(input);
-    equal(oldSummary.comparedValueCount, 1, 'reproduce current scope collision');
+    const oldSummary = baseline.buildLivePidTimelineSummary(input);
+    const newSummary = model.buildLivePidTimelineSummary(input);
+    equal(oldSummary.comparedValueCount, 1, 'frozen scope collision');
     equal(newSummary.comparedValueCount, 0, 'exclude different scope');
     equal(newSummary.networkScopeMismatchValueCount, 1, 'report scope mismatch');
     equal(newSummary.changes, [], 'do not publish delta across scopes');
     equal(newSummary.comparisonAvailable, oldSummary.comparisonAvailable, 'capture eligibility unchanged');
     equal(JSON.stringify(input), before, 'input unchanged');
-    const normalized = current.normalizeLivePidTimeline(input);
-    equal(proposal.normalizeLivePidTimeline(input), normalized, 'normalization unchanged');
-    equal(proposal.buildLivePidTimelineSummary(normalized).comparedValueCount, 0, 'normalized comparison isolated');
+    const normalized = baseline.normalizeLivePidTimeline(input);
+    equal(model.normalizeLivePidTimeline(input), normalized, 'normalization unchanged');
+    equal(model.buildLivePidTimelineSummary(normalized).comparedValueCount, 0, 'normalized comparison isolated');
     const archive = { ...legacy.mixedArchive, session: { live_pid_timeline: normalized } };
-    const oldSession = current.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
-    const newSession = proposal.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
+    const oldSession = baseline.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
+    const newSession = model.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
     equal(newSession.livePidTimeline.samples, oldSession.livePidTimeline.samples, 'legacy samples retained');
-    const restored = proposal.buildDiagnosticScanSessionFromJson(JSON.stringify(proposal.buildBridgeSessionExportPayload(newSession)));
+    const restored = model.buildDiagnosticScanSessionFromJson(JSON.stringify(model.buildBridgeSessionExportPayload(newSession)));
     equal(restored.livePidTimeline.samples, oldSession.livePidTimeline.samples, 'round trip samples retained');
   }
-  reports.push({ left, right, currentCompared: 1, proposedCompared: 0, proposedScopeMismatch: 1 });
+  reports.push({ left, right, legacyCompared: 1, compared: 0, scopeMismatch: 1 });
 }
 for (const [left, right] of [
   [{}, {}], [{networkBus:'CAN'}, {networkBus:'CAN'}],
@@ -78,7 +65,7 @@ for (const [left, right] of [
   [{networkScopeConflict:true}, {}], [{networkBus:null}, {}]
 ]) {
   const input = pair(left, right);
-  equal(proposal.buildLivePidTimelineSummary(input), current.buildLivePidTimelineSummary(input), 'noncolliding summary unchanged');
+  equal(model.buildLivePidTimelineSummary(input), baseline.buildLivePidTimelineSummary(input), 'noncolliding summary unchanged');
 }
 for (const change of [
   t => { t.samples[1].observationCondition = 'cold'; },
@@ -89,8 +76,8 @@ for (const change of [
   t => { t.samples[1].monitorValues[0].valueType = 'text'; }
 ]) {
   const input = pair({networkBus:'CAN'}); change(input);
-  equal(proposal.buildLivePidTimelineSummary(input), current.buildLivePidTimelineSummary(input), 'existing exclusion unchanged');
+  equal(model.buildLivePidTimelineSummary(input), baseline.buildLivePidTimelineSummary(input), 'existing exclusion unchanged');
 }
-for (const test of legacy.cases) equal(proposal.buildLivePidTimelineSummary(test.timeline), current.buildLivePidTimelineSummary(test.timeline), 'legacy regression unchanged');
+for (const test of legacy.cases) equal(model.buildLivePidTimelineSummary(test.timeline), baseline.buildLivePidTimelineSummary(test.timeline), 'legacy regression unchanged');
 equal(fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8'), source, 'production source unchanged');
-console.log(JSON.stringify({ checks, reports, scope: 'VM-only timeline key proposal; no runtime changes or vehicle I/O' }, null, 2));
+console.log(JSON.stringify({ checks, reports, scope: 'Production timeline key regression; frozen legacy samples retained; no vehicle I/O' }, null, 2));

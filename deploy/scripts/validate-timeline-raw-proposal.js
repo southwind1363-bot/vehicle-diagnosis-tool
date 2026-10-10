@@ -194,6 +194,35 @@ if (process.argv.includes('--browser')) {
         assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), networkSessionBefore);
         const networkExport = await page.evaluate(() => JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
         assert.deepEqual(plain(after.model.buildDiagnosticScanSessionFromJson(networkExport).livePidTimeline.samples), plain(networkArchive.session.live_pid_timeline.samples));
+        // Import an actual old archive whose routes used to collide in comparison keys.
+        const scopeFixture = JSON.parse(fs.readFileSync(new URL('./fixtures/timeline-scope-3.13.657.json', import.meta.url), 'utf8'));
+        const collisionFixture = scopeFixture.entries.find(entry => entry.method === 'buildDiagnosticScanSessionFromJson');
+        const collisionArchive = collisionFixture.input;
+        await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+        const collisionPicker = page.waitForEvent('filechooser');
+        page.once('dialog', dialog => dialog.accept());
+        await page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }).click();
+        await (await collisionPicker).setFiles({ name: 'old-colliding-routes.json', mimeType: 'application/json', buffer: Buffer.from(collisionArchive) });
+        await page.waitForFunction(() => obdDevSession.lastSession?.livePidTimelineSummary?.networkScopeMismatchValueCount === 1);
+        const comparison = await page.evaluate(() => obdDevSession.lastSession.livePidTimelineSummary);
+        assert.equal(comparison.comparedValueCount, 0);
+        assert.deepEqual(comparison.changes, []);
+        assert.equal(await card.count(), 0);
+        await page.locator('.obd-results-nav').getByRole('button', { name: '追加データ', exact: true }).click();
+        await page.locator('#obdReadoutDetailMenu').getByRole('button', { name: '全読取情報', exact: true }).click();
+        await page.getByText('通信経路が一致しないPID 1件は差分比較から除外', { exact: true }).waitFor({ state: 'visible' });
+        const historyCard = page.locator('#obdDevSessionDetails .obd-session-detail-card').filter({ has: page.locator('strong', { hasText: /^ライブ履歴$/ }) });
+        for (const width of [390, 1280]) {
+          await page.setViewportSize({ width, height: 844 });
+          for (const dark of [false, true]) {
+            await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+            await historyCard.screenshot({ path: path.join(output, 'scope-exclusion-' + width + '-' + dark + '.png') });
+          }
+        }
+        const collisionExport = await page.evaluate(() => JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+        assert.deepEqual(plain(after.model.buildDiagnosticScanSessionFromJson(collisionExport).livePidTimeline.samples), collisionFixture.output.livePidTimeline.samples);
+
 
 
       } finally { await context.close(); }
