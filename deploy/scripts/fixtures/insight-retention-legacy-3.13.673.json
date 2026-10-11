@@ -1,0 +1,1002 @@
+{
+  "version": "3.13.673",
+  "scope": "Synthetic records; no vehicle or source authenticity evidence",
+  "cases": [
+    {
+      "id": "same-title",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文A",
+            "nextStep": "保存時の確認手順"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "same-id",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "記録A",
+            "detail": "保存時の原文A",
+            "nextStep": "保存時の確認手順",
+            "id": "same"
+          },
+          {
+            "level": "caution",
+            "title": "記録B",
+            "detail": "保存時の原文B",
+            "nextStep": "保存時の確認手順",
+            "id": "same"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "記録B",
+          "detail": "保存時の原文B",
+          "nextStep": "保存時の確認手順",
+          "id": "same"
+        },
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "記録B",
+          "detail": "保存時の原文B",
+          "nextStep": "保存時の確認手順",
+          "id": "same"
+        },
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "id-title-collision",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "別の保存文",
+            "detail": "保存時の原文A",
+            "nextStep": "保存時の確認手順",
+            "id": "電源電圧を優先確認"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文A",
+            "nextStep": "保存時の確認手順"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "different-next-step",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "保存された別の手順"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "different-level",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "info",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "exact-computed",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "reordered-keys",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "title": "電源電圧を優先確認",
+            "level": "caution"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "extra-metadata",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する",
+            "origin": {
+              "reported": "source-A"
+            },
+            "capturedAt": "synthetic-record-time"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "duplicate-records",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "anonymous",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "detail": "名無しA"
+          },
+          {
+            "detail": "名無しB"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "detail": "名無しA"
+        },
+        {
+          "detail": "名無しB"
+        },
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "detail": "名無しA"
+        },
+        {
+          "detail": "名無しB"
+        },
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "empty-recorded",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": []
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "normal-voltage",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 14,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文A",
+            "nextStep": "保存時の確認手順"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "保存時の原文A",
+          "nextStep": "保存時の確認手順"
+        },
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "保存時の原文A",
+          "nextStep": "保存時の確認手順"
+        },
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "raw-voltage",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8",
+            "decoded": false
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文A",
+            "nextStep": "保存時の確認手順"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "保存時の原文A",
+          "nextStep": "保存時の確認手順"
+        },
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "保存時の原文A",
+          "nextStep": "保存時の確認手順"
+        },
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": "9",
+          "unit": "V",
+          "category": "電源",
+          "valueType": "raw_hex",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": false,
+          "note": "未換算RAW値",
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "no-values",
+      "input": {
+        "values": [],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文A",
+            "nextStep": "保存時の確認手順"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "保存時の原文A",
+          "nextStep": "保存時の確認手順"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "保存時の原文A",
+          "nextStep": "保存時の確認手順"
+        }
+      ],
+      "oldMonitorValues": []
+    },
+    {
+      "id": "crowded-same-title",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "pid": "42",
+            "value": 9,
+            "unit": "V",
+            "sourceEcu": "7E8"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文0",
+            "nextStep": "保存時の確認手順"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文1",
+            "nextStep": "保存時の確認手順"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文2",
+            "nextStep": "保存時の確認手順"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文3",
+            "nextStep": "保存時の確認手順"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文4",
+            "nextStep": "保存時の確認手順"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文5",
+            "nextStep": "保存時の確認手順"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文6",
+            "nextStep": "保存時の確認手順"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "保存時の原文7",
+            "nextStep": "保存時の確認手順"
+          }
+        ]
+      },
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMergeInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "oldMonitorValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    }
+  ]
+}
