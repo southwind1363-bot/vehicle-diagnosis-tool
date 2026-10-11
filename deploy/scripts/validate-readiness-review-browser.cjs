@@ -398,6 +398,23 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             assert.ok(!text.includes(raw + ' °C') && !text.includes(raw + ' kPa') && !text.includes(raw + ' %') && !text.includes(raw + ' rpm') && !text.includes(raw + ' s') && !text.includes(raw + ' ppm') && !text.includes(raw + ' mg/stroke'), 'RAW must not display a physical unit');
           }
           const scopeLabels = {
+            "6B": "EGR温度 PID 6B（応答全体）",
+            "6D": "燃圧制御 PID 6D（応答全体）",
+            "6E": "噴射圧制御 PID 6E（応答全体）",
+            "6F": "ターボ入口圧 PID 6F（応答全体）",
+            "70": "過給圧制御 PID 70（応答全体）",
+            "71": "可変ターボ制御 PID 71（応答全体）",
+            "72": "ウェイストゲート制御 PID 72（応答全体）",
+            "73": "排気圧 PID 73（応答全体）",
+            "74": "ターボ回転数 PID 74（応答全体）",
+            "75": "ターボ温度 PID 75（応答全体）",
+            "77": "チャージエアクーラー温度 PID 77（応答全体）",
+            "78": "排気温度 バンク1 PID 78（応答全体）",
+            "79": "排気温度 バンク2 PID 79（応答全体）",
+            "7A": "DPF差圧 PID 7A（応答全体）",
+            "7C": "DPF温度 PID 7C（応答全体）",
+            "83": "NOxセンサー PID 83（応答全体）",
+            "86": "PMセンサー PID 86（応答全体）",
             '66': 'MAFセンサー A/B（複合データ）', '7B': 'DPF バンク2 圧力（差圧・入口・出口）',
             '7F': 'エンジン運転時間（複合データ）', '87': '吸気マニホールド絶対圧 A/B（複合データ）',
             '89': 'AECD #11〜15 エンジン運転時間', '8F': 'PMセンサー バンク1/2（状態・値）',
@@ -422,8 +439,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
               await search.fill(query);
               const visible = selector === '#obdMonitorGrid' ? detail.locator('.obd-monitor-card:visible') : detail.locator('li:visible');
               assert.ok((await visible.allTextContents()).some(line => line.includes(visibleLabel)), 'new/old label search: ' + query);
-              if (selector === '#obdMonitorGrid') assert.equal(await visible.count(), 1, 'live search must narrow rows');
-              else assert.match(await detail.locator('[data-freeze-review-count]').innerText(), /記録値：1 \//, 'FF search must narrow rows');
+              // Old names are substring searches: NOxセンサー値 also matches 補正済みNOxセンサー値.
+              const normalized=q=>q.normalize('NFKC').toLowerCase();
+              const expectedMatches=compound.livePidSnapshot.monitorValues.filter(item=>[kind==='legacy'?item.label:scopeLabels[item.pid],item.label].filter(Boolean).some(label=>normalized(label).includes(normalized(query)))).length;
+              if (selector === '#obdMonitorGrid') assert.equal(await visible.count(), expectedMatches, 'live search must retain every matching old/new label: '+query);
+              else assert.ok((await detail.locator('[data-freeze-review-count]').innerText()).includes('記録値：'+expectedMatches+' /'), 'FF search must retain matching labels: '+query);
             }
             await search.fill('');
           }

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.668";
+const APP_VERSION = "3.13.669";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10700,6 +10700,23 @@ function getObdMonitorDisplayLabel(item = {}) {
   if (item.scope && item.scope !== "standard-generic") return original;
   // Display only; see RAW-PID-DISPLAY-LABELS.md for the reviewed response lengths.
   const definitions = {
+    "6B": ["egr_temp", 5, "EGR温度 PID 6B（応答全体）"],
+    "6D": ["fuel_pressure_control", 11, "燃圧制御 PID 6D（応答全体）"],
+    "6E": ["injection_pressure_control", 9, "噴射圧制御 PID 6E（応答全体）"],
+    "6F": ["turbo_inlet_pressure", 3, "ターボ入口圧 PID 6F（応答全体）"],
+    "70": ["boost_pressure_control", 10, "過給圧制御 PID 70（応答全体）"],
+    "71": ["vgt_control", 6, "可変ターボ制御 PID 71（応答全体）"],
+    "72": ["wastegate_control", 5, "ウェイストゲート制御 PID 72（応答全体）"],
+    "73": ["exhaust_pressure", 5, "排気圧 PID 73（応答全体）"],
+    "74": ["turbo_speed", 5, "ターボ回転数 PID 74（応答全体）"],
+    "75": ["turbo_temp", 7, "ターボ温度 PID 75（応答全体）"],
+    "77": ["charge_air_cooler_temp", 5, "チャージエアクーラー温度 PID 77（応答全体）"],
+    "78": ["egt_bank1", 9, "排気温度 バンク1 PID 78（応答全体）"],
+    "79": ["egt_bank2", 9, "排気温度 バンク2 PID 79（応答全体）"],
+    "7A": ["dpf_differential_pressure", 7, "DPF差圧 PID 7A（応答全体）"],
+    "7C": ["dpf_temp", 9, "DPF温度 PID 7C（応答全体）"],
+    "83": ["nox_sensor", 9, "NOxセンサー PID 83（応答全体）"],
+    "86": ["particulate_matter_sensor", 5, "PMセンサー PID 86（応答全体）"],
     "66": ["maf_sensor_status", 5, "MAFセンサー A/B（複合データ）"],
     "7B": ["dpf_status", 7, "DPF バンク2 圧力（差圧・入口・出口）"],
     "7F": ["engine_runtime_aux", 13, "エンジン運転時間（複合データ）"],
