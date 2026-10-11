@@ -398,6 +398,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             assert.ok(!text.includes(raw + ' °C') && !text.includes(raw + ' kPa') && !text.includes(raw + ' %') && !text.includes(raw + ' rpm') && !text.includes(raw + ' s') && !text.includes(raw + ' ppm') && !text.includes(raw + ' mg/stroke'), 'RAW must not display a physical unit');
           }
           const scopeLabels = {
+            "65": "補助入出力対応状態 PID 65（応答全体）",
+            "7D": "NOx NTE制御状態 PID 7D（応答全体）",
+            "7E": "PM NTE制御状態 PID 7E（応答全体）",
+            "85": "NOx還元剤システム状態 PID 85（応答全体）",
+            "88": "SCR誘導警告状態 PID 88（応答全体）",
+            "8B": "ディーゼル後処理状態 PID 8B（応答全体）",
             "6B": "EGR温度 PID 6B（応答全体）",
             "6D": "燃圧制御 PID 6D（応答全体）",
             "6E": "噴射圧制御 PID 6E（応答全体）",
@@ -456,6 +462,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             }
           } else {
             assert.ok(!text.includes(legacyNote), 'RAW row received legacy text caution');
+            if(kind==='status')assert.equal(text.includes('対応機能のビット表示を翻訳した値を扱う'),false,'RAW status must not claim translated bits');
             assert.ok(text.includes('未換算'));
           }
           if (selector.includes('FreezeFrame')) {
@@ -469,7 +476,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
             await detail.screenshot({ path: path.join(output, 'compound-' + kind + '-' + selector.slice(1) + '-' + width + '-' + dark + '.png') });
           }
-          if(kind==='raw'&&width===390)await require('./validate-readout-print.cjs')(page,output,'raw-'+selector.slice(1));
+          if(['raw','status','legacy'].includes(kind)&&width===390)await require('./validate-readout-print.cjs')(page,output,kind+'-'+selector.slice(1));
           await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
         }
       }

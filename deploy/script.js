@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.669";
+const APP_VERSION = "3.13.670";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10717,6 +10717,12 @@ function getObdMonitorDisplayLabel(item = {}) {
     "7C": ["dpf_temp", 9, "DPF温度 PID 7C（応答全体）"],
     "83": ["nox_sensor", 9, "NOxセンサー PID 83（応答全体）"],
     "86": ["particulate_matter_sensor", 5, "PMセンサー PID 86（応答全体）"],
+    "65": ["auxiliary_io_supported", 2, "補助入出力対応状態 PID 65（応答全体）"],
+    "7D": ["nox_nte_status", 1, "NOx NTE制御状態 PID 7D（応答全体）"],
+    "7E": ["pm_nte_status", 1, "PM NTE制御状態 PID 7E（応答全体）"],
+    "85": ["nox_reagent_system", 10, "NOx還元剤システム状態 PID 85（応答全体）"],
+    "88": ["scr_inducement_status", 13, "SCR誘導警告状態 PID 88（応答全体）"],
+    "8B": ["diesel_aftertreatment_status", 7, "ディーゼル後処理状態 PID 8B（応答全体）"],
     "66": ["maf_sensor_status", 5, "MAFセンサー A/B（複合データ）"],
     "7B": ["dpf_status", 7, "DPF バンク2 圧力（差圧・入口・出口）"],
     "7F": ["engine_runtime_aux", 13, "エンジン運転時間（複合データ）"],
