@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.675";
+const APP_VERSION = "3.13.676";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -15370,6 +15370,12 @@ function analyzeObdScannerImport(options = {}) {
     && (structuredImportSession.accepted === false || structuredImportSession.ok === false || structuredImportSession.blocked === true);
   if (structuredImportRejected) {
     const errors = Array.isArray(structuredImportSession.errors) ? structuredImportSession.errors.filter(Boolean) : [];
+    if (errors.includes("source_ecu_alias_conflict")) {
+      setObdStage("results");
+      obdImportStatus.textContent = "同じ箇所に記録された2つのECU番号が一致しないか、形式が不正なため、このJSONは取り込めません。元ファイルの取得元を確認してください。現在の読取結果は保持しています。";
+      scrollToObdSection("obdImportStatus");
+      return;
+    }
     if (hasActiveObdReadoutForExitWarning()) {
       obdImportStatus.textContent = `診断結果ファイルを取り込めませんでした: ${errors.slice(0, 3).join(" / ") || "検証に失敗"}。現在の読取結果を保持しています。`;
       return;

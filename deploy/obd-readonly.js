@@ -38299,6 +38299,27 @@
     return result("scanner", SCANNER_JSON_MAX_BYTES, byteLength > SCANNER_JSON_MAX_BYTES ? "scanner_json_too_large" : null);
   }
 
+  function hasConflictingJsonEcuAliases(input) {
+    const pending = [input];
+    while (pending.length) {
+      const item = pending.pop();
+      if (!item || typeof item !== "object") continue;
+      if (!Array.isArray(item)) {
+        const camel = item.sourceEcu;
+        const snake = item.source_ecu;
+        if (camel !== null && camel !== undefined && snake !== null && snake !== undefined) {
+          if (typeof camel !== "string" || typeof snake !== "string"
+            || !camel.trim() || !snake.trim()
+            || camel.trim().toUpperCase() !== snake.trim().toUpperCase()) return true;
+        }
+      }
+      for (const value of Object.values(item)) {
+        if (value && typeof value === "object") pending.push(value);
+      }
+    }
+    return false;
+  }
+
   function buildDiagnosticScanSessionFromJson(value, options = {}) {
     const jsonPolicy = getDiagnosticSessionJsonPolicy(value);
     if (!jsonPolicy.isJson || !jsonPolicy.accepted) return null;
@@ -38309,6 +38330,12 @@
     } catch {
       return null;
     }
+    if (hasConflictingJsonEcuAliases(parsed)) return {
+      accepted: false, ok: false, blocked: true,
+      errors: ["source_ecu_alias_conflict"],
+      vehicleCommandEnabled: false, vehicle_command_enabled: false,
+      wouldTransmit: false, would_transmit: false, retainedRawText: false
+    };
     const nativeConnectorArchive = parsed && typeof parsed === "object" && !Array.isArray(parsed)
       ? (parsed.native_connector_archive || parsed.nativeConnectorArchive || parsed)
       : null;

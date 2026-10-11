@@ -38,6 +38,7 @@ import "./validate-timeline-scope-key-proposal.js";
 import "./validate-dtc-scope-key-proposal.js";
 import "./validate-ff-link-scope-proposal.js";
 import "./validate-live-scope-inheritance-proposal.js";
+import "./validate-ecu-alias-import-proposal.js";
 import "./validate-inventory-live-key-v2-proposal.js";
 import "./validate-temperature-conversion-display.js";
 import "./validate-raw-pid-display-label.js";

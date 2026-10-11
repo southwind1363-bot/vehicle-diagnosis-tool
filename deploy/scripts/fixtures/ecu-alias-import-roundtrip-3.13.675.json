@@ -1,0 +1,56 @@
+{
+  "version": "3.13.675",
+  "commit": "ed4087e72c3bdb8d05d0c094227cb13911e5411a",
+  "archives": [
+    {
+      "id": "same-aliases",
+      "outputSha256": "9fbe3d20e9d1a822539f9ed924c09d3ec89a4e3837fb446552b5b71860e61a67"
+    },
+    {
+      "id": "case-space",
+      "outputSha256": "9fbe3d20e9d1a822539f9ed924c09d3ec89a4e3837fb446552b5b71860e61a67"
+    },
+    {
+      "id": "one-alias",
+      "outputSha256": "9fbe3d20e9d1a822539f9ed924c09d3ec89a4e3837fb446552b5b71860e61a67"
+    },
+    {
+      "id": "null-alias",
+      "outputSha256": "9fbe3d20e9d1a822539f9ed924c09d3ec89a4e3837fb446552b5b71860e61a67"
+    },
+    {
+      "id": "no-alias",
+      "outputSha256": "204334d7fe0e22da51833c1c502f194d4c581f417e6afbc0a00e04b342e48cf8"
+    },
+    {
+      "id": "separate-ecus",
+      "outputSha256": "c946f21a42ae91d292beec74791ce20a5c2c9204d17b9ad95aaf01c245abc72b"
+    },
+    {
+      "id": "other-alias-deferred",
+      "outputSha256": "9fbe3d20e9d1a822539f9ed924c09d3ec89a4e3837fb446552b5b71860e61a67"
+    },
+    {
+      "id": "parent-child-deferred",
+      "outputSha256": "0359b32ae7251c2e6992ab7bb0ad874eee5bb94179ae7874dd2d82895b901ea6"
+    }
+  ],
+  "nonJson": [
+    {
+      "input": "",
+      "output": null
+    },
+    {
+      "input": "not JSON",
+      "output": null
+    },
+    {
+      "input": "{invalid",
+      "output": null
+    },
+    {
+      "input": "null",
+      "output": null
+    }
+  ]
+}
