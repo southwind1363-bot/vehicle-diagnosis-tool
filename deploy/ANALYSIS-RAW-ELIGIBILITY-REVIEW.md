@@ -1,0 +1,33 @@
+# 未解析RAWの数値分析除外案（適用前）
+
+2026-10-11 / 本体3.13.671 / 調査対象コミット07be8c88
+
+## 確認した問題と到達範囲
+
+analyzeMonitorValuesの数値選択はcamelCaseのtext分類と有限数値だけを確認し、decoded:false等のRAW分類を確認しない。id=control_module_voltage、value=9、decoded=falseの合成記録で「電源電圧を優先確認」が生成された。buildBridgeDiagnosticImportからmergeDiagnosticInputsへ引き継ぐ保持済み数値RAWでも再現した。8種類の入力と旧分析文を固定fixtureに保存している。
+
+通常のnormalizeBridgeLivePidSnapshot経路では同じRAWが文字列化され、この注意文は生成されなかった。通常JSON再取込でも既存の正規化が働く場合がある。したがって「すべてのRAW取込が誤分析される」とは扱わない。今回の証拠は公開APIと統合APIの合成検証であり、通常画面のファイル取込や実車での再現証拠ではない。
+
+## 適用案
+
+analyzeMonitorValues内のnumeric関数の1条件を、既存のbuildMonitorValueSummary([item]).numericCount === 1へ変更する。タイムラインと同じ分類条件を使う。decoded:false、undecodedRaw/undecoded_raw、valueType/value_typeのraw_hexまたはtextを数値分析から除外する。
+
+| 入力・処理 | 現行 | 修正案 |
+| --- | --- | --- |
+| 数値9を持つ未換算電圧RAW | 低電圧の注意文を生成 | その数値を根拠とした注意文を生成しない |
+| 通常の電圧9 V | 低電圧の注意文を生成 | 維持 |
+| 通常の回転数0・車速0 | キーON停止中の参考文 | 維持 |
+| 燃料補正・温度差・運転状態等 | RAWが数値型なら条件に利用され得る | 各条件のRAW/textの値を利用しない |
+| 一般的な再取得・比較の案内 | 表示 | 維持。RAWだけでも案内は残り得る |
+| 保存済み/外部提供の分析文 | 引継ぎ | 維持。出所や根拠の再検証は別課題 |
+| 同じIDの複数行 | 既存の後勝ち選択 | 維持。末尾RAWを除外しても前の数値へ戻さない |
+
+値・名称・分類・保存schema・車両要求・実行許可は変更しない。既存の保存復元正規化による数値RAWの文字列化は維持する。別ECUや経路を跨ぐ分析の妥当性、外部分析文の根拠、RAW分類フラグの追加解釈はこの案に含めない。
+
+## 検証
+
+node deploy/scripts/validate-analysis-raw-proposal.js: 284項目合格。本体のコピーを別VM内で1条件だけ変更した。通常値と0、8分析ケース、8分類指定、非数値、各分析条件の一部だけRAWの組合せ、同じIDの優先順、統合API、入力不変、既存の保存復元結果一致を確認。
+
+固定旧版結果: scripts/fixtures/analysis-raw-legacy-3.13.671.json。検証スクリプトは本体への未適用を前提としており、適用後は本体回帰へ切り替える必要がある。
+
+本体・版番号・配布ZIPは変更していない。これは診断結果の契約に関わる変更（生成される注意文の減少）なので適用範囲を確認する。適用後に通常画面と全体OBD検証、配布検証、公開照合を実施する。
