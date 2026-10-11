@@ -1,0 +1,371 @@
+{
+  "version": "3.13.666",
+  "observed": [
+    {
+      "mode": "live",
+      "pid": "A1",
+      "rows": [
+        {
+          "id": "nox_sensor_corrected",
+          "label": "補正済みNOxセンサー値",
+          "value": "0F 80",
+          "unit": "ppm",
+          "category": "ディーゼル後処理",
+          "valueType": "raw_hex",
+          "service": "01",
+          "pid": "A1",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "補正条件と上流・下流位置を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": false,
+          "note": "未換算RAW値",
+          "sourceLine": 1
+        },
+        {
+          "id": "vehicle_speed",
+          "label": "車速",
+          "value": 40,
+          "unit": "km/h",
+          "category": "走行",
+          "valueType": "number",
+          "service": "01",
+          "pid": "0D",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "停止状態と走行状態を区別する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 2
+        }
+      ],
+      "summary": {
+        "totalCount": 2,
+        "total_count": 2,
+        "decodedCount": 1,
+        "decoded_count": 1,
+        "undecodedRawCount": 1,
+        "undecoded_raw_count": 1,
+        "numericCount": 1,
+        "numeric_count": 1,
+        "textCount": 0,
+        "text_count": 0
+      }
+    },
+    {
+      "mode": "live",
+      "pid": "A2",
+      "rows": [
+        {
+          "id": "cylinder_fuel_rate",
+          "label": "シリンダー燃料噴射率",
+          "value": "41 0D",
+          "unit": "mg/stroke",
+          "category": "燃料",
+          "valueType": "raw_hex",
+          "service": "01",
+          "pid": "A2",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "気筒別か全体値か、単位を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": false,
+          "note": "未換算RAW値",
+          "sourceLine": 1
+        }
+      ],
+      "summary": {
+        "totalCount": 1,
+        "total_count": 1,
+        "decodedCount": 0,
+        "decoded_count": 0,
+        "undecodedRawCount": 1,
+        "undecoded_raw_count": 1,
+        "numericCount": 0,
+        "numeric_count": 0,
+        "textCount": 0,
+        "text_count": 0
+      }
+    },
+    {
+      "mode": "live",
+      "pid": "A4",
+      "rows": [
+        {
+          "id": "transmission_actual_gear",
+          "label": "トランスミッション実ギヤ",
+          "value": "03",
+          "unit": "",
+          "category": "変速機",
+          "valueType": "text",
+          "service": "01",
+          "pid": "A4",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "CVTやハイブリッドでは表示方式が異なる",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        },
+        {
+          "id": "vehicle_speed",
+          "label": "車速",
+          "value": 40,
+          "unit": "km/h",
+          "category": "走行",
+          "valueType": "number",
+          "service": "01",
+          "pid": "0D",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "停止状態と走行状態を区別する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 2
+        }
+      ],
+      "summary": {
+        "totalCount": 2,
+        "total_count": 2,
+        "decodedCount": 2,
+        "decoded_count": 2,
+        "undecodedRawCount": 0,
+        "undecoded_raw_count": 0,
+        "numericCount": 1,
+        "numeric_count": 1,
+        "textCount": 1,
+        "text_count": 1
+      }
+    },
+    {
+      "mode": "live",
+      "pid": "A5",
+      "rows": [
+        {
+          "id": "commanded_diesel_exhaust_fluid",
+          "label": "尿素水制御指令値",
+          "value": 1.176,
+          "unit": "%",
+          "category": "ディーゼル後処理",
+          "valueType": "number",
+          "service": "01",
+          "pid": "A5",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "対応SCR車だけ表示する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "summary": {
+        "totalCount": 1,
+        "total_count": 1,
+        "decodedCount": 1,
+        "decoded_count": 1,
+        "undecodedRawCount": 0,
+        "undecoded_raw_count": 0,
+        "numericCount": 1,
+        "numeric_count": 1,
+        "textCount": 0,
+        "text_count": 0
+      }
+    },
+    {
+      "mode": "FF",
+      "pid": "A1",
+      "rows": [
+        {
+          "id": "nox_sensor_corrected",
+          "label": "補正済みNOxセンサー値",
+          "value": "0F 80 41 0D 28 80",
+          "unit": "ppm",
+          "category": "ディーゼル後処理",
+          "valueType": "raw_hex",
+          "service": "01",
+          "pid": "A1",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "補正条件と上流・下流位置を確認する",
+          "freezeFrameNumber": 2,
+          "freeze_frame_number": 2,
+          "decoded": false,
+          "note": "未換算RAW値",
+          "sourceLine": 1,
+          "source": "freeze_frame",
+          "freezeFramePriority": null,
+          "interpretationNote": "補正条件と上流・下流位置を確認する"
+        }
+      ],
+      "summary": {
+        "totalCount": 1,
+        "total_count": 1,
+        "decodedCount": 0,
+        "decoded_count": 0,
+        "undecodedRawCount": 1,
+        "undecoded_raw_count": 1,
+        "numericCount": 0,
+        "numeric_count": 0,
+        "textCount": 0,
+        "text_count": 0
+      }
+    },
+    {
+      "mode": "FF",
+      "pid": "A2",
+      "rows": [
+        {
+          "id": "cylinder_fuel_rate",
+          "label": "シリンダー燃料噴射率",
+          "value": "41 0D",
+          "unit": "mg/stroke",
+          "category": "燃料",
+          "valueType": "raw_hex",
+          "service": "01",
+          "pid": "A2",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "気筒別か全体値か、単位を確認する",
+          "freezeFrameNumber": 2,
+          "freeze_frame_number": 2,
+          "decoded": false,
+          "note": "未換算RAW値",
+          "sourceLine": 1,
+          "source": "freeze_frame",
+          "freezeFramePriority": null,
+          "interpretationNote": "気筒別か全体値か、単位を確認する"
+        }
+      ],
+      "summary": {
+        "totalCount": 1,
+        "total_count": 1,
+        "decodedCount": 0,
+        "decoded_count": 0,
+        "undecodedRawCount": 1,
+        "undecoded_raw_count": 1,
+        "numericCount": 0,
+        "numeric_count": 0,
+        "textCount": 0,
+        "text_count": 0
+      }
+    },
+    {
+      "mode": "FF",
+      "pid": "A4",
+      "rows": [
+        {
+          "id": "transmission_actual_gear",
+          "label": "トランスミッション実ギヤ",
+          "value": "03 41 0D 28",
+          "unit": "",
+          "category": "変速機",
+          "valueType": "text",
+          "service": "01",
+          "pid": "A4",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "CVTやハイブリッドでは表示方式が異なる",
+          "freezeFrameNumber": 2,
+          "freeze_frame_number": 2,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1,
+          "source": "freeze_frame",
+          "freezeFramePriority": null,
+          "interpretationNote": "CVTやハイブリッドでは表示方式が異なる"
+        }
+      ],
+      "summary": {
+        "totalCount": 1,
+        "total_count": 1,
+        "decodedCount": 1,
+        "decoded_count": 1,
+        "undecodedRawCount": 0,
+        "undecoded_raw_count": 0,
+        "numericCount": 0,
+        "numeric_count": 0,
+        "textCount": 1,
+        "text_count": 1
+      }
+    },
+    {
+      "mode": "FF",
+      "pid": "A5",
+      "rows": [
+        {
+          "id": "commanded_diesel_exhaust_fluid",
+          "label": "尿素水制御指令値",
+          "value": 1.176,
+          "unit": "%",
+          "category": "ディーゼル後処理",
+          "valueType": "number",
+          "service": "01",
+          "pid": "A5",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "対応SCR車だけ表示する",
+          "freezeFrameNumber": 2,
+          "freeze_frame_number": 2,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1,
+          "source": "freeze_frame",
+          "freezeFramePriority": null,
+          "interpretationNote": "対応SCR車だけ表示する"
+        }
+      ],
+      "summary": {
+        "totalCount": 1,
+        "total_count": 1,
+        "decodedCount": 1,
+        "decoded_count": 1,
+        "undecodedRawCount": 0,
+        "undecoded_raw_count": 0,
+        "numericCount": 1,
+        "numeric_count": 1,
+        "textCount": 0,
+        "text_count": 0
+      }
+    }
+  ]
+}
