@@ -49,4 +49,16 @@ node deploy/scripts/validate-late-pid-boundary-review.js : 832項目合格。
 
 本体回帰843項目合格。旧3.13.666固定fixtureの保存復元、新RAWの境界・後続PID保持・不正長拒否、注記の適用/除外・値不変を確認した。実JSON取込で新4PIDの完全なRAW、旧A4/A5注記、390/1280px明暗表示、保存復元、外部/車両要求0を確認（readiness-review-VbnCkg）。
 
-iPhoneの独立実装 OBD2ReadoutDecoder.swift 559–561行にはA5の先頭バイト換算が残る。今回のWeb修正でnative読取まで修正済みとはしない。次はnative側の応答長・RAW分類・Swift生成JSON→Web取込を点検する。実機は使用していない。配布・全体・公開照合は DEVELOPMENT-ROADMAP.md の3.13.667履歴を参照。
+Web版3.13.667公開時点では、iPhoneの独立実装 OBD2ReadoutDecoder.swift 559–561行にはA5の先頭バイト換算が残る。今回のWeb修正でnative読取まで修正済みとはしない。次はnative側の応答長・RAW分類・Swift生成JSON→Web取込を点検する。実機は使用していない。配布・全体・公開照合は DEVELOPMENT-ROADMAP.md の3.13.667履歴を参照。
+
+## iPhone側A5の適用（2026-10-11、CI確認前）
+
+継続指示を受け、既存のA5コマンドの完了処理を `decodeLiveRawPID` へ接続した。4バイト完全長だけを同じID `commanded_diesel_exhaust_fluid` のRAWとして返し、旧数値APIでは成功させない。送信コマンド・読取計画・FF対象・schemaは追加しない。旧保存値は再換算しない。応答長の根拠と制約は上記J1699-3 v17の点検記録と同じ。
+
+Swift試験にA5の全256先頭バイト、00/FF/41/42、短縮/余剰/別PID/混在失敗応答、複数ECU、envelopeとarchive再読込を追加した。CIが生成するRAW JSONは4PID×2ECUの8件に拡張し、Web取込側でID・全文・RAW分類・ECU・保存復元を照合する。WindowsにはSwiftがないため、テストの追加と実行合格は区別する。
+
+ローカルの合成envelope→Web取込197項目合格。ネイティブenvelopeは空単位、Web正規化後は辞書の単位メタデータを保持するが、RAW表示は物理単位を付けない既存契約を維持する。Web本体と配布版は3.13.667のまま。実機/BLE/車両通信は未実施。
+
+画面検証: 合成native A5の実JSONファイル取込、全4バイトの未換算表示、%と旧数値注記の抑制、保存復元を確認。既存390/1280px明暗の回帰も合格、外部/車両要求0（readiness-review-e2JbUc）。ブリッジ384項目・JSON203ファイル/DTC3,878件はエラー0。ローカルHTTP200の主要5資産は本体と全文一致。
+
+ローカル全体OBD検査7,447項目・エラー0で完了。Swift/macOS CIは公開後に対象SHAの結果を確認する。

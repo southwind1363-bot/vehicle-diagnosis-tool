@@ -206,6 +206,7 @@ public enum OBD2ReadoutDecoder {
         case .commandedEGRAndError: (pid, length, id) = (0x69, 7, "egr_system_pid69_raw")
         case .commandedDieselIntakeAirFlow: (pid, length, id) = (0x6A, 5, "intake_air_flow_pid6a_raw")
         case .commandedThrottleControl: (pid, length, id) = (0x6C, 5, "throttle_control_pid6c_raw")
+        case .commandedDieselExhaustFluid: (pid, length, id) = (0xA5, 4, "commanded_diesel_exhaust_fluid")
         default: return .failure(.malformedResponse)
         }
         return packets(in: response).flatMap { packets in
@@ -556,9 +557,6 @@ public enum OBD2ReadoutDecoder {
         case .engineFrictionTorque:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "engine_friction_torque", pid: "8E", value: Double(Int(bytes[0]) - 125), unit: "%")
-        case .commandedDieselExhaustFluid:
-            guard bytes.count == 1 else { return nil }
-            return OBD2MonitorValue(id: "commanded_diesel_exhaust_fluid", pid: "A5", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .fuelPressure:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "fuel_pressure", pid: "0A", value: Double(bytes[0]) * 3, unit: "kPa")

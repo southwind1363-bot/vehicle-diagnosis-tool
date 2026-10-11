@@ -791,7 +791,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .commandedEGRAndError, .commandedDieselIntakeAirFlow, .commandedThrottleControl:
+            case .commandedEGRAndError, .commandedDieselIntakeAirFlow, .commandedThrottleControl, .commandedDieselExhaustFluid:
                 switch OBD2ReadoutDecoder.decodeLiveRawPID(command: command, response: response) {
                 case .success(let results):
                     results.forEach { result in
@@ -811,7 +811,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .shortTermFuelTrimBank2, .longTermFuelTrimBank2, .manifoldSurfaceTemperature, .commandedThrottleActuatorControl, .engineFrictionTorque, .commandedDieselExhaustFluid:
+            case .shortTermFuelTrimBank2, .longTermFuelTrimBank2, .manifoldSurfaceTemperature, .commandedThrottleActuatorControl, .engineFrictionTorque:
                 switch OBD2ReadoutDecoder.decodeLivePID(command: command, response: response) {
                 case .success(let results):
                     results.forEach { result in

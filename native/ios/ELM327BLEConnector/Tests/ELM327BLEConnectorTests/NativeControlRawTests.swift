@@ -5,7 +5,8 @@ final class NativeControlRawTests: XCTestCase {
     private let cases: [(ELMReadCommand, String, String, Int)] = [
         (.commandedEGRAndError, "69", "egr_system_pid69_raw", 7),
         (.commandedDieselIntakeAirFlow, "6A", "intake_air_flow_pid6a_raw", 5),
-        (.commandedThrottleControl, "6C", "throttle_control_pid6c_raw", 5)
+        (.commandedThrottleControl, "6C", "throttle_control_pid6c_raw", 5),
+        (.commandedDieselExhaustFluid, "A5", "commanded_diesel_exhaust_fluid", 4)
     ]
 
     func testCompleteRawAndRefusedNumericResults() throws {
@@ -23,6 +24,11 @@ final class NativeControlRawTests: XCTestCase {
                 let response = "41 \(pid) " + Array(repeating: "80", count: size).joined(separator: " ")
                 XCTAssertThrowsError(try OBD2ReadoutDecoder.decodeLiveRawPID(command: command, response: response).get())
                 XCTAssertEqual(OBD2PIDDecoder.decodeValues(command, response: response), [])
+                XCTAssertThrowsError(try OBD2ReadoutDecoder.decodeLivePID(command: command, response: response).get())
+            }
+            for fill in ["00", "FF", "41", "42"] {
+                let raw = Array(repeating: fill, count: length).joined(separator: " ")
+                XCTAssertEqual(try OBD2ReadoutDecoder.decodeLiveRawPID(command: command, response: "41 \(pid) \(raw)").get().first?.value.value, raw)
             }
             let full = "41 \(pid) " + Array(repeating: "80", count: length).joined(separator: " ")
             let scoped = try OBD2ReadoutDecoder.decodeLiveRawPID(command: command, response: "7E8 \(full)\r7E9 \(full)").get()
