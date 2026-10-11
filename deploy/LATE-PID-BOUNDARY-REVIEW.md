@@ -62,3 +62,9 @@ Swift試験にA5の全256先頭バイト、00/FF/41/42、短縮/余剰/別PID/�
 画面検証: 合成native A5の実JSONファイル取込、全4バイトの未換算表示、%と旧数値注記の抑制、保存復元を確認。既存390/1280px明暗の回帰も合格、外部/車両要求0（readiness-review-e2JbUc）。ブリッジ384項目・JSON203ファイル/DTC3,878件はエラー0。ローカルHTTP200の主要5資産は本体と全文一致。
 
 ローカル全体OBD検査7,447項目・エラー0で完了。Swift/macOS CIは公開後に対象SHAの結果を確認する。
+
+公開確認: 実装40a9ab5bd4b5671460295249e15b57c3f0774ae5をmainへpush。本番dpl_BZPRbX1xTLdHsewQLCSEMsL4ko1Jは同SHAでREADY、公開主要5資産はHTTP200・LF正規化後の全文一致。[Web CI 38105750333](https://github.com/southwind1363-bot/vehicle-diagnosis-tool/actions/runs/38105750333)の4ジョブすべてとworkflow全体がsuccess。
+
+## iPhone A5修正のCI完了
+
+2026-10-11。[iOS CI 38105750288](https://github.com/southwind1363-bot/vehicle-diagnosis-tool/actions/runs/38105750288)は実装SHA 40a9ab5bd4b5671460295249e15b57c3f0774ae5でcompleted/success。Swift単体試験、実際にSwiftが生成した4PID×2ECUの8件のRAW JSON→Web取込、iOSシミュレータービルド・ホスト結合試験、全体OBD検査、未署名IPA作成・検証・成果物保存の全工程が成功した。上記CI未確認は公開前の履歴。実端末への導入・BLE・VCI・実車通信は未確認のまま。次は文字列PIDの未換算分類・表示名の点検へ進む。
