@@ -149,4 +149,30 @@ for (const hasRows of [true, false]) {
   check(readings.slice(3).join(",") === "0 rpm,0 rpm,780 rpm", "Zero or recorded readings changed");
   check(JSON.stringify(samples) === before, "Display formatting rewrote live evidence");
 }
+{
+  const h = harness();
+  const base = { id: 'auxiliary_io_supported', pid: '65', label: '補助入出力対応状態', supportNote: '対応機能のビット表示を翻訳した値を扱う' };
+  const incompleteNote = '未換算の記録です。応答の完全性や個別の状態は、この表示だけでは確認できません。';
+  for (const flag of [{ decoded: false }, { undecodedRaw: true }]) {
+    for (const value of ['03', '03 41 00', 'GG', '', null, 0]) {
+      const row = Object.freeze({ ...base, ...flag, value });
+      const before = JSON.stringify(row);
+      h.context.renderObdMonitorValues([row]);
+      const card = h.context.obdMonitorGrid.children[0];
+      const note = card.children.find(child => child.className === 'obd-monitor-note').textContent;
+      check(note === incompleteNote, 'Unconfirmed RAW must not claim interpreted bits or complete response');
+      check(card.querySelector().ariaLabel.includes(base.label) && !card.querySelector().ariaLabel.includes('応答全体'), 'Incomplete RAW name changed');
+      check(JSON.stringify(row) === before, 'RAW display mutated evidence');
+    }
+  }
+  for (const row of [{ ...base, value: '03 41', decoded: true }, { ...base, value: 0 }, { id: 'rpm', value: 780, supportNote: 'アイドル域として確認' }]) {
+    h.context.renderObdMonitorValues([row]);
+    check(h.context.obdMonitorGrid.children[0].children.find(child => child.className === 'obd-monitor-note').textContent.startsWith(row.supportNote), 'Legacy or numeric support note changed');
+  }
+  for (const label of [base.label, '補助入出力対応状態 PID 65（応答全体）']) {
+    const row = { ...base, label, value: '03 41', decoded: false };
+    h.context.renderObdMonitorValues([row]);
+    check(!h.context.obdMonitorGrid.children[0].children.find(child => child.className === 'obd-monitor-note').textContent.includes('翻訳した値'), 'Saved display label restored misleading note');
+  }
+}
 console.log(`Monitor filter checks: ${checks} / Errors: 0`);

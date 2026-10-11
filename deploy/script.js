@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.670";
+const APP_VERSION = "3.13.671";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16156,8 +16156,10 @@ function renderObdMonitorValues(values, insights = []) {
 
     const note = document.createElement("span");
     note.className = "obd-monitor-note";
-    note.textContent = [getObdMonitorDisplayLabel(item) !== (item.label || item.id || "項目")
-      ? "未換算の応答全体です。個別の値や対応状況はまだ解釈していません。"
+    note.textContent = [item.decoded === false || item.undecodedRaw === true
+      ? getObdMonitorDisplayLabel(item) !== (item.label || item.id || "項目")
+        ? "未換算の応答全体です。個別の値や対応状況はまだ解釈していません。"
+        : "未換算の記録です。応答の完全性や個別の状態は、この表示だけでは確認できません。"
       : item.supportNote || "メーカー整備書の基準値と比較してください。", formatObdLegacyControlReviewNote(item)].filter(Boolean).join(" ");
 
     card.append(category, displayLabel, reading, note);

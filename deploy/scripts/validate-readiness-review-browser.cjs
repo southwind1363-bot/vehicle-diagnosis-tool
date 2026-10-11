@@ -372,6 +372,45 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
     console.log('PID'+pid+' browser: full RAW, legacy note, unchanged archives and responsive views passed.');
     }
+    {
+      const rawRows = [
+        { id: 'auxiliary_io_supported', pid: '65', label: '補助入出力対応状態', value: '03', decoded: false, source_ecu: '7E8', supportNote: '対応機能のビット表示を翻訳した値を扱う' },
+        { id: 'auxiliary_io_supported', pid: '65', label: '補助入出力対応状態', value: '03 41 00', decoded: false, source_ecu: '7E9', supportNote: '対応機能のビット表示を翻訳した値を扱う' }
+      ];
+      const session = model.buildDiagnosticScanSession({ livePidSnapshot: model.normalizeBridgeLivePidSnapshot({ values: rawRows }) });
+      const picker = page.waitForEvent('filechooser');
+      page.once('dialog', dialog => dialog.accept());
+      await page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }).click();
+      await (await picker).setFiles({ name: 'incomplete-raw-status.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(session))) });
+      await page.waitForFunction(() => obdDevSession.lastSession?.livePidSnapshot?.monitorValues?.[0]?.value === '03');
+      const before = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+      await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      await page.getByRole('button', { name: 'ライブデータの詳細を開く', exact: true }).click();
+      const grid = page.locator('#obdMonitorGrid');
+      await grid.waitFor({ state: 'visible' });
+      const text = await grid.innerText();
+      for(const expected of ['RAW 03 / 未換算', 'RAW 03 41 00 / 未換算', '応答の完全性や個別の状態は、この表示だけでは確認できません。']) assert.ok(text.includes(expected), expected);
+      assert.ok(!text.includes('翻訳した値') && !text.includes('応答全体'));
+      await page.locator('#obdMonitorSearch').fill('補助入出力');
+      assert.equal(await grid.locator('.obd-monitor-card:visible').count(), 2);
+      await page.locator('#obdMonitorSearch').fill('');
+      for(const width of [390,1280]) for(const dark of [false,true]) {
+        await page.setViewportSize({width,height:844});
+        await page.evaluate(dark=>document.body.classList.toggle('dark',dark),dark);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+        await grid.screenshot({path:path.join(output,'incomplete-raw-'+width+'-'+dark+'.png')});
+      }
+      await require('./validate-readout-print.cjs')(page,output,'incomplete-raw-status');
+      assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),before);
+      const archive = await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+      const restored = model.buildDiagnosticScanSessionFromJson(archive);
+      assert.equal(restored.livePidSnapshot.monitorValues.length,2);
+      assert.equal(restored.livePidSnapshot.monitorValues[0].value,'03');
+      assert.equal(restored.livePidSnapshot.monitorValues[1].value,'03 41 00');
+      assert.equal(restored.livePidSnapshot.monitorValues[0].supportNote,'対応機能のビット表示を翻訳した値を扱う');
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      console.log('Incomplete RAW: short/extra bytes, neutral note, old-name search, print, responsive themes and unchanged archive passed.');
+    }
     const compoundPayloads = [['A1','0F 80 41 0D 28 80 42 00 80'],['A2','41 0D'],['A4','03 41 0D 28'],['A5','03 80 01 00'],['6B', '0F 41 0D 28 42'], ['6D', '3F 41 0D 28 42 0D 02 28 41 42 00'], ['6E', '0F 41 0D 28 42 0D 02 28 00'], ['6F', '03 41 42'], ['70', '3F 41 0D 28 42 0D 02 28 00 00'], ['71', '3F 41 0D 28 42 00'], ['72', '0F 41 0D 28 42'], ['73', '03 41 0D 28 42'], ['74', '03 41 0D 28 42'], ['75', '0F 41 0D 28 42 00 00'], ['77', '0F 41 0D 28 42'], ['78', '0F 41 0D 28 42 0D 02 28 00'], ['79', '0F 42 0D 02 28 41 0D 28 00'], ['7A', '07 41 0D 28 42 00 00'], ['7C', '0F 41 0D 28 42 0D 02 28 00'], ['7F', '07 41 0D 28 42 0D 02 28 00 00 41 42 00'], ['83', '0F 41 0D 28 42 0D 02 28 00'], ['86', '03 41 0D 28 42'], ['87', '03 41 0D 28 42'], ['89', '1F 41 0D 28 42 0D 02 28 ' + Array(33).fill('00').join(' ')], ['8F', '0F 41 0D 28 42 00 00']];
     const legacyText = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/text-pid-legacy-3.13.651.json'), 'utf8'));
     const legacyPayloads = legacyText.live_pid_snapshot.monitor_values.map(row => [row.pid, row.value]);
