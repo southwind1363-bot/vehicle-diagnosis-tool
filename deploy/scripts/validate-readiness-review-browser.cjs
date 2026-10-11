@@ -372,7 +372,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
     console.log('PID'+pid+' browser: full RAW, legacy note, unchanged archives and responsive views passed.');
     }
-    const compoundPayloads = [['6B', '0F 41 0D 28 42'], ['6D', '3F 41 0D 28 42 0D 02 28 41 42 00'], ['6E', '0F 41 0D 28 42 0D 02 28 00'], ['6F', '03 41 42'], ['70', '3F 41 0D 28 42 0D 02 28 00 00'], ['71', '3F 41 0D 28 42 00'], ['72', '0F 41 0D 28 42'], ['73', '03 41 0D 28 42'], ['74', '03 41 0D 28 42'], ['75', '0F 41 0D 28 42 00 00'], ['77', '0F 41 0D 28 42'], ['78', '0F 41 0D 28 42 0D 02 28 00'], ['79', '0F 42 0D 02 28 41 0D 28 00'], ['7A', '07 41 0D 28 42 00 00'], ['7C', '0F 41 0D 28 42 0D 02 28 00'], ['7F', '07 41 0D 28 42 0D 02 28 00 00 41 42 00'], ['83', '0F 41 0D 28 42 0D 02 28 00'], ['86', '03 41 0D 28 42'], ['87', '03 41 0D 28 42'], ['89', '1F 41 0D 28 42 0D 02 28 ' + Array(33).fill('00').join(' ')], ['8F', '0F 41 0D 28 42 00 00']];
+    const compoundPayloads = [['A1','0F 80 41 0D 28 80 42 00 80'],['A2','41 0D'],['A4','03 41 0D 28'],['A5','03 80 01 00'],['6B', '0F 41 0D 28 42'], ['6D', '3F 41 0D 28 42 0D 02 28 41 42 00'], ['6E', '0F 41 0D 28 42 0D 02 28 00'], ['6F', '03 41 42'], ['70', '3F 41 0D 28 42 0D 02 28 00 00'], ['71', '3F 41 0D 28 42 00'], ['72', '0F 41 0D 28 42'], ['73', '03 41 0D 28 42'], ['74', '03 41 0D 28 42'], ['75', '0F 41 0D 28 42 00 00'], ['77', '0F 41 0D 28 42'], ['78', '0F 41 0D 28 42 0D 02 28 00'], ['79', '0F 42 0D 02 28 41 0D 28 00'], ['7A', '07 41 0D 28 42 00 00'], ['7C', '0F 41 0D 28 42 0D 02 28 00'], ['7F', '07 41 0D 28 42 0D 02 28 00 00 41 42 00'], ['83', '0F 41 0D 28 42 0D 02 28 00'], ['86', '03 41 0D 28 42'], ['87', '03 41 0D 28 42'], ['89', '1F 41 0D 28 42 0D 02 28 ' + Array(33).fill('00').join(' ')], ['8F', '0F 41 0D 28 42 00 00']];
     const legacyText = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/text-pid-legacy-3.13.651.json'), 'utf8'));
     const legacyPayloads = legacyText.live_pid_snapshot.monitor_values.map(row => [row.pid, row.value]);
     for (const [kind, payloads] of [['raw', compoundPayloads], ['status', [["65","03 41"],["66","03 41 0D 28 42"],["7B","03 41 0D 28 42 0D 02"],["7D","03"],["7E","03"],["85","03 41 0D 28 42 0D 02 28 03 41"],["88","03 41 0D 28 42 0D 02 28 03 41 0D 28 42"],["8B","03 41 0D 28 42 0D 02"],["91","03 41 0D 28 42"]]], ['legacy', legacyPayloads]]) {
@@ -395,7 +395,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
           const text = await detail.innerText();
           for (const [, raw] of payloads) {
             assert.ok(text.includes((kind !== 'legacy' ? 'RAW ' : '') + raw), raw);
-            assert.ok(!text.includes(raw + ' °C') && !text.includes(raw + ' kPa') && !text.includes(raw + ' %') && !text.includes(raw + ' rpm') && !text.includes(raw + ' s') && !text.includes(raw + ' ppm'), 'RAW must not display a physical unit');
+            assert.ok(!text.includes(raw + ' °C') && !text.includes(raw + ' kPa') && !text.includes(raw + ' %') && !text.includes(raw + ' rpm') && !text.includes(raw + ' s') && !text.includes(raw + ' ppm') && !text.includes(raw + ' mg/stroke'), 'RAW must not display a physical unit');
           }
           const scopeLabels = {
             '66': 'MAFセンサー A/B（複合データ）', '7B': 'DPF バンク2 圧力（差圧・入口・出口）',
@@ -774,6 +774,26 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(restored.vehicleCommandEnabled,false);assert.equal(restored.wouldTransmit,false);
     }
     console.log('Shared scope identity: legacy JSON re-import, wrong-route exclusion, matching-route control, two acquisition scopes, responsive themes and archive passed.');
+    const lateLegacy=JSON.parse(fs.readFileSync(path.join(root,'scripts/fixtures/late-pid-boundary-3.13.666.json'),'utf8'));
+    const oldRows=mode=>lateLegacy.observed.filter(row=>row.mode===mode&&['A4','A5'].includes(row.pid)).flatMap(row=>row.rows.filter(item=>item.pid===row.pid));
+    const oldLate=model.buildDiagnosticScanSession({livePidSnapshot:{livePidReadoutStatus:'reported',monitorValues:oldRows('live')},freezeFrameSnapshot:{freezeFrameReadoutStatus:'reported',monitorValues:oldRows('FF')}});
+    await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+    const latePicker=page.waitForEvent('filechooser');page.once('dialog',d=>d.accept());
+    await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+    await(await latePicker).setFiles({name:'late-pid-legacy.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(oldLate)))});
+    await page.waitForFunction(()=>obdDevSession.lastSession?.livePidSnapshot?.monitorValues?.some(row=>row.pid==='A5'&&row.value===1.176));
+    const lateBefore=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+    for(const [button,selector] of [['ライブデータの詳細を開く','#obdMonitorGrid'],['フリーズフレームの詳細を開く','#obdSessionDetailFreezeFrame']]){
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      await page.getByRole('button',{name:button,exact:true}).click();
+      const detail=page.locator(selector);await detail.waitFor({state:'visible'});
+      const text=await detail.innerText();assert.ok(text.includes('16進形式の文字列として保存されています。'));assert.ok(text.includes('PID A5の数値記録：'));assert.ok(text.includes('1.176'));
+      for(const width of [390,1280])for(const dark of [false,true]){await page.setViewportSize({width,height:844});await page.evaluate(d=>document.body.classList.toggle('dark',d),dark);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await detail.screenshot({path:path.join(output,'late-legacy-'+selector.slice(1)+'-'+width+'-'+dark+'.png')});}
+    }
+    assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),lateBefore);
+    const lateRestored=await page.evaluate(()=>window.ObdReadOnly.buildDiagnosticScanSessionFromJson(JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession))));
+    for(const field of ['livePidSnapshot','freezeFrameSnapshot'])assert.deepEqual(lateRestored[field].monitorValues,JSON.parse(lateBefore)[field].monitorValues);
+    console.log('Late PID legacy: A4 text and A5 numeric preserved, review notes visible in live/FF, responsive themes and archive passed.');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);

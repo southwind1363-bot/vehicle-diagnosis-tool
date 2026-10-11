@@ -41178,7 +41178,7 @@
     else if (pid === "1C") value = decodeObdStandard(a);
     else if (pid === "51") value = decodeFuelType(a);
     else if ([
-      "04", "11", "2C", "2E", "2F", "45", "47", "48", "49", "4A", "4B", "4C", "52", "5A", "5B", "A5"
+      "04", "11", "2C", "2E", "2F", "45", "47", "48", "49", "4A", "4B", "4C", "52", "5A", "5B"
     ].includes(pid)) value = a * 100 / 255;
     else if (["05", "0F", "46"].includes(pid)) value = a - 40;
     else if (["06", "07", "08", "09", "2D"].includes(pid)) value = (a - 128) * 100 / 128;
@@ -41217,7 +41217,7 @@
     else if (pid === "84") value = a - 40;
     else if (pid === "8C") value = a * 100 / 255;
     else if (pid === "A6") value = doubleWord() === null ? null : doubleWord() / 10;
-    else if (["65", "66", "7B", "7D", "7E", "85", "88", "8B", "91"].includes(pid)) return buildUndecodedPidValue(definition, pid, dataBytes);
+    else if (["65", "66", "7B", "7D", "7E", "85", "88", "8B", "91", "A4", "A5"].includes(pid)) return buildUndecodedPidValue(definition, pid, dataBytes);
     else if (definition.valueType === "text") value = formatRawPidBytes(dataBytes);
     else if (definition.valueType === "number") return buildUndecodedPidValue(definition, pid, dataBytes);
     if (value === null || (typeof value === "number" && !Number.isFinite(value))) return null;
@@ -41253,13 +41253,15 @@
     const oneBytePids = [
       "04", "05", "06", "07", "08", "09", "0A", "0B", "0D", "0E", "0F", "11", "12", "13", "1C", "1D", "1E",
       "2C", "2D", "2E", "2F", "30", "33", "45", "46", "47", "48", "49", "4A", "4B", "4C", "51", "52", "5A",
-      "5B", "5C", "61", "62", "84", "8C", "8E", "A5"
+      "5B", "5C", "61", "62", "84", "8C", "8E"
     ];
     const twoBytePids = [
       "02", "03", "0C", "10", "14", "15", "16", "17", "18", "19", "1A", "1B", "1F", "21", "22", "23",
-      "31", "32", "3C", "3D", "3E", "3F", "42", "43", "44", "4D", "4E", "59", "5D", "5E", "63"
+      "31", "32", "3C", "3D", "3E", "3F", "42", "43", "44", "4D", "4E", "59", "5D", "5E", "63", "A2"
     ];
-    const fourBytePids = ["01", "24", "25", "26", "27", "28", "29", "2A", "2B", "34", "35", "38", "39", "A6"];
+    const fourBytePids = ["01", "24", "25", "26", "27", "28", "29", "2A", "2B", "34", "35", "38", "39", "A4", "A5", "A6"];
+    // J1699-3 v17.00.00 / J1979DA_201905: see LATE-PID-BOUNDARY-REVIEW.md.
+    if (pid === "A1") return 9;
     if (oneBytePids.includes(pid)) return 1;
     if (twoBytePids.includes(pid)) return 2;
     if (fourBytePids.includes(pid)) return 4;

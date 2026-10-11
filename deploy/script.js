@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.666";
+const APP_VERSION = "3.13.667";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10716,6 +10716,13 @@ function getObdMonitorDisplayLabel(item = {}) {
 }
 
 function formatObdLegacyControlReviewNote(item = {}) {
+  if (item.id === "commanded_diesel_exhaust_fluid" && typeof item.pid === "string" && item.pid.toUpperCase() === "A5"
+    && item.decoded !== false && item.undecodedRaw !== true && item.valueType !== "raw_hex"
+    && typeof item.value === "number" && Number.isFinite(item.value)
+    && (!item.service || ["01", "02"].includes(item.service))
+    && (!item.scope || item.scope === "standard-generic")) {
+    return "PID A5の数値記録：換算根拠を元の応答・整備書で再確認してください。保存値は自動補正していません。";
+  }
   const pid = { commanded_egr_pid69: "69", egr_error_pid69: "69", commanded_diesel_intake_air_flow: "6A", commanded_throttle_control: "6C" }[item.id];
   const numericReview = pid && item.decoded !== false && item.undecodedRaw !== true
     && typeof item.value === "number" && Number.isFinite(item.value)
@@ -10725,7 +10732,7 @@ function formatObdLegacyControlReviewNote(item = {}) {
   const textPid = {
     auxiliary_io_supported: "65", maf_sensor_status: "66", dpf_status: "7B",
     nox_nte_status: "7D", pm_nte_status: "7E", nox_reagent_system: "85",
-    scr_inducement_status: "88", diesel_aftertreatment_status: "8B", wwh_obd_vehicle_info: "91"
+    scr_inducement_status: "88", diesel_aftertreatment_status: "8B", wwh_obd_vehicle_info: "91", transmission_actual_gear: "A4"
   }[item.id];
   const matchesPid = typeof item.pid === "string" && item.pid.toUpperCase() === textPid;
   return matchesPid && item.decoded === true && item.undecodedRaw !== true && item.valueType === "text"
