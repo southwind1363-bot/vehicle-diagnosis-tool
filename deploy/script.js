@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.667";
+const APP_VERSION = "3.13.668";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10698,7 +10698,7 @@ function getObdMonitorDisplayLabel(item = {}) {
   if (!(item.decoded === false || item.undecodedRaw === true)) return original;
   if (item.service && !["01", "02"].includes(item.service)) return original;
   if (item.scope && item.scope !== "standard-generic") return original;
-  // Display only; SAE J1979-DA OCT2011 Tables B82/B103/B107/B114/B116/B122/124.
+  // Display only; see RAW-PID-DISPLAY-LABELS.md for the reviewed response lengths.
   const definitions = {
     "66": ["maf_sensor_status", 5, "MAFセンサー A/B（複合データ）"],
     "7B": ["dpf_status", 7, "DPF バンク2 圧力（差圧・入口・出口）"],
@@ -10706,7 +10706,10 @@ function getObdMonitorDisplayLabel(item = {}) {
     "87": ["intake_manifold_absolute_pressure_a", 5, "吸気マニホールド絶対圧 A/B（複合データ）"],
     "89": ["engine_runtime_aecd", 41, "AECD #11〜15 エンジン運転時間"],
     "8F": ["pm_sensor_bank1", 7, "PMセンサー バンク1/2（状態・値）"],
-    "91": ["wwh_obd_vehicle_info", 5, "WWH-OBD ECU情報（状態・時間）"]
+    "91": ["wwh_obd_vehicle_info", 5, "WWH-OBD ECU情報（状態・時間）"],
+    "A1": ["nox_sensor_corrected", 9, "補正済みNOxセンサー応答 PID A1（複合データ）"],
+    "A4": ["transmission_actual_gear", 4, "トランスミッション応答 PID A4（複合データ）"],
+    "A5": ["commanded_diesel_exhaust_fluid", 4, "尿素水制御応答 PID A5（複合データ）"]
   };
   const definition = definitions[typeof item.pid === "string" ? item.pid.toUpperCase() : ""];
   const raw = typeof item.value === "string" ? item.value.trim() : "";

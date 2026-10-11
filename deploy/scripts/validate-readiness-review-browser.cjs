@@ -401,7 +401,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             '66': 'MAFセンサー A/B（複合データ）', '7B': 'DPF バンク2 圧力（差圧・入口・出口）',
             '7F': 'エンジン運転時間（複合データ）', '87': '吸気マニホールド絶対圧 A/B（複合データ）',
             '89': 'AECD #11〜15 エンジン運転時間', '8F': 'PMセンサー バンク1/2（状態・値）',
-            '91': 'WWH-OBD ECU情報（状態・時間）'
+            '91': 'WWH-OBD ECU情報（状態・時間）',
+            'A1': '補正済みNOxセンサー応答 PID A1（複合データ）',
+            'A4': 'トランスミッション応答 PID A4（複合データ）',
+            'A5': '尿素水制御応答 PID A5（複合データ）'
           };
           for (const row of compound.livePidSnapshot.monitorValues) {
             const corrected = scopeLabels[row.pid];

@@ -11,7 +11,10 @@ for (const [pid, id, length, scopeText] of [
   ['66','maf_sensor_status',5,'A/B'], ['7B','dpf_status',7,'バンク2'],
   ['7F','engine_runtime_aux',13,'複合データ'], ['87','intake_manifold_absolute_pressure_a',5,'A/B'],
   ['89','engine_runtime_aecd',41,'#11〜15'], ['8F','pm_sensor_bank1',7,'バンク1/2'],
-  ['91','wwh_obd_vehicle_info',5,'ECU情報']
+  ['91','wwh_obd_vehicle_info',5,'ECU情報'],
+  ['A1','nox_sensor_corrected',9,'応答 PID A1（複合データ）'],
+  ['A4','transmission_actual_gear',4,'応答 PID A4（複合データ）'],
+  ['A5','commanded_diesel_exhaust_fluid',4,'応答 PID A5（複合データ）']
 ]) {
   const row = Object.freeze({ id, pid, label: '記録時の名称', value: Array(length).fill('28').join(' '), decoded: false, service: '01', scope: 'standard-generic' });
   const original = JSON.stringify(row);
