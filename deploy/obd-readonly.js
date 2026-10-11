@@ -7440,7 +7440,7 @@
     const data = response && typeof response === "object"
       ? nestedData
         ? {
-          ...nestedData,
+          ...inheritReadoutNetworkScope(nestedData, response),
           source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
           readout_ecu_ids: nestedData.readoutEcuIds || nestedData.readout_ecu_ids || response.readoutEcuIds || response.readout_ecu_ids || [],
           source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
@@ -7460,7 +7460,7 @@
       data.ecuSnapshots,
       data.ecu_responses,
       data.ecuResponses
-    );
+    ).map(row => inheritReadoutNetworkScope(row, data));
     const getEcuRawOnboardMonitorResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
     const getEcuOnboardMonitorTests = (row) => firstOnboardMonitorArray(
       row?.tests,
@@ -7504,6 +7504,7 @@
         }, data);
       });
     const sourceErrorCodes = readBridgeResponseErrorCodes(response);
+    if (normalizeReadoutNetworkScope(data).conflict && !sourceErrorCodes.includes("network_scope_conflict")) sourceErrorCodes.push("network_scope_conflict");
     const scopedOnboardMonitorErrorCodes = [...new Set(onboardMonitorEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
     const errorCodes = [...new Set([...sourceErrorCodes, ...scopedOnboardMonitorErrorCodes])].slice(0, 12);
     const rawOnboardMonitorResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
@@ -7536,6 +7537,7 @@
       const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
       const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.module_name || ecuRow?.moduleName || ecuRow?.name || ecuRow?.label || null;
       const decoded = decodeOnboardMonitorResponse({
+        ...readoutNetworkScopeFields(ecuRow),
         raw,
         source: "local_bridge",
         source_ecu: ecu,
@@ -7560,7 +7562,7 @@
     const tests = [...structuredTests, ...rawEcuOnboardMonitorTests];
     const rawEcuOnboardMonitorReadoutUnparsed = [...decodedRawEcuOnboardMonitorSnapshots.values()].some((snapshot) => snapshot?.onboardMonitorReadoutStatus !== "reported");
     if (shouldDecodeRawOnboardMonitor) {
-      const decoded = decodeOnboardMonitorResponse({ raw: rawOnboardMonitorResponse, source: "local_bridge", source_ecu: sourceEcu, source_ecu_name: sourceEcuName, captured_at: capturedAt, protocol });
+      const decoded = decodeOnboardMonitorResponse({ ...readoutNetworkScopeFields(data), raw: rawOnboardMonitorResponse, source: "local_bridge", source_ecu: sourceEcu, source_ecu_name: sourceEcuName, captured_at: capturedAt, protocol });
       return {
         ...decoded,
         protocolProvenance,
@@ -7578,6 +7580,7 @@
     }
     return {
       ...normalizeOnboardMonitorSnapshot({
+        ...readoutNetworkScopeFields(data),
         source: "local_bridge",
         captured_at: capturedAt,
         protocol,
@@ -8680,6 +8683,8 @@
   }
 
   const READOUT_INVENTORY_KEYS = Object.freeze({
+    supported_pid_v2: [2, 1], supported_pid_scope_v2: [1, 0],
+    mode06_test_v2: [4, 2], mode06_value_v2: [6, 2], mode06_scope_v2: [1, 0],
     readiness_monitor_v2: [4, 1], readiness_scope_v2: [1, 0],
     ecu_info_item_v2: [3, 2], ecu_info_value_v2: [4, 2], mode09_type_v2: [2, 1], ecu_info_scope_v2: [1, 0]
   });
@@ -8689,7 +8694,11 @@
     if (!Object.hasOwn(READOUT_INVENTORY_KEYS, prefix) || (expectedPrefix && prefix !== expectedPrefix)) return null;
     const [length, ecuIndex] = READOUT_INVENTORY_KEYS[prefix];
     const parts = decodeLivePidInventoryParts(key, prefix + ":", length);
-    if (!parts || parts.slice(0, length).some((part) => typeof part !== "string" || !part || part.length > 240)) return null;
+    if (!parts || parts.slice(0, prefix === "mode06_value_v2" ? 3 : length).some((part) => typeof part !== "string" || !part || part.length > 240)) return null;
+    if (["supported_pid_v2", "mode06_test_v2", "mode06_value_v2"].includes(prefix) && !/^[0-9A-F]{2}$/.test(parts[0])) return null;
+    if (["mode06_test_v2", "mode06_value_v2"].includes(prefix) && !/^[0-9A-F]{2}$/.test(parts[1])) return null;
+    if (prefix === "mode06_test_v2" && !["pass", "fail", "unknown"].includes(parts[3])) return null;
+    if (prefix === "mode06_value_v2" && (typeof parts[3] !== "number" || !Number.isFinite(parts[3]) || parts.slice(4, 6).some(value => value !== null && (typeof value !== "number" || !Number.isFinite(value))))) return null;
     if (prefix === "readiness_monitor_v2" && (!["supported", "not_supported", "unknown"].includes(parts[2]) || !["complete", "not_complete", "unknown"].includes(parts[3]))) return null;
     if (prefix === "mode09_type_v2" && !/^[0-9A-F]{2}$/.test(parts[0])) return null;
     if (prefix === "ecu_info_value_v2" && (!["calibration_id", "calibration_verification_number"].includes(parts[0]) || redactSensitiveText(parts[3]) !== parts[3])) return null;
@@ -8700,7 +8709,7 @@
     if (route.some((part, index) => part !== null && (!part || part.length > [120, 120, 160][index]))) return null;
     parts.splice(length, 3, ...route);
     return { parts, sourceEcu, key: encodeLivePidInventoryKey(prefix + ":", parts),
-      scopeKey: encodeLivePidInventoryKey(prefix.startsWith("readiness_") ? "readiness_scope_v2:" : "ecu_info_scope_v2:", [sourceEcu, ...route]),
+      scopeKey: encodeLivePidInventoryKey(prefix.startsWith("supported_pid_") ? "supported_pid_scope_v2:" : prefix.startsWith("mode06_") ? "mode06_scope_v2:" : prefix.startsWith("readiness_") ? "readiness_scope_v2:" : "ecu_info_scope_v2:", [sourceEcu, ...route]),
       hasNetworkScope: route.some((part) => part !== null) };
   }
   function buildReadoutInventoryKey(prefix, head, input) {
@@ -8725,6 +8734,27 @@
       const scope = suffix.endsWith("ScopeKeys"), expected = scope ? (domain === "readiness" ? "readiness_scope_v2" : "ecu_info_scope_v2") : prefix;
       if (!(camel || snake || []).every((key) => version === 2 ? Boolean(parseReadoutInventoryKey(key, expected))
         : typeof key === "string" && !key.includes("_v2:") && key.split("|").length === (scope ? 1 : READOUT_INVENTORY_KEYS[prefix][0]) && key.split("|").every(Boolean))) return null;
+    }
+    return version;
+  }
+
+  function readPidMode06InventoryKeyVersion(summary = {}, domain) {
+    const snakeDomain = domain === "supportedPid" ? "supported_pid" : "onboard_monitor";
+    if (summary[domain + "KeyValidationFailed"] === true || summary[snakeDomain + "_key_validation_failed"] === true) return null;
+    const a = summary[domain + "KeyVersion"], b = summary[snakeDomain + "_key_version"];
+    if (a !== undefined && b !== undefined && a !== b) return null;
+    const version = a ?? b ?? 1;
+    if (![1, 2].includes(version)) return null;
+    const fields = domain === "supportedPid"
+      ? [["supportedPidKeys", "supported_pid_v2"], ["supportedPidReportedEcuKeys", "supported_pid_v2"], ["supportedPidReportedEcuScopeKeys", "supported_pid_scope_v2"], ["supportedPidUnresolvedEcuScopeKeys", "supported_pid_scope_v2"]]
+      : [["onboardMonitorTestKeys", "mode06_test_v2"], ["onboardMonitorValueKeys", "mode06_value_v2"], ["onboardMonitorReportedEcuTestKeys", "mode06_test_v2"], ["onboardMonitorReportedEcuValueKeys", "mode06_value_v2"], ["onboardMonitorReportedEcuScopeKeys", "mode06_scope_v2"], ["onboardMonitorUnresolvedEcuScopeKeys", "mode06_scope_v2"]];
+    for (const [field, prefix] of fields) {
+      const alias = field.replace(/[A-Z]/g, letter => "_" + letter.toLowerCase());
+      const camel = summary[field], snake = summary[alias];
+      if ((camel !== undefined && !Array.isArray(camel)) || (snake !== undefined && !Array.isArray(snake))) return null;
+      if (camel !== undefined && snake !== undefined && JSON.stringify(camel) !== JSON.stringify(snake)) return null;
+      if (!(camel || snake || []).every(key => version === 2 ? Boolean(parseReadoutInventoryKey(key, prefix))
+        : typeof key === "string" && !key.includes("_v2:") && key.split("|").length === READOUT_INVENTORY_KEYS[prefix][0] && key.split("|").every(Boolean))) return null;
     }
     return version;
   }
@@ -9209,19 +9239,15 @@
         .map((pid) => inheritReadoutNetworkScope({ pid, sourceEcu: supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu || null }, supportedPidMatrix));
     const supportedPidKeys = [...new Set(supportedPidEntries.map((entry) => {
       const pid = normalizeSupportedPidCode(entry?.pid);
-      const sourceEcu = String(entry?.sourceEcu || entry?.source_ecu || "").replace(/\|/g, " ").trim().toUpperCase() || "-";
-      const networkScopeKey = getReadoutNetworkScopeKey(entry);
-      if (!pid || networkScopeKey === null) return null;
-      return [pid, sourceEcu, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+      const ecu = String(entry?.sourceEcu || entry?.source_ecu || "-").trim().toUpperCase();
+      return pid ? buildReadoutInventoryKey("supported_pid_v2", [pid, ecu], entry) : null;
     }).filter(Boolean))].sort();
     const recordedSupportedPidKeys = supportedPidEvidenceRecorded ? supportedPidKeys : [];
-    const normalizeSupportedPidEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").replace(/\|/g, " ").trim().toUpperCase() || null;
+    const normalizeSupportedPidEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
     const readSupportedPidEcuId = (snapshot = {}) => normalizeSupportedPidEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || snapshot?.address || null);
     const readSupportedPidEcuScopeKey = (snapshot = {}) => {
       const ecuId = readSupportedPidEcuId(snapshot);
-      const networkScopeKey = getReadoutNetworkScopeKey(snapshot);
-      if (!ecuId || networkScopeKey === null) return null;
-      return [ecuId, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+      return ecuId ? buildReadoutInventoryKey("supported_pid_scope_v2", [ecuId], snapshot) : null;
     };
     const reportedSupportedPidEcuIds = [...new Set(supportedPidEcuSnapshots
       .filter((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() === "reported")
@@ -9234,7 +9260,7 @@
     const reportedSupportedPidEcuScopeKeys = [...new Set(supportedPidEcuSnapshots
       .filter((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() === "reported")
       .map(readSupportedPidEcuScopeKey)
-      .filter(Boolean))].sort();
+      .filter(key => key && !supportedPidEcuSnapshots.some(snapshot => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").toLowerCase() !== "reported" && readSupportedPidEcuScopeKey(snapshot) === key)))].sort();
     const unresolvedSupportedPidEcuScopeKeys = [...new Set(supportedPidEcuSnapshots
       .filter((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() !== "reported")
       .map(readSupportedPidEcuScopeKey)
@@ -9246,10 +9272,7 @@
     const supportedPidReportedEcuKeys = supportedPidReportedEcuEvidenceRecorded
       ? supportedPidKeys.filter((key) => {
         if (supportedPidEvidenceRecorded) return true;
-        const parts = String(key || "").split("|");
-        const ecuId = normalizeSupportedPidEcuId(parts[1]);
-        const pidScopeKey = parts.length === 5 ? [ecuId, ...parts.slice(2, 5)].join("|") : ecuId;
-        return reportedSupportedPidEcuScopeKeys.includes(pidScopeKey);
+        return reportedSupportedPidEcuScopeKeys.includes(parseReadoutInventoryKey(key, "supported_pid_v2")?.scopeKey);
       })
       : [];
     const onboardMonitorEcuSnapshots = firstPopulatedInventoryArray(
@@ -9262,22 +9285,15 @@
     );
     const onboardMonitorResponseUnavailable = isInventoryResponseUnavailable(onboardMonitorSnapshot, onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status);
     const onboardMonitorEvidenceRecorded = !onboardMonitorResponseUnavailable
-      && String(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || "").trim().toLowerCase() === "reported";
-    const onboardMonitorTestKeys = [...new Set(onboardMonitorTestEntries.map((test) => [
-      String(test?.testId || test?.test_id || "").trim().toUpperCase(),
-      String(test?.componentId || test?.component_id || "").trim().toUpperCase(),
-      String(test?.sourceEcu || test?.source_ecu || onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu || "").trim().toUpperCase() || "-",
-      String(test?.status || (test?.passed === true ? "pass" : test?.passed === false ? "fail" : "unknown")).trim().toLowerCase() || "unknown"
-    ].join("|")).filter((key) => !key.startsWith("|")))].sort();
+      && String(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || "").trim().toLowerCase() === "reported"
+      && onboardMonitorEcuSnapshots.every(snapshot => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || "").toLowerCase() === "reported" && !normalizeReadoutNetworkScope(snapshot).conflict);
+    const mode06Head = test => [String(test?.testId || test?.test_id || "").trim().toUpperCase(), String(test?.componentId || test?.component_id || "").trim().toUpperCase(), String(test?.sourceEcu || test?.source_ecu || onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu || "-").trim().toUpperCase()];
+    const onboardMonitorTestKeys = [...new Set(onboardMonitorTestEntries.map(test => buildReadoutInventoryKey("mode06_test_v2", [...mode06Head(test), String(test?.status || (test?.passed === true ? "pass" : test?.passed === false ? "fail" : "unknown")).trim().toLowerCase()], inheritReadoutNetworkScope(test, onboardMonitorSnapshot))).filter(Boolean))].sort();
     const recordedOnboardMonitorTestKeys = onboardMonitorEvidenceRecorded ? onboardMonitorTestKeys : [];
-    const normalizeOnboardMonitorReportedNumber = (value) => Number.isFinite(Number(value)) ? String(Number(value)) : "-";
-    const onboardMonitorValueKeys = [...new Set(onboardMonitorTestEntries.map((test) => {
-      const testId = String(test?.testId || test?.test_id || "").trim().toUpperCase();
-      const componentId = String(test?.componentId || test?.component_id || "").trim().toUpperCase();
-      const value = normalizeOnboardMonitorReportedNumber(test?.value);
-      if (!testId || !componentId || value === "-") return null;
-      const sourceEcu = String(test?.sourceEcu || test?.source_ecu || onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
-      return [testId, componentId, sourceEcu, value, normalizeOnboardMonitorReportedNumber(test?.min), normalizeOnboardMonitorReportedNumber(test?.max)].join("|");
+    const mode06Number = value => (typeof value === "number" || (typeof value === "string" && value.trim())) && Number.isFinite(Number(value)) ? Number(value) : null;
+    const onboardMonitorValueKeys = [...new Set(onboardMonitorTestEntries.map(test => {
+      const value = mode06Number(test?.value);
+      return value === null ? null : buildReadoutInventoryKey("mode06_value_v2", [...mode06Head(test), value, mode06Number(test?.min), mode06Number(test?.max)], inheritReadoutNetworkScope(test, onboardMonitorSnapshot));
     }).filter(Boolean))].sort();
     const onboardMonitorValueEvidenceRecorded = onboardMonitorEvidenceRecorded;
     const recordedOnboardMonitorValueKeys = onboardMonitorValueEvidenceRecorded ? onboardMonitorValueKeys : [];
@@ -9291,18 +9307,30 @@
       .filter((snapshot) => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || "").trim().toLowerCase() !== "reported")
       .map(readOnboardMonitorEcuId)
       .filter(Boolean))].sort();
+    const readOnboardMonitorScopeKey = snapshot => {
+      const ecu = readOnboardMonitorEcuId(snapshot);
+      return ecu ? buildReadoutInventoryKey("mode06_scope_v2", [ecu], snapshot) : null;
+    };
+    const reportedOnboardMonitorEcuScopeKeys = [...new Set(onboardMonitorEcuSnapshots.filter(snapshot => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || "").toLowerCase() === "reported").map(readOnboardMonitorScopeKey).filter(key => key && !onboardMonitorEcuSnapshots.some(snapshot => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || "").toLowerCase() !== "reported" && readOnboardMonitorScopeKey(snapshot) === key)))].sort();
+    const unresolvedOnboardMonitorEcuScopeKeys = [...new Set(onboardMonitorEcuSnapshots.filter(snapshot => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || "").toLowerCase() !== "reported").map(readOnboardMonitorScopeKey).filter(Boolean))].sort();
     const onboardMonitorReportedEcuEvidenceRecorded = onboardMonitorEvidenceRecorded
       || (onboardMonitorSnapshot?.blocked !== true && onboardMonitorSnapshot?.isBlocked !== true && onboardMonitorSnapshot?.is_blocked !== true
         && String(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedOnboardMonitorEcuIds.length > 0);
     const onboardMonitorReportedEcuTestKeys = onboardMonitorReportedEcuEvidenceRecorded
-      ? onboardMonitorTestKeys.filter((key) => onboardMonitorEvidenceRecorded || reportedOnboardMonitorEcuIds.includes(normalizeOnboardMonitorEcuId(String(key || "").split("|")[2])))
+      ? onboardMonitorTestKeys.filter((key) => onboardMonitorEvidenceRecorded || reportedOnboardMonitorEcuScopeKeys.includes(parseReadoutInventoryKey(key, "mode06_test_v2")?.scopeKey))
       : [];
     const onboardMonitorReportedEcuValueKeys = onboardMonitorReportedEcuEvidenceRecorded
-      ? onboardMonitorValueKeys.filter((key) => onboardMonitorEvidenceRecorded || reportedOnboardMonitorEcuIds.includes(normalizeOnboardMonitorEcuId(String(key || "").split("|")[2])))
+      ? onboardMonitorValueKeys.filter((key) => onboardMonitorEvidenceRecorded || reportedOnboardMonitorEcuScopeKeys.includes(parseReadoutInventoryKey(key, "mode06_value_v2")?.scopeKey))
       : [];
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
+      supportedPidKeyVersion: 2, supported_pid_key_version: 2,
+      onboardMonitorKeyVersion: 2, onboard_monitor_key_version: 2,
+      onboardMonitorReportedEcuScopeKeys: reportedOnboardMonitorEcuScopeKeys,
+      onboard_monitor_reported_ecu_scope_keys: [...reportedOnboardMonitorEcuScopeKeys],
+      onboardMonitorUnresolvedEcuScopeKeys: unresolvedOnboardMonitorEcuScopeKeys,
+      onboard_monitor_unresolved_ecu_scope_keys: [...unresolvedOnboardMonitorEcuScopeKeys],
       schemaVersion: "core_readout_inventory_v1",
       schema_version: "core_readout_inventory_v1",
       totalReadoutCount: items.length,
@@ -14333,10 +14361,10 @@
     const generatedImportedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const generatedImportedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const generatedImportedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
-    const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
+    const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
+    const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary, generatedImportedCoreReadoutInventoryComparisonSummary);
     const generatedImportedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
     const generatedImportedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
-    const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedCoreComparisonSummary = parts.importedCoreComparisonSummary || parts.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || generatedImportedCoreComparisonSummary;
     const importedDiagnosticFlowComparisonSummary = parts.importedDiagnosticFlowComparisonSummary || parts.imported_diagnostic_flow_comparison_summary || importedSessionComparisonSummary?.diagnosticFlowComparison || importedSessionComparisonSummary?.diagnostic_flow_comparison || generatedImportedDiagnosticFlowComparisonSummary;
     const importedReadoutCompletionComparisonSummary = parts.importedReadoutCompletionComparisonSummary || parts.imported_readout_completion_comparison_summary || importedSessionComparisonSummary?.readoutCompletionComparison || importedSessionComparisonSummary?.readout_completion_comparison || generatedImportedReadoutCompletionComparisonSummary;
@@ -15104,10 +15132,10 @@
     const generatedImportedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const generatedImportedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const generatedImportedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
-    const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
+    const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
+    const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary, generatedImportedCoreReadoutInventoryComparisonSummary);
     const generatedImportedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
     const generatedImportedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
-    const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedCoreComparisonSummary = parts.importedCoreComparisonSummary || parts.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || generatedImportedCoreComparisonSummary;
     const importedDiagnosticFlowComparisonSummary = parts.importedDiagnosticFlowComparisonSummary || parts.imported_diagnostic_flow_comparison_summary || importedSessionComparisonSummary?.diagnosticFlowComparison || importedSessionComparisonSummary?.diagnostic_flow_comparison || generatedImportedDiagnosticFlowComparisonSummary;
     const importedReadoutCompletionComparisonSummary = parts.importedReadoutCompletionComparisonSummary || parts.imported_readout_completion_comparison_summary || importedSessionComparisonSummary?.readoutCompletionComparison || importedSessionComparisonSummary?.readout_completion_comparison || generatedImportedReadoutCompletionComparisonSummary;
@@ -22679,6 +22707,8 @@
       supportedPidReportedEcuEvidenceRecorded: ["supported_pid_reported_ecu_evidence_recorded"],
       supportedPidReportedEcuIds: ["supported_pid_reported_ecu_ids"],
       supportedPidUnresolvedEcuIds: ["supported_pid_unresolved_ecu_ids"],
+      onboardMonitorReportedEcuScopeKeys: ["onboard_monitor_reported_ecu_scope_keys"],
+      onboardMonitorUnresolvedEcuScopeKeys: ["onboard_monitor_unresolved_ecu_scope_keys"],
       supportedPidReportedEcuScopeKeys: ["supported_pid_reported_ecu_scope_keys"],
       supportedPidUnresolvedEcuScopeKeys: ["supported_pid_unresolved_ecu_scope_keys"],
       supportedPidReportedEcuKeys: ["supported_pid_reported_ecu_keys"],
@@ -23342,7 +23372,13 @@
       : reportedEcuMode09SupportedTypeComparisonAvailable ? filterMode09SupportedTypeKeysByScope(currentMode09SupportedTypeReportedEcuScope) : [];
     const mode09SupportedTypeAddedKeys = mode09SupportedTypeComparisonAvailable ? diffIds(currentMode09SupportedTypeKeys, importedMode09SupportedTypeKeys) : [];
     const mode09SupportedTypeRemovedKeys = mode09SupportedTypeComparisonAvailable ? diffIds(importedMode09SupportedTypeKeys, currentMode09SupportedTypeKeys) : [];
+    const importedSupportedPidKeyVersion = readPidMode06InventoryKeyVersion(importedInventory, "supportedPid");
+    const currentSupportedPidKeyVersion = readPidMode06InventoryKeyVersion(currentSummary, "supportedPid");
+    const supportedPidKeyVersionsCompatible = importedSupportedPidKeyVersion !== null && importedSupportedPidKeyVersion === currentSupportedPidKeyVersion;
+    const supportedPidComparisonBlockedByKeyVersion = !supportedPidKeyVersionsCompatible;
     const parseSupportedPidKey = (value) => {
+      const parsed = parseReadoutInventoryKey(value, "supported_pid_v2");
+      if (parsed) return { ...parsed, pid: parsed.parts[0], sourceScopeKey: parsed.scopeKey };
       const parts = String(value || "").trim().split("|");
       if (![2, 5].includes(parts.length)) return null;
       const pid = normalizeSupportedPidCode(parts[0]);
@@ -23374,6 +23410,8 @@
       : [];
     const readSupportedPidKeys = (summary) => [...new Set(readRawSupportedPidKeys(summary).map(parseSupportedPidKey).filter(Boolean).map((item) => item.key))].sort();
     const normalizeSupportedPidEcuScopeKey = (value) => {
+      const parsed = parseReadoutInventoryKey(value, "supported_pid_scope_v2");
+      if (parsed) return parsed.key;
       const parts = String(value || "").trim().split("|");
       if (![1, 4].includes(parts.length)) return null;
       const ecu = normalizeComparableCanEcuAddress(parts[0]) || parts[0].normalize("NFKC").trim().toUpperCase();
@@ -23393,10 +23431,10 @@
       const explicitScopeKeys = readIds(summary, "supportedPidReportedEcuScopeKeys").map(normalizeSupportedPidEcuScopeKey).filter(Boolean);
       const derivedScopeKeys = allKeys.map((key) => parseSupportedPidKey(key)?.sourceScopeKey || null).filter(Boolean);
       const reportedEcuScopeKeys = explicitScopeKeys.length > 0 || !completeEvidenceRecorded
-        ? [...new Set(explicitScopeKeys.length > 0 ? explicitScopeKeys : explicitIds)].sort()
+        ? [...new Set(explicitScopeKeys.length > 0 ? explicitScopeKeys : readPidMode06InventoryKeyVersion(summary, "supportedPid") === 1 ? explicitIds : [])].sort()
         : [...new Set(derivedScopeKeys)].sort();
-      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
-      const explicitKeys = readIds(summary, "supportedPidReportedEcuKeys");
+      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => parseReadoutInventoryKey(key, "supported_pid_scope_v2")?.sourceEcu || key.split("|")[0]))].sort();
+      const explicitKeys = [...new Set(readIds(summary, "supportedPidReportedEcuKeys").map(key => parseSupportedPidKey(key)?.key).filter(Boolean))].sort();
       const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
       return {
         evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "supportedPidReportedEcuEvidenceRecorded"),
@@ -23423,18 +23461,17 @@
     const currentSupportedPidNetworkScopeKeyMode = readSupportedPidNetworkScopeKeyMode(
       currentSupportedPidEvidenceRecorded ? currentRawSupportedPidKeys : currentSupportedPidReportedEcuScope.reportedEcuKeys
     );
-    const supportedPidNetworkScopeKeyModesCompatible = importedSupportedPidNetworkScopeKeyMode === currentSupportedPidNetworkScopeKeyMode
-      && !["mixed", "invalid"].includes(importedSupportedPidNetworkScopeKeyMode);
+    const supportedPidNetworkScopeKeyModesCompatible = supportedPidKeyVersionsCompatible && (importedSupportedPidKeyVersion === 2 || (importedSupportedPidNetworkScopeKeyMode === currentSupportedPidNetworkScopeKeyMode && ["none", "unscoped"].includes(importedSupportedPidNetworkScopeKeyMode)));
     const supportedPidComparisonBlockedByScopeVersion = importedSupportedPidReportedEcuScope.evidenceRecorded
       && currentSupportedPidReportedEcuScope.evidenceRecorded
       && !supportedPidNetworkScopeKeyModesCompatible;
-    const completeSupportedPidComparisonAvailable = importedSupportedPidEvidenceRecorded && currentSupportedPidEvidenceRecorded;
+    const completeSupportedPidComparisonAvailable = supportedPidNetworkScopeKeyModesCompatible && importedSupportedPidEvidenceRecorded && currentSupportedPidEvidenceRecorded;
     const comparableSupportedPidEcuScopeKeys = completeSupportedPidComparisonAvailable
       ? []
-      : importedSupportedPidReportedEcuScope.evidenceRecorded && currentSupportedPidReportedEcuScope.evidenceRecorded
+      : supportedPidNetworkScopeKeyModesCompatible && importedSupportedPidReportedEcuScope.evidenceRecorded && currentSupportedPidReportedEcuScope.evidenceRecorded
         ? importedSupportedPidReportedEcuScope.reportedEcuScopeKeys.filter((key) => currentSupportedPidReportedEcuScope.reportedEcuScopeKeys.includes(key))
         : [];
-    const comparableSupportedPidEcuIds = [...new Set(comparableSupportedPidEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
+    const comparableSupportedPidEcuIds = [...new Set(comparableSupportedPidEcuScopeKeys.map((key) => parseReadoutInventoryKey(key, "supported_pid_scope_v2")?.sourceEcu || key.split("|")[0]))].sort();
     const reportedEcuSupportedPidComparisonAvailable = !completeSupportedPidComparisonAvailable && comparableSupportedPidEcuScopeKeys.length > 0;
     const supportedPidComparisonAvailable = (completeSupportedPidComparisonAvailable || reportedEcuSupportedPidComparisonAvailable)
       && supportedPidNetworkScopeKeyModesCompatible;
@@ -23458,7 +23495,7 @@
       ...readIds(importedInventory, "supportedPidUnresolvedEcuIds"),
       ...readIds(currentSummary, "supportedPidUnresolvedEcuIds")
     ].length > 0;
-    const restrictSupportedPidComparisonToScopedEvidence = supportedPidComparisonBlockedByScopeVersion
+    const restrictSupportedPidComparisonToScopedEvidence = supportedPidComparisonBlockedByKeyVersion || supportedPidComparisonBlockedByScopeVersion
       || (!completeSupportedPidComparisonAvailable && hasSupportedPidEcuScopeEvidence);
     const nonComparableValueCountIds = new Set([
       restrictLivePidComparisonToScopedEvidence ? "live_pid_snapshot" : null,
@@ -23467,54 +23504,53 @@
       restrictEcuInfoComparisonToScopedEvidence ? "ecu_info_snapshot" : null,
       restrictSupportedPidComparisonToScopedEvidence ? "supported_pid_matrix" : null
     ].filter(Boolean));
+    const onboardMonitorKeyVersionsCompatible = readPidMode06InventoryKeyVersion(importedInventory, "onboardMonitor") === 2 && readPidMode06InventoryKeyVersion(currentSummary, "onboardMonitor") === 2;
+    const onboardMonitorComparisonBlockedByKeyVersion = !onboardMonitorKeyVersionsCompatible;
     const readOnboardMonitorKeys = (summary) => Array.isArray(readField(summary, "onboardMonitorTestKeys"))
-      ? [...new Set(readField(summary, "onboardMonitorTestKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      ? [...new Set(readField(summary, "onboardMonitorTestKeys").map((key) => parseReadoutInventoryKey(key, "mode06_test_v2")?.key).filter(Boolean))].sort()
       : [];
     const importedOnboardMonitorEvidenceRecorded = readBoolean(importedInventory, "onboardMonitorEvidenceRecorded");
     const currentOnboardMonitorEvidenceRecorded = readBoolean(currentSummary, "onboardMonitorEvidenceRecorded");
     const importedAllOnboardMonitorTestKeys = readOnboardMonitorKeys(importedInventory);
     const currentAllOnboardMonitorTestKeys = readOnboardMonitorKeys(currentSummary);
     const readOnboardMonitorValueKeys = (summary) => Array.isArray(readField(summary, "onboardMonitorValueKeys"))
-      ? [...new Set(readField(summary, "onboardMonitorValueKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      ? [...new Set(readField(summary, "onboardMonitorValueKeys").map((key) => parseReadoutInventoryKey(key, "mode06_value_v2")?.key).filter(Boolean))].sort()
       : [];
     const importedOnboardMonitorValueEvidenceRecorded = readBoolean(importedInventory, "onboardMonitorValueEvidenceRecorded");
     const currentOnboardMonitorValueEvidenceRecorded = readBoolean(currentSummary, "onboardMonitorValueEvidenceRecorded");
     const importedAllOnboardMonitorValueKeys = readOnboardMonitorValueKeys(importedInventory);
     const currentAllOnboardMonitorValueKeys = readOnboardMonitorValueKeys(currentSummary);
     const readOnboardMonitorReportedEcuScope = (summary, completeEvidenceRecorded, allTestKeys, allValueKeys) => {
-      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
-        || String(value || "").trim().toUpperCase()
-        || null;
-      const explicitIds = readIds(summary, "onboardMonitorReportedEcuIds").map(normalizeScopeId).filter(Boolean);
-      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
-        ? [...new Set(explicitIds)].sort()
-        : [...new Set([...allTestKeys, ...allValueKeys].map((key) => normalizeScopeId(String(key || "").split("|")[2])).filter(Boolean))].sort();
-      const explicitTestKeys = readIds(summary, "onboardMonitorReportedEcuTestKeys");
-      const explicitValueKeys = readIds(summary, "onboardMonitorReportedEcuValueKeys");
+      const explicitScopeKeys = readIds(summary, "onboardMonitorReportedEcuScopeKeys").map(key => parseReadoutInventoryKey(key, "mode06_scope_v2")?.key).filter(Boolean);
+      const reportedEcuScopeKeys = [...new Set(explicitScopeKeys.length > 0 || !completeEvidenceRecorded ? explicitScopeKeys : [...allTestKeys, ...allValueKeys].map(key => parseReadoutInventoryKey(key)?.scopeKey).filter(Boolean))].sort();
+      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map(key => parseReadoutInventoryKey(key, "mode06_scope_v2")?.sourceEcu).filter(Boolean))].sort();
+      const explicitTestKeys = [...new Set(readIds(summary, "onboardMonitorReportedEcuTestKeys").map(key => parseReadoutInventoryKey(key, "mode06_test_v2")?.key).filter(Boolean))].sort();
+      const explicitValueKeys = [...new Set(readIds(summary, "onboardMonitorReportedEcuValueKeys").map(key => parseReadoutInventoryKey(key, "mode06_value_v2")?.key).filter(Boolean))].sort();
       return {
         evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "onboardMonitorReportedEcuEvidenceRecorded"),
         reportedEcuIds,
+        reportedEcuScopeKeys,
         reportedEcuTestKeys: explicitTestKeys.length > 0 || !completeEvidenceRecorded ? explicitTestKeys : [...allTestKeys],
         reportedEcuValueKeys: explicitValueKeys.length > 0 || !completeEvidenceRecorded ? explicitValueKeys : [...allValueKeys]
       };
     };
     const importedOnboardMonitorReportedEcuScope = readOnboardMonitorReportedEcuScope(importedInventory, importedOnboardMonitorEvidenceRecorded || importedOnboardMonitorValueEvidenceRecorded, importedAllOnboardMonitorTestKeys, importedAllOnboardMonitorValueKeys);
     const currentOnboardMonitorReportedEcuScope = readOnboardMonitorReportedEcuScope(currentSummary, currentOnboardMonitorEvidenceRecorded || currentOnboardMonitorValueEvidenceRecorded, currentAllOnboardMonitorTestKeys, currentAllOnboardMonitorValueKeys);
-    const completeOnboardMonitorComparisonAvailable = importedOnboardMonitorEvidenceRecorded && currentOnboardMonitorEvidenceRecorded;
-    const completeOnboardMonitorValueComparisonAvailable = importedOnboardMonitorValueEvidenceRecorded && currentOnboardMonitorValueEvidenceRecorded;
-    const comparableOnboardMonitorEcuIds = completeOnboardMonitorComparisonAvailable || completeOnboardMonitorValueComparisonAvailable
+    const completeOnboardMonitorComparisonAvailable = onboardMonitorKeyVersionsCompatible && importedOnboardMonitorEvidenceRecorded && currentOnboardMonitorEvidenceRecorded;
+    const completeOnboardMonitorValueComparisonAvailable = onboardMonitorKeyVersionsCompatible && importedOnboardMonitorValueEvidenceRecorded && currentOnboardMonitorValueEvidenceRecorded;
+    const comparableOnboardMonitorEcuScopeKeys = completeOnboardMonitorComparisonAvailable || completeOnboardMonitorValueComparisonAvailable
       ? []
-      : importedOnboardMonitorReportedEcuScope.evidenceRecorded && currentOnboardMonitorReportedEcuScope.evidenceRecorded
-        ? importedOnboardMonitorReportedEcuScope.reportedEcuIds.filter((id) => currentOnboardMonitorReportedEcuScope.reportedEcuIds.includes(id))
+      : onboardMonitorKeyVersionsCompatible && importedOnboardMonitorReportedEcuScope.evidenceRecorded && currentOnboardMonitorReportedEcuScope.evidenceRecorded
+        ? importedOnboardMonitorReportedEcuScope.reportedEcuScopeKeys.filter((key) => currentOnboardMonitorReportedEcuScope.reportedEcuScopeKeys.includes(key))
         : [];
+    const comparableOnboardMonitorEcuIds = [...new Set(comparableOnboardMonitorEcuScopeKeys.map(key => parseReadoutInventoryKey(key, "mode06_scope_v2")?.sourceEcu).filter(Boolean))].sort();
     const reportedOnboardMonitorScopeEvidenceRecorded = readBoolean(importedInventory, "onboardMonitorReportedEcuEvidenceRecorded")
       && readBoolean(currentSummary, "onboardMonitorReportedEcuEvidenceRecorded");
     const reportedEcuOnboardMonitorComparisonAvailable = !completeOnboardMonitorComparisonAvailable && reportedOnboardMonitorScopeEvidenceRecorded && comparableOnboardMonitorEcuIds.length > 0;
     const reportedEcuOnboardMonitorValueComparisonAvailable = !completeOnboardMonitorValueComparisonAvailable && reportedOnboardMonitorScopeEvidenceRecorded && comparableOnboardMonitorEcuIds.length > 0;
     const onboardMonitorComparisonAvailable = completeOnboardMonitorComparisonAvailable || reportedEcuOnboardMonitorComparisonAvailable;
     const filterOnboardMonitorKeysByScope = (keys) => keys.filter((key) => {
-      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[2]) || String(key || "").split("|")[2]?.trim().toUpperCase();
-      return comparableOnboardMonitorEcuIds.includes(ecu);
+      return comparableOnboardMonitorEcuScopeKeys.includes(parseReadoutInventoryKey(key)?.scopeKey);
     });
     const importedOnboardMonitorTestKeys = completeOnboardMonitorComparisonAvailable
       ? importedAllOnboardMonitorTestKeys
@@ -23535,7 +23571,7 @@
       ...readIds(importedInventory, "onboardMonitorUnresolvedEcuIds"),
       ...readIds(currentSummary, "onboardMonitorUnresolvedEcuIds")
     ].length > 0;
-    const restrictOnboardMonitorComparisonToScopedEvidence = !completeOnboardMonitorComparisonAvailable && !completeOnboardMonitorValueComparisonAvailable && hasOnboardMonitorEcuScopeEvidence;
+    const restrictOnboardMonitorComparisonToScopedEvidence = onboardMonitorComparisonBlockedByKeyVersion || (!completeOnboardMonitorComparisonAvailable && !completeOnboardMonitorValueComparisonAvailable && hasOnboardMonitorEcuScopeEvidence);
     if (restrictOnboardMonitorComparisonToScopedEvidence) nonComparableValueCountIds.add("onboard_monitor_snapshot");
     const comparableChangedValueCountIds = changedValueCountIds.filter((id) => !nonComparableValueCountIds.has(id));
     const onboardMonitorTestAddedKeys = onboardMonitorComparisonAvailable ? diffIds(currentOnboardMonitorTestKeys, importedOnboardMonitorTestKeys) : [];
@@ -24003,6 +24039,8 @@
       current_supported_pid_network_scope_key_mode: currentSupportedPidNetworkScopeKeyMode,
       supportedPidNetworkScopeKeyModesCompatible,
       supported_pid_network_scope_key_modes_compatible: supportedPidNetworkScopeKeyModesCompatible,
+      supportedPidComparisonBlockedByKeyVersion,
+      supported_pid_comparison_blocked_by_key_version: supportedPidComparisonBlockedByKeyVersion,
       supportedPidComparisonBlockedByScopeVersion,
       supported_pid_comparison_blocked_by_scope_version: supportedPidComparisonBlockedByScopeVersion,
       supportedPidComparisonScope: supportedPidComparisonAvailable && completeSupportedPidComparisonAvailable ? "complete" : supportedPidComparisonAvailable && reportedEcuSupportedPidComparisonAvailable ? "reported_ecus" : "unavailable",
@@ -24033,6 +24071,12 @@
       imported_onboard_monitor_reported_ecu_evidence_recorded: importedOnboardMonitorReportedEcuScope.evidenceRecorded,
       currentOnboardMonitorReportedEcuEvidenceRecorded: currentOnboardMonitorReportedEcuScope.evidenceRecorded,
       current_onboard_monitor_reported_ecu_evidence_recorded: currentOnboardMonitorReportedEcuScope.evidenceRecorded,
+      onboardMonitorFailedDelta: onboardMonitorComparisonAvailable ? currentOnboardMonitorTestKeys.filter(key => parseReadoutInventoryKey(key, "mode06_test_v2")?.parts[3] === "fail").length - importedOnboardMonitorTestKeys.filter(key => parseReadoutInventoryKey(key, "mode06_test_v2")?.parts[3] === "fail").length : null,
+      onboard_monitor_failed_delta: onboardMonitorComparisonAvailable ? currentOnboardMonitorTestKeys.filter(key => parseReadoutInventoryKey(key, "mode06_test_v2")?.parts[3] === "fail").length - importedOnboardMonitorTestKeys.filter(key => parseReadoutInventoryKey(key, "mode06_test_v2")?.parts[3] === "fail").length : null,
+      onboardMonitorComparisonBlockedByKeyVersion,
+      onboard_monitor_comparison_blocked_by_key_version: onboardMonitorComparisonBlockedByKeyVersion,
+      onboardMonitorComparableEcuScopeKeys: comparableOnboardMonitorEcuScopeKeys,
+      onboard_monitor_comparable_ecu_scope_keys: [...comparableOnboardMonitorEcuScopeKeys],
       onboardMonitorComparisonAvailable,
       onboard_monitor_comparison_available: onboardMonitorComparisonAvailable,
       onboardMonitorComparisonScope: onboardMonitorComparisonAvailable && completeOnboardMonitorComparisonAvailable ? "complete" : onboardMonitorComparisonAvailable && reportedEcuOnboardMonitorComparisonAvailable ? "reported_ecus" : "unavailable",
@@ -24166,6 +24210,18 @@
       freeze_frame_value_reported_ecu_ids: normalizeIds(summary.freezeFrameValueReportedEcuIds || summary.freeze_frame_value_reported_ecu_ids),
       freezeFrameValueUnresolvedEcuIds: normalizeIds(summary.freezeFrameValueUnresolvedEcuIds || summary.freeze_frame_value_unresolved_ecu_ids),
       freeze_frame_value_unresolved_ecu_ids: normalizeIds(summary.freezeFrameValueUnresolvedEcuIds || summary.freeze_frame_value_unresolved_ecu_ids),
+      supportedPidKeyVersion: pickDefined(summary.supportedPidKeyVersion, summary.supported_pid_key_version, null),
+      supported_pid_key_version: pickDefined(summary.supported_pid_key_version, summary.supportedPidKeyVersion, null),
+      supportedPidKeyValidationFailed: readPidMode06InventoryKeyVersion(summary, "supportedPid") === null,
+      supported_pid_key_validation_failed: readPidMode06InventoryKeyVersion(summary, "supportedPid") === null,
+      onboardMonitorKeyVersion: pickDefined(summary.onboardMonitorKeyVersion, summary.onboard_monitor_key_version, null),
+      onboard_monitor_key_version: pickDefined(summary.onboard_monitor_key_version, summary.onboardMonitorKeyVersion, null),
+      onboardMonitorKeyValidationFailed: readPidMode06InventoryKeyVersion(summary, "onboardMonitor") === null,
+      onboard_monitor_key_validation_failed: readPidMode06InventoryKeyVersion(summary, "onboardMonitor") === null,
+      onboardMonitorReportedEcuScopeKeys: normalizeIds(summary.onboardMonitorReportedEcuScopeKeys || summary.onboard_monitor_reported_ecu_scope_keys),
+      onboard_monitor_reported_ecu_scope_keys: normalizeIds(summary.onboardMonitorReportedEcuScopeKeys || summary.onboard_monitor_reported_ecu_scope_keys),
+      onboardMonitorUnresolvedEcuScopeKeys: normalizeIds(summary.onboardMonitorUnresolvedEcuScopeKeys || summary.onboard_monitor_unresolved_ecu_scope_keys),
+      onboard_monitor_unresolved_ecu_scope_keys: normalizeIds(summary.onboardMonitorUnresolvedEcuScopeKeys || summary.onboard_monitor_unresolved_ecu_scope_keys),
       readinessKeyVersion: pickDefined(summary.readinessKeyVersion, summary.readiness_key_version, null),
       readiness_key_version: pickDefined(summary.readiness_key_version, summary.readinessKeyVersion, null),
       readinessKeyValidationFailed: readReadoutInventoryKeyVersion(summary, "readiness") === null,
@@ -26084,7 +26140,7 @@
     };
   }
 
-  function buildImportedReadoutQualityComparisonSummary(importedQualitySummary = null, currentQualitySummary = {}) {
+  function buildImportedReadoutQualityComparisonSummary(importedQualitySummary = null, currentQualitySummary = {}, inventoryComparison = null) {
     if (!importedQualitySummary || typeof importedQualitySummary !== "object") return null;
     const currentSummary = currentQualitySummary && typeof currentQualitySummary === "object" ? currentQualitySummary : {};
     const toSnakeField = (field) => String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
@@ -26101,7 +26157,7 @@
       raw_pid_values_need_conversion: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedQualitySummary, "rawPidUndecodedCount"),
       readiness_incomplete: readCount(currentSummary, "readinessIncompleteCount") - readCount(importedQualitySummary, "readinessIncompleteCount"),
       mode09_key_items_missing: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedQualitySummary, "ecuInfoMissingKeyCount"),
-      onboard_monitor_test_failed: readCount(currentSummary, "onboardMonitorFailedCount") - readCount(importedQualitySummary, "onboardMonitorFailedCount"),
+      onboard_monitor_test_failed: inventoryComparison?.onboardMonitorComparisonAvailable === true ? inventoryComparison.onboardMonitorFailedDelta : null,
       web_serial_response_quality: readCount(currentSummary, "webSerialResponseReviewCount") - readCount(importedQualitySummary, "webSerialResponseReviewCount"),
       invalid_dtc_evidence_excluded: readCount(currentSummary, "invalidDtcEvidenceObservationCount") - readCount(importedQualitySummary, "invalidDtcEvidenceObservationCount")
     };
@@ -26118,7 +26174,7 @@
       transport_error: readCount(currentSummary, "webSerialTransportErrorCount") - readCount(importedQualitySummary, "webSerialTransportErrorCount")
     };
     const changedIssueCountIds = Object.entries(issueFieldDeltas)
-      .filter(([, delta]) => delta !== 0)
+      .filter(([, delta]) => delta !== null && delta !== 0)
       .map(([id]) => id)
       .sort();
     const issueReviewReadoutMap = {
@@ -31649,10 +31705,10 @@
     const generatedImportedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const generatedImportedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const generatedImportedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
-    const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
+    const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
+    const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary, generatedImportedCoreReadoutInventoryComparisonSummary);
     const generatedImportedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
     const generatedImportedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
-    const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedCoreComparisonSummary = input.importedCoreComparisonSummary || input.imported_core_comparison_summary || bridgeImport?.importedCoreComparisonSummary || bridgeImport?.imported_core_comparison_summary || bridgeImportInput?.importedCoreComparisonSummary || bridgeImportInput?.imported_core_comparison_summary || bridgeSession?.importedCoreComparisonSummary || bridgeSession?.imported_core_comparison_summary || importedSessionComparisonSummaryInput?.coreComparison || importedSessionComparisonSummaryInput?.core_comparison || generatedImportedCoreComparisonSummary;
     const importedDiagnosticFlowComparisonSummary = input.importedDiagnosticFlowComparisonSummary || input.imported_diagnostic_flow_comparison_summary || bridgeImport?.importedDiagnosticFlowComparisonSummary || bridgeImport?.imported_diagnostic_flow_comparison_summary || bridgeImportInput?.importedDiagnosticFlowComparisonSummary || bridgeImportInput?.imported_diagnostic_flow_comparison_summary || bridgeSession?.importedDiagnosticFlowComparisonSummary || bridgeSession?.imported_diagnostic_flow_comparison_summary || importedSessionComparisonSummaryInput?.diagnosticFlowComparison || importedSessionComparisonSummaryInput?.diagnostic_flow_comparison || generatedImportedDiagnosticFlowComparisonSummary;
     const importedReadoutCompletionComparisonSummary = input.importedReadoutCompletionComparisonSummary || input.imported_readout_completion_comparison_summary || bridgeImport?.importedReadoutCompletionComparisonSummary || bridgeImport?.imported_readout_completion_comparison_summary || bridgeImportInput?.importedReadoutCompletionComparisonSummary || bridgeImportInput?.imported_readout_completion_comparison_summary || bridgeSession?.importedReadoutCompletionComparisonSummary || bridgeSession?.imported_readout_completion_comparison_summary || importedSessionComparisonSummaryInput?.readoutCompletionComparison || importedSessionComparisonSummaryInput?.readout_completion_comparison || generatedImportedReadoutCompletionComparisonSummary;
@@ -35365,7 +35421,7 @@
       const snapshotStatusInput = String(snapshotInput.onboardMonitorReadoutStatus || snapshotInput.onboard_monitor_readout_status || snapshotInput.readoutStatus || snapshotInput.readout_status || "").trim().toLowerCase();
       const resolvedSnapshotStatus = snapshotStatusInput === "blocked" ? "blocked" : snapshotErrorCodes.length > 0 ? "unparsed" : snapshotStatusInput;
       const normalizedSnapshot = normalizeOnboardMonitorSnapshot({
-        ...snapshotInput,
+        ...inheritReadoutNetworkScope(snapshotInput, sourceInput),
         ...(resolvedSnapshotStatus ? { onboardMonitorReadoutStatus: resolvedSnapshotStatus, onboard_monitor_readout_status: resolvedSnapshotStatus } : {}),
         onboardMonitorEcuSnapshots: [],
         onboard_monitor_ecu_snapshots: [],
@@ -35380,8 +35436,8 @@
         ...normalizedSnapshot,
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
-        errorCodes: snapshotErrorCodes,
-        error_codes: [...snapshotErrorCodes],
+        errorCodes: normalizedSnapshot.errorCodes,
+        error_codes: [...normalizedSnapshot.errorCodes],
         onboardMonitorScope: "single_ecu",
         onboard_monitor_scope: "single_ecu"
       };
@@ -35390,16 +35446,18 @@
       String(snapshot.onboardMonitorReadoutStatus || snapshot.onboard_monitor_readout_status || "unknown").trim().toLowerCase() === "reported"
     );
     const matchesReportedOnboardMonitorEcu = (row) => {
+      const route = getDtcReadoutNetworkScopeIdentity(row);
+      if (route === null) return false;
       if (onboardMonitorEcuSnapshots.length === 0) return true;
       const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
-      if (!rowSource) return reportedOnboardMonitorEcuSnapshots.length === onboardMonitorEcuSnapshots.length;
       const rowAddress = normalizeComparableCanEcuAddress(rowSource);
-      return reportedOnboardMonitorEcuSnapshots.some((snapshot) => {
-        const reportedSource = String(readObdResponseSourceEcu(snapshot) || "").trim().toUpperCase();
-        if (reportedSource === rowSource) return true;
-        const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
-        return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
+      const candidates = onboardMonitorEcuSnapshots.filter(snapshot => {
+        const source = String(readObdResponseSourceEcu(snapshot) || "").trim().toUpperCase();
+        return !rowSource || source === rowSource || isComparableCanEcuAddressMatch(normalizeComparableCanEcuAddress(source), rowAddress);
       });
+      // Unspecified route is only evidence for an unspecified route. Never guess a bus.
+      const matching = candidates.filter(snapshot => getDtcReadoutNetworkScopeIdentity(snapshot) === route);
+      return matching.length > 0 && matching.every(snapshot => reportedOnboardMonitorEcuSnapshots.includes(snapshot));
     };
     const directRows = firstOnboardMonitorArray(
       sourceInput.tests,
@@ -35459,6 +35517,7 @@
         if (!testId || !componentId || !Number.isFinite(value)) return null;
         const status = hasLimits ? (passed ? "pass" : "fail") : explicitPassed ? "pass" : explicitFailed ? "fail" : "unknown";
         return {
+          ...readoutNetworkScopeFields(row),
           testId,
           componentId,
           value,
@@ -35492,7 +35551,7 @@
     const readExplicitOnboardMonitorCount = (camelKey, snakeKey) => Math.max(0, ...[sourceInput[camelKey], sourceInput[snakeKey]]
       .filter((value) => Number.isFinite(Number(value)))
       .map((value) => Math.max(0, Math.round(Number(value)))));
-    const hasTestRows = tests.length > 0;
+    const hasTestRows = tests.length > 0 || rows.some(row => row && typeof row === "object" && !matchesReportedOnboardMonitorEcu(row));
     const passedCount = hasTestRows ? tests.filter((test) => test.status === "pass").length : readExplicitOnboardMonitorCount("passedCount", "passed_count");
     const failedCount = hasTestRows ? tests.filter((test) => test.status === "fail").length : readExplicitOnboardMonitorCount("failedCount", "failed_count");
     const unknownCount = hasTestRows ? tests.filter((test) => test.status === "unknown").length : readExplicitOnboardMonitorCount("unknownCount", "unknown_count");
@@ -35581,6 +35640,7 @@
     };
 
     return {
+      ...readoutNetworkScopeFields(sourceInput),
       schemaVersion: "onboard_monitor_snapshot_v1",
       schema_version: "onboard_monitor_snapshot_v1",
       source,
@@ -37251,6 +37311,7 @@
     }
 
     return normalizeOnboardMonitorSnapshot({
+      ...readoutNetworkScopeFields(input),
       source: input.source || "obd_response_decoder",
       ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       ...(sourceEcuName ? { source_ecu_name: sourceEcuName } : {}),
@@ -43295,10 +43356,10 @@
     const generatedImportedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const generatedImportedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const generatedImportedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
-    const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
+    const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
+    const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary, generatedImportedCoreReadoutInventoryComparisonSummary);
     const generatedImportedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
     const generatedImportedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
-    const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedCoreComparisonSummary = sessionInput.importedCoreComparisonSummary || sessionInput.imported_core_comparison_summary || importedSessionComparisonSummaryInput?.coreComparison || importedSessionComparisonSummaryInput?.core_comparison || generatedImportedCoreComparisonSummary;
     const importedDiagnosticFlowComparisonSummary = sessionInput.importedDiagnosticFlowComparisonSummary || sessionInput.imported_diagnostic_flow_comparison_summary || importedSessionComparisonSummaryInput?.diagnosticFlowComparison || importedSessionComparisonSummaryInput?.diagnostic_flow_comparison || generatedImportedDiagnosticFlowComparisonSummary;
     const importedReadoutCompletionComparisonSummary = sessionInput.importedReadoutCompletionComparisonSummary || sessionInput.imported_readout_completion_comparison_summary || importedSessionComparisonSummaryInput?.readoutCompletionComparison || importedSessionComparisonSummaryInput?.readout_completion_comparison || generatedImportedReadoutCompletionComparisonSummary;

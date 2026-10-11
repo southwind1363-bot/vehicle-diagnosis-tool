@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.664";
+const APP_VERSION = "3.13.665";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -11078,6 +11078,11 @@ function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
   return parts.join(" / ");
 }
 
+function formatObdMode06Route(item = {}) {
+  if (item.networkScopeConflict || item.network_scope_conflict) return "通信経路: 情報に矛盾あり";
+  return [["バス", item.networkBus || item.network_bus], ["チャネル", item.networkChannel || item.network_channel], ["経路", item.gatewayRoute || item.gateway_route]].filter(([, value]) => value).map(([label, value]) => label + " " + value).join(" / ");
+}
+
 function formatObdOnboardMonitorTestLine(item = {}) {
   const testId = item.testId ?? item.tid ?? "未記録";
   const componentId = item.componentId ?? item.cid ?? "未記録";
@@ -11086,7 +11091,7 @@ function formatObdOnboardMonitorTestLine(item = {}) {
     : !item.status || item.status === "unknown" ? "未判定" : `未判定 (${item.status})`;
   const min = formatObdBridgeReadoutValue({ value: item.min, unit: item.min == null ? null : item.unit });
   const max = formatObdBridgeReadoutValue({ value: item.max, unit: item.max == null ? null : item.unit });
-  return `[${ecu}] TID ${testId} / CID ${componentId}: 記録値 ${formatObdBridgeReadoutValue(item)} / 下限 ${min} / 上限 ${max} / 記録判定: ${status}`;
+  return `[${ecu}]${formatObdMode06Route(item) ? ` [${formatObdMode06Route(item)}]` : ""} TID ${testId} / CID ${componentId}: 記録値 ${formatObdBridgeReadoutValue(item)} / 下限 ${min} / 上限 ${max} / 記録判定: ${status}`;
 }
 
 function buildObdOnboardMonitorDisplayLines(snapshot = null) {
@@ -11103,7 +11108,7 @@ function buildObdOnboardMonitorDisplayLines(snapshot = null) {
   if (ecuSnapshots.length && parentErrorLabel) lines.push(`全体: ${parentErrorLabel}`);
   (ecuSnapshots.length ? ecuSnapshots : [snapshot]).forEach((group) => {
     const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
-    lines.push(`${ecu}: ${formatObdReadoutStatus(group.onboardMonitorReadoutStatus || group.onboard_monitor_readout_status, "状態未確認")}`);
+    lines.push(`${ecu}${formatObdMode06Route(group) ? ` [${formatObdMode06Route(group)}]` : ""}: ${formatObdReadoutStatus(group.onboardMonitorReadoutStatus || group.onboard_monitor_readout_status, "状態未確認")}`);
     const errorLabel = formatReadoutErrorCodes(group.errorCodes?.length ? group.errorCodes : group.error_codes || []);
     if (errorLabel) lines.push(`${ecu}: ${errorLabel}`);
     if (ecuSnapshots.length && !group.tests?.length && group.testCount > 0) {
@@ -11136,7 +11141,7 @@ function createObdMode06ReviewControls(tests, rows) {
   const panel = document.createElement("div"); panel.className = "obd-mode06-review";
   const controls = document.createElement("div"); controls.className = "obd-readiness-controls";
   const label = document.createElement("label"); label.textContent = "Mode06のECU・TID・CIDを検索";
-  const search = document.createElement("input"); search.type = "search"; search.placeholder = "例：7E8、TID 01、CID 02"; label.appendChild(search);
+  const search = document.createElement("input"); search.type = "search"; search.placeholder = "例：7E8、TID 01、CAN-PT"; label.appendChild(search);
   const stateLabel = document.createElement("label"); stateLabel.textContent = "Mode06の記録判定";
   const filter = document.createElement("select"); filter.setAttribute("aria-label", "Mode06の記録判定");
   for (const [value, text] of [["all", "すべて"], ["attention", "不合格・未判定"], ["fail", "不合格のみ"], ["unknown", "未判定のみ"], ["pass", "合格のみ"]]) {
@@ -11146,7 +11151,7 @@ function createObdMode06ReviewControls(tests, rows) {
   const reset = document.createElement("button"); reset.type = "button"; reset.className = "secondary-button"; reset.textContent = "Mode06の絞り込みを解除";
   const count = document.createElement("p"); count.setAttribute("role", "status"); count.setAttribute("aria-live", "polite"); count.dataset.mode06ReviewCount = "";
   const entries = tests.map((test, index) => ({ row: rows[index],
-    text: `${test.sourceEcu || test.source_ecu || "ECU未記録"} TID ${test.testId ?? test.tid ?? "未記録"} CID ${test.componentId ?? test.cid ?? "未記録"}`.toLocaleLowerCase(),
+    text: `${formatObdMode06Route(test)} ${test.sourceEcu || test.source_ecu || "ECU未記録"} TID ${test.testId ?? test.tid ?? "未記録"} CID ${test.componentId ?? test.cid ?? "未記録"}`.toLocaleLowerCase(),
     state: ["pass", "fail"].includes(test.status) ? test.status : "unknown" }));
   controls.hidden = entries.length === 0;
   entries.forEach((entry) => { entry.row.dataset.mode06ReviewRow = entry.state; });
@@ -13171,15 +13176,18 @@ function renderObdFreezeFrameInventoryComparison(session) {
 function renderObdReadinessEcuInventoryComparison(session) {
   const comparison = session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary;
   for (const [targetId, families] of [["obdSessionDetailReadiness", [["readinessMonitor", "監視状態"]]],
-    ["obdSessionDetailEcuInfo", [["ecuInfoItem", "項目"], ["ecuInfoKeyValue", "CAL ID/CVN"], ["mode09SupportedType", "対応情報種別"]]]]) {
+    ["obdSessionDetailEcuInfo", [["ecuInfoItem", "項目"], ["ecuInfoKeyValue", "CAL ID/CVN"], ["mode09SupportedType", "対応情報種別"]]],
+    ["obdSessionDetailSupportedPid", [["supportedPid", "対応PID"]]],
+    ["obdSessionDetailMode06", [["onboardMonitor", "検査状態"], ["onboardMonitorValue", "検査値"]]]]) {
     const target = document.getElementById(targetId);
     if (!target) continue;
     target.querySelector(".obd-readout-comparison-note")?.remove();
     if (!comparison) continue;
     const notes = families.map(([field, label]) => {
-      if (comparison[field + "ComparisonBlockedByKeyVersion"] || comparison[field + "ComparisonBlockedByScopeVersion"]) return label + "は保存記録の比較形式が旧版・不一致・不正のため比較できません。差分なしとは判定しません。";
+      if ((field === "onboardMonitorValue" && comparison.onboardMonitorComparisonBlockedByKeyVersion) || comparison[field + "ComparisonBlockedByKeyVersion"] || comparison[field + "ComparisonBlockedByScopeVersion"]) return label + "は保存記録の比較形式が旧版・不一致・不正のため比較できません。差分なしとは判定しません。";
       if (!comparison[field + "ComparisonAvailable"]) return label + "は共通する取得済み範囲を確認できないため比較できません。";
-      return label + "：比較対象内の追加 " + (comparison[field + "AddedKeys"] || []).length + "件 / 削除 " + (comparison[field + "RemovedKeys"] || []).length + "件";
+      const keyField = field === "onboardMonitor" ? "onboardMonitorTest" : field;
+      return label + "：比較対象内の追加 " + (comparison[keyField + "AddedKeys"] || []).length + "件 / 削除 " + (comparison[keyField + "RemovedKeys"] || []).length + "件";
     });
     const note = document.createElement("p");
     note.className = "empty-state obd-readout-comparison-note";
@@ -13348,13 +13356,13 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   }
   if (!mode09SupportedTypeComparisonAvailable && (importedMode09SupportedTypeCount > 0 || currentMode09SupportedTypeCount > 0)) parts.push("Mode09対応詳細比較不可");
   if (addedSupportedPidKeys.length || removedSupportedPidKeys.length) {
-    const displaySupportedPidKey = (key) => String(key || "").split("|")[0] || "PID";
+    const displaySupportedPidKey = (key) => readFreezeFrameInventoryDisplayParts(key, "supported_pid_v2")[0] || "PID";
     parts.push(`PID対応:${[...addedSupportedPidKeys.map((key) => `+${displaySupportedPidKey(key)}`), ...removedSupportedPidKeys.map((key) => `-${displaySupportedPidKey(key)}`)].slice(0, 3).join(",")}`);
   }
   if (!supportedPidComparisonAvailable && (importedSupportedPidCount > 0 || currentSupportedPidCount > 0)) parts.push("PID詳細比較不可");
   if (addedOnboardMonitorTestKeys.length || removedOnboardMonitorTestKeys.length) {
     const displayOnboardMonitorKey = (key) => {
-      const [testId, componentId, , status] = String(key || "").split("|");
+      const [testId, componentId, , status] = readFreezeFrameInventoryDisplayParts(key, "mode06_test_v2");
       return (testId || "TID") + "-" + (componentId || "CID") + ":" + (status === "pass" ? "合格" : status === "fail" ? "範囲外" : "不明");
     };
     parts.push("M06状態:" + [...addedOnboardMonitorTestKeys.map((key) => "+" + displayOnboardMonitorKey(key)), ...removedOnboardMonitorTestKeys.map((key) => "-" + displayOnboardMonitorKey(key))].slice(0, 3).join(","));
@@ -13362,9 +13370,9 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   if (!onboardMonitorComparisonAvailable && (importedOnboardMonitorTestCount > 0 || currentOnboardMonitorTestCount > 0)) parts.push("M06詳細比較不可");
   if (addedOnboardMonitorValueKeys.length || removedOnboardMonitorValueKeys.length) {
     const displayOnboardMonitorValueKey = (key) => {
-      const [testId, componentId, ecu, value, minimum, maximum] = String(key || "").split("|");
-      const limits = minimum !== "-" && maximum !== "-" ? ` (${minimum}-${maximum})` : "";
-      return `${testId || "TID"}-${componentId || "CID"}${ecu && ecu !== "-" ? `@${ecu}` : ""}:${value || "?"}${limits}`;
+      const [testId, componentId, ecu, value, minimum, maximum] = readFreezeFrameInventoryDisplayParts(key, "mode06_value_v2");
+      const limits = minimum != null && maximum != null && minimum !== "-" && maximum !== "-" ? ` (${minimum}-${maximum})` : "";
+      return `${testId || "TID"}-${componentId || "CID"}${ecu && ecu !== "-" ? `@${ecu}` : ""}:${value ?? "?"}${limits}`;
     };
     parts.push(`M06値:${[...addedOnboardMonitorValueKeys.map((key) => `+${displayOnboardMonitorValueKey(key)}`), ...removedOnboardMonitorValueKeys.map((key) => `-${displayOnboardMonitorValueKey(key)}`)].slice(0, 3).join(",")}`);
   }

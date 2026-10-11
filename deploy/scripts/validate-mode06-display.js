@@ -7,7 +7,7 @@ const extract = (name) => source.match(new RegExp(`function ${name}\\([^)]*\\) \
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 const context = vm.createContext({ NO_DATA: "未記録" });
-vm.runInContext(["formatObdOnboardMonitorTestLine", "buildObdOnboardMonitorDisplayLines", "formatObdBridgeOnboardMonitorSummary",
+vm.runInContext(["formatObdMode06Route", "formatObdOnboardMonitorTestLine", "buildObdOnboardMonitorDisplayLines", "formatObdBridgeOnboardMonitorSummary",
   "formatReadoutErrorCodes", "buildObdFreezeFrameDispositionLines", "formatObdBridgeReadoutValue", "formatObdBridgeCompositeValue", "formatObdReadoutStatus"].map(extract).join("\n"), context);
 for (const [status, label] of [["pass", "合格"], ["fail", "不合格"], ["unknown", "未判定"], [null, "未判定"],
   [undefined, "未判定"], ["", "未判定"], ["PASS", "未判定 (PASS)"], ["<img src=x>", "未判定 (<img src=x>)"]]) {

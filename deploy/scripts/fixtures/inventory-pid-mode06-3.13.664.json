@@ -1,0 +1,235 @@
+{
+  "version": "3.13.664",
+  "pidUnscoped": {
+    "supportedPidCount": 1,
+    "supported_pid_count": 1,
+    "supportedPidKeys": [
+      "0C|7E8"
+    ],
+    "supported_pid_keys": [
+      "0C|7E8"
+    ],
+    "supportedPidEvidenceRecorded": true,
+    "supported_pid_evidence_recorded": true,
+    "supportedPidReportedEcuEvidenceRecorded": true,
+    "supported_pid_reported_ecu_evidence_recorded": true,
+    "supportedPidReportedEcuIds": [
+      "7E8"
+    ],
+    "supported_pid_reported_ecu_ids": [
+      "7E8"
+    ],
+    "supportedPidUnresolvedEcuIds": [],
+    "supported_pid_unresolved_ecu_ids": [],
+    "supportedPidReportedEcuScopeKeys": [
+      "7E8"
+    ],
+    "supported_pid_reported_ecu_scope_keys": [
+      "7E8"
+    ],
+    "supportedPidUnresolvedEcuScopeKeys": [],
+    "supported_pid_unresolved_ecu_scope_keys": [],
+    "supportedPidReportedEcuKeys": [
+      "0C|7E8"
+    ],
+    "supported_pid_reported_ecu_keys": [
+      "0C|7E8"
+    ],
+    "onboardMonitorTestCount": 0,
+    "onboard_monitor_test_count": 0,
+    "onboardMonitorTestKeys": [],
+    "onboard_monitor_test_keys": [],
+    "onboardMonitorEvidenceRecorded": false,
+    "onboard_monitor_evidence_recorded": false,
+    "onboardMonitorReportedEcuEvidenceRecorded": false,
+    "onboard_monitor_reported_ecu_evidence_recorded": false,
+    "onboardMonitorReportedEcuIds": [],
+    "onboard_monitor_reported_ecu_ids": [],
+    "onboardMonitorUnresolvedEcuIds": [],
+    "onboard_monitor_unresolved_ecu_ids": [],
+    "onboardMonitorReportedEcuTestKeys": [],
+    "onboard_monitor_reported_ecu_test_keys": [],
+    "onboardMonitorValueCount": 0,
+    "onboard_monitor_value_count": 0,
+    "onboardMonitorValueKeys": [],
+    "onboard_monitor_value_keys": [],
+    "onboardMonitorValueEvidenceRecorded": false,
+    "onboard_monitor_value_evidence_recorded": false,
+    "onboardMonitorReportedEcuValueKeys": [],
+    "onboard_monitor_reported_ecu_value_keys": []
+  },
+  "pidScoped": {
+    "supportedPidCount": 1,
+    "supported_pid_count": 1,
+    "supportedPidKeys": [
+      "0C|7E8|can-pt|-|-"
+    ],
+    "supported_pid_keys": [
+      "0C|7E8|can-pt|-|-"
+    ],
+    "supportedPidEvidenceRecorded": true,
+    "supported_pid_evidence_recorded": true,
+    "supportedPidReportedEcuEvidenceRecorded": true,
+    "supported_pid_reported_ecu_evidence_recorded": true,
+    "supportedPidReportedEcuIds": [
+      "7E8"
+    ],
+    "supported_pid_reported_ecu_ids": [
+      "7E8"
+    ],
+    "supportedPidUnresolvedEcuIds": [],
+    "supported_pid_unresolved_ecu_ids": [],
+    "supportedPidReportedEcuScopeKeys": [
+      "7E8|can-pt|-|-"
+    ],
+    "supported_pid_reported_ecu_scope_keys": [
+      "7E8|can-pt|-|-"
+    ],
+    "supportedPidUnresolvedEcuScopeKeys": [],
+    "supported_pid_unresolved_ecu_scope_keys": [],
+    "supportedPidReportedEcuKeys": [
+      "0C|7E8|can-pt|-|-"
+    ],
+    "supported_pid_reported_ecu_keys": [
+      "0C|7E8|can-pt|-|-"
+    ],
+    "onboardMonitorTestCount": 0,
+    "onboard_monitor_test_count": 0,
+    "onboardMonitorTestKeys": [],
+    "onboard_monitor_test_keys": [],
+    "onboardMonitorEvidenceRecorded": false,
+    "onboard_monitor_evidence_recorded": false,
+    "onboardMonitorReportedEcuEvidenceRecorded": false,
+    "onboard_monitor_reported_ecu_evidence_recorded": false,
+    "onboardMonitorReportedEcuIds": [],
+    "onboard_monitor_reported_ecu_ids": [],
+    "onboardMonitorUnresolvedEcuIds": [],
+    "onboard_monitor_unresolved_ecu_ids": [],
+    "onboardMonitorReportedEcuTestKeys": [],
+    "onboard_monitor_reported_ecu_test_keys": [],
+    "onboardMonitorValueCount": 0,
+    "onboard_monitor_value_count": 0,
+    "onboardMonitorValueKeys": [],
+    "onboard_monitor_value_keys": [],
+    "onboardMonitorValueEvidenceRecorded": false,
+    "onboard_monitor_value_evidence_recorded": false,
+    "onboardMonitorReportedEcuValueKeys": [],
+    "onboard_monitor_reported_ecu_value_keys": []
+  },
+  "mode06Unscoped": {
+    "supportedPidCount": 0,
+    "supported_pid_count": 0,
+    "supportedPidKeys": [],
+    "supported_pid_keys": [],
+    "supportedPidEvidenceRecorded": false,
+    "supported_pid_evidence_recorded": false,
+    "supportedPidReportedEcuEvidenceRecorded": false,
+    "supported_pid_reported_ecu_evidence_recorded": false,
+    "supportedPidReportedEcuIds": [],
+    "supported_pid_reported_ecu_ids": [],
+    "supportedPidUnresolvedEcuIds": [],
+    "supported_pid_unresolved_ecu_ids": [],
+    "supportedPidReportedEcuScopeKeys": [],
+    "supported_pid_reported_ecu_scope_keys": [],
+    "supportedPidUnresolvedEcuScopeKeys": [],
+    "supported_pid_unresolved_ecu_scope_keys": [],
+    "supportedPidReportedEcuKeys": [],
+    "supported_pid_reported_ecu_keys": [],
+    "onboardMonitorTestCount": 1,
+    "onboard_monitor_test_count": 1,
+    "onboardMonitorTestKeys": [
+      "01|02|7E8|pass"
+    ],
+    "onboard_monitor_test_keys": [
+      "01|02|7E8|pass"
+    ],
+    "onboardMonitorEvidenceRecorded": true,
+    "onboard_monitor_evidence_recorded": true,
+    "onboardMonitorReportedEcuEvidenceRecorded": true,
+    "onboard_monitor_reported_ecu_evidence_recorded": true,
+    "onboardMonitorReportedEcuIds": [],
+    "onboard_monitor_reported_ecu_ids": [],
+    "onboardMonitorUnresolvedEcuIds": [],
+    "onboard_monitor_unresolved_ecu_ids": [],
+    "onboardMonitorReportedEcuTestKeys": [
+      "01|02|7E8|pass"
+    ],
+    "onboard_monitor_reported_ecu_test_keys": [
+      "01|02|7E8|pass"
+    ],
+    "onboardMonitorValueCount": 1,
+    "onboard_monitor_value_count": 1,
+    "onboardMonitorValueKeys": [
+      "01|02|7E8|1|0|10"
+    ],
+    "onboard_monitor_value_keys": [
+      "01|02|7E8|1|0|10"
+    ],
+    "onboardMonitorValueEvidenceRecorded": true,
+    "onboard_monitor_value_evidence_recorded": true,
+    "onboardMonitorReportedEcuValueKeys": [
+      "01|02|7E8|1|0|10"
+    ],
+    "onboard_monitor_reported_ecu_value_keys": [
+      "01|02|7E8|1|0|10"
+    ]
+  },
+  "mode06Scoped": {
+    "supportedPidCount": 0,
+    "supported_pid_count": 0,
+    "supportedPidKeys": [],
+    "supported_pid_keys": [],
+    "supportedPidEvidenceRecorded": false,
+    "supported_pid_evidence_recorded": false,
+    "supportedPidReportedEcuEvidenceRecorded": false,
+    "supported_pid_reported_ecu_evidence_recorded": false,
+    "supportedPidReportedEcuIds": [],
+    "supported_pid_reported_ecu_ids": [],
+    "supportedPidUnresolvedEcuIds": [],
+    "supported_pid_unresolved_ecu_ids": [],
+    "supportedPidReportedEcuScopeKeys": [],
+    "supported_pid_reported_ecu_scope_keys": [],
+    "supportedPidUnresolvedEcuScopeKeys": [],
+    "supported_pid_unresolved_ecu_scope_keys": [],
+    "supportedPidReportedEcuKeys": [],
+    "supported_pid_reported_ecu_keys": [],
+    "onboardMonitorTestCount": 1,
+    "onboard_monitor_test_count": 1,
+    "onboardMonitorTestKeys": [
+      "01|02|7E8|pass"
+    ],
+    "onboard_monitor_test_keys": [
+      "01|02|7E8|pass"
+    ],
+    "onboardMonitorEvidenceRecorded": true,
+    "onboard_monitor_evidence_recorded": true,
+    "onboardMonitorReportedEcuEvidenceRecorded": true,
+    "onboard_monitor_reported_ecu_evidence_recorded": true,
+    "onboardMonitorReportedEcuIds": [],
+    "onboard_monitor_reported_ecu_ids": [],
+    "onboardMonitorUnresolvedEcuIds": [],
+    "onboard_monitor_unresolved_ecu_ids": [],
+    "onboardMonitorReportedEcuTestKeys": [
+      "01|02|7E8|pass"
+    ],
+    "onboard_monitor_reported_ecu_test_keys": [
+      "01|02|7E8|pass"
+    ],
+    "onboardMonitorValueCount": 1,
+    "onboard_monitor_value_count": 1,
+    "onboardMonitorValueKeys": [
+      "01|02|7E8|1|0|10"
+    ],
+    "onboard_monitor_value_keys": [
+      "01|02|7E8|1|0|10"
+    ],
+    "onboardMonitorValueEvidenceRecorded": true,
+    "onboard_monitor_value_evidence_recorded": true,
+    "onboardMonitorReportedEcuValueKeys": [
+      "01|02|7E8|1|0|10"
+    ],
+    "onboard_monitor_reported_ecu_value_keys": [
+      "01|02|7E8|1|0|10"
+    ]
+  }
+}

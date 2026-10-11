@@ -702,6 +702,44 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.deepEqual(restored.ecuInfoSnapshot.items,JSON.parse(state).ecuInfoSnapshot.items);
     }
     console.log('Readiness/ECU inventory v2: legacy blocked, acquired routes matched, value and route changes shown, real import/archive and responsive themes passed.');
+    for (const kind of ['legacy','routes','partial']) {
+      const snapshot=(bus,partial=false)=>({supportedPidMatrix:{supportedPidReadoutStatus:'reported',supportedPidEcuSnapshots:[{sourceEcu:'7E8',networkBus:bus,supportedPidReadoutStatus:'reported',supportedPids:['0C']}]},onboardMonitorSnapshot:partial?{onboardMonitorReadoutStatus:'unparsed',onboardMonitorEcuSnapshots:[{sourceEcu:'7E8',networkBus:bus,onboardMonitorReadoutStatus:'reported',tests:[{testId:'01',componentId:'02',value:0,min:0,max:10}]},{sourceEcu:'7E8',networkBus:bus==='CAN-PT'?'CAN-BODY':'CAN-PT',onboardMonitorReadoutStatus:'unparsed',tests:[]}]}:{onboardMonitorReadoutStatus:'reported',tests:[{testId:'01',componentId:'02',sourceEcu:'7E8',networkBus:bus,value:0,min:0,max:10}]}});
+      const old=JSON.parse(fs.readFileSync(path.join(root,'scripts/fixtures/inventory-pid-mode06-3.13.664.json'),'utf8'));
+      const baseline=kind==='legacy'?{...old.pidScoped,...old.mode06Scoped}:model.buildDiagnosticScanSession(snapshot('CAN-PT',kind==='partial')).coreReadoutInventorySummary;
+      const prepared=model.buildDiagnosticScanSession({...snapshot('CAN-BODY',kind==='partial'),core_readout_inventory_summary:baseline});
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      const choose=page.waitForEvent('filechooser');page.once('dialog',d=>d.accept());
+      await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+      await (await choose).setFiles({name:'pid-mode06-'+kind+'.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(prepared)))});
+      await page.waitForFunction(()=>obdDevSession.lastSession?.coreReadoutInventorySummary?.onboardMonitorKeyVersion===2);
+      const state=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+      assert.equal(JSON.parse(state).importedCoreReadoutInventoryComparisonSummary.onboardMonitorValueComparisonAvailable,kind==='routes');
+      for(const [button,id] of [['対応PID','SupportedPid'],['Mode06','Mode06']]){
+        await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+        await page.getByRole('button',{name:button+'の詳細を開く',exact:true}).click();
+        const note=page.locator('#obdSessionDetail'+id+' .obd-readout-comparison-note');await note.waitFor({state:'visible'});
+        const text=await note.innerText();
+        if(kind==='legacy')assert.ok(text.includes('比較できません。差分なしとは判定しません。'));
+        else if(kind==='partial'&&id==='Mode06')assert.ok(text.includes('共通する取得済み範囲'));
+        else assert.ok(text.includes('比較対象内の追加 1件 / 削除 1件'));
+        if(id==='Mode06'){
+          const search=page.getByRole('searchbox',{name:'Mode06のECU・TID・CIDを検索',exact:true});
+          await search.fill('CAN-BODY');assert.equal(await page.locator('[data-mode06-review-row]:visible').count(),1);
+          await search.fill('CAN-PT');assert.equal(await page.locator('[data-mode06-review-row]:visible').count(),0);
+          await search.fill('');
+        }
+        for(const width of [390,1280])for(const dark of [false,true]){
+          await page.setViewportSize({width,height:844});await page.evaluate(d=>document.body.classList.toggle('dark',d),dark);
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+          await note.screenshot({path:path.join(output,'pid-mode06-'+kind+'-'+id+'-'+width+'-'+dark+'.png')});
+        }
+      }
+      assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),state);
+      const restored=await page.evaluate(()=>window.ObdReadOnly.buildDiagnosticScanSessionFromJson(JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession))));
+      assert.deepEqual(restored.onboardMonitorSnapshot.tests,JSON.parse(state).onboardMonitorSnapshot.tests);
+      assert.equal(restored.importedCoreReadoutInventoryComparisonSummary.onboardMonitorValueComparisonAvailable,kind==='routes');
+    }
+    console.log('PID/Mode06 v2: legacy unavailable, route changes, partial intersection, route search, zero values and archive passed.');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
