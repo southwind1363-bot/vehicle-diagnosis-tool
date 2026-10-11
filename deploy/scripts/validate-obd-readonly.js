@@ -1,3 +1,4 @@
+import "./validate-readout-scope-identity-review.js";
 import "./validate-inventory-pid-mode06-key-review.js";
 import "./validate-inventory-readiness-ecu-key-review.js";
 import "./validate-inventory-freeze-frame-key-review.js";

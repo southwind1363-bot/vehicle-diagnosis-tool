@@ -5730,12 +5730,7 @@
   }
 
   function getReadoutNetworkScopeKey(input = {}) {
-    const scope = normalizeReadoutNetworkScope(input);
-    if (scope.conflict) return null;
-    if (!scope.provided) return "";
-    return [scope.networkBus, scope.networkChannel, scope.gatewayRoute]
-      .map((value) => String(value || "-").normalize("NFKC").trim().toLowerCase().replace(/\|/g, " "))
-      .join("|");
+    return getDtcReadoutNetworkScopeIdentity(input);
   }
 
   function readoutNetworkScopeMatches(expected = {}, observed = {}) {

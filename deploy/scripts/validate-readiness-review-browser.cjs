@@ -740,6 +740,40 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(restored.importedCoreReadoutInventoryComparisonSummary.onboardMonitorValueComparisonAvailable,kind==='routes');
     }
     console.log('PID/Mode06 v2: legacy unavailable, route changes, partial intersection, route search, zero values and archive passed.');
+    // Re-import a genuine 3.13.665 snapshot; normalize it only inside the browser import path.
+    const legacyScopes=JSON.parse(fs.readFileSync(path.join(root,'scripts/fixtures/readout-scope-3.13.665.json'),'utf8'));
+    for(const sameRoute of [false,true]){
+      const oldSnapshot=JSON.parse(JSON.stringify(legacyScopes.rows[0].snapshot));
+      if(sameRoute){oldSnapshot.items[0].networkBus='A|B';oldSnapshot.items[0].network_bus='A|B';oldSnapshot.items[0].value='ACQUIRED-ROUTE';}
+      const payload=model.buildBridgeSessionExportPayload(model.buildDiagnosticScanSession({}));
+      payload.session.ecuInfoSnapshot=oldSnapshot;payload.session.ecu_info_snapshot=oldSnapshot;
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      const pick=page.waitForEvent('filechooser');page.once('dialog',d=>d.accept());
+      await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+      await(await pick).setFiles({name:'shared-scope-'+sameRoute+'.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(payload))});
+      await page.waitForFunction(()=>obdDevSession.lastSession?.ecuInfoSnapshot?.ecuInfoEcuAggregateSummary?.ecuCount===2);
+      const before=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+      const snapshot=JSON.parse(before).ecuInfoSnapshot;
+      assert.deepEqual(snapshot.items.map(row=>row.value),sameRoute?['ACQUIRED-ROUTE']:[]);
+      assert.equal(snapshot.ecuInfoEcuAggregateSummary.reportedEcuCount,1);
+      assert.equal(snapshot.ecuInfoEcuAggregateSummary.unparsedEcuCount,1);
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      await page.getByRole('button',{name:'ECU情報の詳細を開く',exact:true}).click();
+      const card=page.locator('#obdSessionDetailEcuInfo');await card.waitFor({state:'visible'});
+      assert.equal((await card.innerText()).includes('UNRESOLVED-ROUTE'),false);
+      if(sameRoute)assert.ok((await card.innerText()).includes('ACQUIRED-ROUTE'));
+      for(const width of [390,1280])for(const dark of [false,true]){
+        await page.setViewportSize({width,height:844});await page.evaluate(d=>document.body.classList.toggle('dark',d),dark);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+        await card.screenshot({path:path.join(output,'shared-scope-'+sameRoute+'-'+width+'-'+dark+'.png')});
+      }
+      assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),before);
+      const restored=await page.evaluate(()=>window.ObdReadOnly.buildDiagnosticScanSessionFromJson(JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession))));
+      assert.deepEqual(restored.ecuInfoSnapshot.items,snapshot.items);
+      assert.equal(restored.ecuInfoSnapshot.ecuInfoEcuAggregateSummary.ecuCount,2);
+      assert.equal(restored.vehicleCommandEnabled,false);assert.equal(restored.wouldTransmit,false);
+    }
+    console.log('Shared scope identity: legacy JSON re-import, wrong-route exclusion, matching-route control, two acquisition scopes, responsive themes and archive passed.');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('DTC-linked FF browser passed: identical readings retain frames, RAW unit suppressed, unrelated ECU/frame excluded, six-row limit, responsive themes and unchanged archive.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
