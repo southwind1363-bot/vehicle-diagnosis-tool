@@ -61,7 +61,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "same-id",
@@ -144,7 +146,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "id-title-collision",
@@ -212,7 +216,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "different-next-step",
@@ -273,7 +279,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "different-level",
@@ -334,7 +342,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "exact-computed",
@@ -395,7 +405,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "reordered-keys",
@@ -456,7 +468,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "extra-metadata",
@@ -521,7 +535,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "duplicate-records",
@@ -588,7 +604,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "anonymous",
@@ -661,7 +679,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "empty-recorded",
@@ -715,7 +735,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     },
     {
       "id": "normal-voltage",
@@ -788,7 +810,9 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "8ae5f95cb7b204865191b921688698c16c0c3ce5c5f6c2f606b5028592638279",
+      "oldMergeRestSha256": "cd234929076ade2ac81a47f2df5addc29b8fa5e583c3b7215e758b87dbc39b8a"
     },
     {
       "id": "raw-voltage",
@@ -862,7 +886,9 @@
           "note": "未換算RAW値",
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "d11f1974a4aa39ed068caadf2e221c029ee03638d776e9592df1c0432f0ee8eb",
+      "oldMergeRestSha256": "14f9ea4102f2649b820f39098642327017b5f92011c045b31ca42f9012d5d988"
     },
     {
       "id": "no-values",
@@ -893,7 +919,9 @@
           "nextStep": "保存時の確認手順"
         }
       ],
-      "oldMonitorValues": []
+      "oldMonitorValues": [],
+      "oldNormalizationRestSha256": "51627d25461685cf64c33701c5953d036bd367fd232c7bb96779763bd0bdd118",
+      "oldMergeRestSha256": "0c5e5b2f7d030f224739a95cc38c3e2f2c644ad1bbab6dfc60eab069d28ba85e"
     },
     {
       "id": "crowded-same-title",
@@ -996,7 +1024,10 @@
           "note": null,
           "sourceLine": 1
         }
-      ]
+      ],
+      "oldNormalizationRestSha256": "32b5938aa83df7f32ec919721e2e3f4dbbe7d087e181eda118f96dd09f41c395",
+      "oldMergeRestSha256": "c84ccaee7fa7411193c8a36c19ae47fc74908f2bd5addbd5859e748447e27e9c"
     }
-  ]
+  ],
+  "hashScope": "SHA256 of JSON outside all monitorInsights/monitor_insights fields; VM Date frozen to 1791712800000; captured before applying 3.13.674"
 }

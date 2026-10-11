@@ -1,6 +1,6 @@
-# 同名分析文の原文保持案（適用前）
+# 同名分析文の原文保持・適用記録（3.13.674）
 
-2026-10-11 / 本体3.13.673 / 調査対象dd98ac78
+2026-10-11 / 調査時3.13.673・対象dd98ac78 / 確認後3.13.674へ適用
 
 ## 再現した原文の損失
 
@@ -17,7 +17,7 @@ normalizeBridgeLivePidSnapshotとmergeDiagnosticInputsは、分析文をIDまた
 
 旧出力はscripts/fixtures/insight-retention-legacy-3.13.673.jsonへ固定した。実車や作成元の真正性を確認したものではない。
 
-## 適用する差分
+## 適用した差分
 
 2か所のMap統合を共通のmergeRecordedMonitorInsightsへ置き換える。
 
@@ -36,7 +36,7 @@ normalizeBridgeLivePidSnapshotとmergeDiagnosticInputsは、分析文をIDまた
 - camel/snake aliasの入力優先順は維持する。両aliasに異なる配列がある場合の統合、無効PIDに対する既存の安全再計算、複数ECU・経路別の分析は今回の対象外。
 - 原文の真正性や作成情報を証明する新規の保存契約は導入しない。
 
-## 検証
+## 適用前の検証記録
 
 node deploy/scripts/validate-insight-retention-proposal.js
 
@@ -48,4 +48,12 @@ node deploy/scripts/validate-insight-retention-browser.js
 
 隔離ブラウザーに返すobd-readonly.jsだけを差し替え、5JSONを実ファイル取込する検証が合格した。原文・順序・付随情報・既存重複、再計算群との分離、段階表示、390/1280px明暗、展開前後の印刷、保存復元、セッション不変、外部/車両要求0を確認。成果物: insight-retention-proposal-lM2OxQ。印刷メディアの画像で9件全ての原文/再計算文と表示件数を確認した。実プリンター・実車試験ではない。
 
-本体、版番号、配布ZIPは3.13.673のまま。保存される分析文の内容・件数を変えるため、適用範囲の確認後に本体の回帰検証へ切り替え、全体検証・配布・公開確認を行う。
+## 本体適用後
+
+ユーザーの適用確認後、2か所の統合処理と共通関数を本体へ反映し、3.13.674へ更新した。保存フィールド名・数値分類・閾値・通信権限は維持する。
+
+検証は本体obd-readonly.jsの直接実行へ切り替え、全体OBD検証へ組み込んだ。適用前に同一固定時刻で取得した旧版出力のSHA256をfixtureへ追加し、分析文以外の全項目を比較する。旧版の上書き挙動そのものを現行本体へ要求する2検査/ケースは除き、実データ保持・反復保存・不変条件を検証する。本体15ケース・586項目が合格した。
+
+本体ブラウザー5JSONの検証は合格。試作用の応答差し替えを撤去し、原文・順序・付随情報・重複、段階表示、明暗/幅、印刷、保存復元、セッション不変、外部/車両要求0を確認した。成果物: insight-retention-production-NYDJNy。
+
+全体検証・配布ZIP・公開確認の結果はDEVELOPMENT-ROADMAP.mdの3.13.674履歴に記録する。

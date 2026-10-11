@@ -6125,10 +6125,7 @@
     const observationCondition = normalizeLivePidObservationCondition(observationConditionInput);
     const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary, data.monitor_value_summary);
     const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);
-    const monitorInsights = [...new Map([
-      ...explicitMonitorInsights,
-      ...analyzeMonitorValues(monitorValues)
-    ].map((item, index) => [item?.id || item?.title || `monitor_insight_${index}`, item])).values()];
+    const monitorInsights = mergeRecordedMonitorInsights(explicitMonitorInsights, analyzeMonitorValues(monitorValues));
 
     return {
       source: "local_bridge",
@@ -31473,16 +31470,7 @@
     const bridgeMonitorValueSummary = resolveMonitorValueSummary([], ...bridgeMonitorValueSummaryInputs);
     const recalculatedMonitorValueSummary = buildMonitorValueSummary(monitorValues);
     const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);
-    const monitorInsights = [...new Map([
-      ...bridgeMonitorInsights.map((item) => [
-        item?.id || item?.title || JSON.stringify(item),
-        item
-      ]),
-      ...recalculatedMonitorInsights.map((item) => [
-        item?.id || item?.title || JSON.stringify(item),
-        item
-      ])
-    ]).values()];
+    const monitorInsights = mergeRecordedMonitorInsights(bridgeMonitorInsights, recalculatedMonitorInsights);
     const monitorValueSummary = hasBridgeMonitorValueSummary
       ? {
         totalCount: Math.max(recalculatedMonitorValueSummary.totalCount || 0, bridgeMonitorValueSummary.totalCount || 0),
@@ -45520,6 +45508,18 @@
       sourceLength: raw.length,
       retainedRawText: false
     };
+  }
+
+  function mergeRecordedMonitorInsights(recorded, recalculated) {
+    const merged = [...recorded];
+    for (const insight of recalculated) {
+      const keys = Object.keys(insight);
+      const alreadyRecorded = merged.some(item => item && typeof item === "object" && !Array.isArray(item)
+        && Object.keys(item).length === keys.length
+        && keys.every(key => Object.prototype.hasOwnProperty.call(item, key) && item[key] === insight[key]));
+      if (!alreadyRecorded) merged.push(insight);
+    }
+    return merged;
   }
 
   function analyzeMonitorValues(values = []) {

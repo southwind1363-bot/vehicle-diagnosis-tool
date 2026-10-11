@@ -5,17 +5,16 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
-import {applyInsightRetentionProposal} from './insight-retention-proposal.js';
 
 const require = createRequire(import.meta.url);
 const root = fileURLToPath(new URL('../',import.meta.url));
 const fixture = JSON.parse(fs.readFileSync(new URL('./fixtures/insight-retention-legacy-3.13.673.json',import.meta.url),'utf8'));
-const coreSource = applyInsightRetentionProposal(fs.readFileSync(path.join(root,'obd-readonly.js'),'utf8'));
+const coreSource = fs.readFileSync(path.join(root,'obd-readonly.js'),'utf8');
 const modelContext = vm.createContext({window:{}}); vm.runInContext(coreSource,modelContext);
 const model = modelContext.window.ObdReadOnly;
 model.configureMonitorDefinitions(JSON.parse(fs.readFileSync(path.join(root,'data/obd-monitor-definitions.json'),'utf8')));
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const output = fs.mkdtempSync(path.join(os.tmpdir(),'insight-retention-proposal-'));
+const output = fs.mkdtempSync(path.join(os.tmpdir(),'insight-retention-production-'));
 const browser = await chromium.launch({channel:'chrome',headless:true});
 const errors=[], blocked=[];
 try {
@@ -32,7 +31,7 @@ try {
     const file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)));
     const relative=path.relative(root,file);
     if(relative.startsWith('..')||path.isAbsolute(relative)||!fs.existsSync(file))return route.fulfill({status:404,body:''});
-    await route.fulfill({contentType:{'.js':'text/javascript','.json':'application/json','.html':'text/html','.css':'text/css','.svg':'image/svg+xml'}[path.extname(file)]||'text/plain',body:url.pathname==='/obd-readonly.js'?coreSource:fs.readFileSync(file)});
+    await route.fulfill({contentType:{'.js':'text/javascript','.json':'application/json','.html':'text/html','.css':'text/css','.svg':'image/svg+xml'}[path.extname(file)]||'text/plain',body:fs.readFileSync(file)});
   });
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.goto('http://127.0.0.1/');
@@ -75,5 +74,5 @@ try {
     await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
   }
   assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
-  console.log('Insight retention proposal browser: five real JSON imports, original text/order/metadata retained, duplicate records preserved, pagination, print, responsive themes, archive stability, zero external/vehicle requests. Artifacts: '+output);
+  console.log('Insight retention production browser: five real JSON imports, original text/order/metadata retained, duplicate records preserved, pagination, print, responsive themes, archive stability, zero external/vehicle requests. Artifacts: '+output);
 } finally { await browser.close(); }
