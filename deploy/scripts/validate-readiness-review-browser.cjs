@@ -449,8 +449,14 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
             await detail.screenshot({ path: path.join(output, 'compound-' + kind + '-' + selector.slice(1) + '-' + width + '-' + dark + '.png') });
           }
+          if(kind==='raw'&&width===390)await require('./validate-readout-print.cjs')(page,output,'raw-'+selector.slice(1));
           await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
         }
+      }
+      if(kind==='raw'){
+        const overview=await page.locator('#obdSimpleResultSummary').innerText();
+        assert.ok(overview.includes('ライブデータ')&&overview.includes(payloads.length+'項目'));
+        await require('./validate-readout-print.cjs')(page,output,'raw-overview');
       }
       assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), compoundBefore);
       const compoundArchive = await page.evaluate(() => JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
@@ -792,11 +798,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const detail=page.locator(selector);await detail.waitFor({state:'visible'});
       const text=await detail.innerText();assert.ok(text.includes('16進形式の文字列として保存されています。'));assert.ok(text.includes('PID A5の数値記録：'));assert.ok(text.includes('1.176'));
       for(const width of [390,1280])for(const dark of [false,true]){await page.setViewportSize({width,height:844});await page.evaluate(d=>document.body.classList.toggle('dark',d),dark);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await detail.screenshot({path:path.join(output,'late-legacy-'+selector.slice(1)+'-'+width+'-'+dark+'.png')});}
+      await require('./validate-readout-print.cjs')(page,output,'late-legacy-'+selector.slice(1));
     }
     assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),lateBefore);
     const lateRestored=await page.evaluate(()=>window.ObdReadOnly.buildDiagnosticScanSessionFromJson(JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession))));
     for(const field of ['livePidSnapshot','freezeFrameSnapshot'])assert.deepEqual(lateRestored[field].monitorValues,JSON.parse(lateBefore)[field].monitorValues);
-    console.log('Late PID legacy: A4 text and A5 numeric preserved, review notes visible in live/FF, responsive themes and archive passed.');
+    console.log('Late PID legacy: A4 text and A5 numeric preserved, review notes visible in live/FF and print, responsive themes and archive passed.');
     const nativeA5=JSON.parse(fs.readFileSync(path.join(root,'scripts/fixtures/native-elm327-live-pid-envelope.json'),'utf8'));
     nativeA5.readout_scope_id='7E8';
     nativeA5.data.monitor_values=[{id:'commanded_diesel_exhaust_fluid',pid:'A5',value:'03 41 0D 28',unit:'',decoded:false,source_ecu:'7E8'}];
