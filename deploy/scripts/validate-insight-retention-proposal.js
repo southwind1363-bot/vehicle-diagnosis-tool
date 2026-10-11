@@ -75,6 +75,10 @@ const collision = fixture.cases.find(test=>test.id==='same-title');
 check(!collision.oldInsights.some(row=>row.detail==='保存時の原文A'),'old overwrite reproduced');
 for(const id of ['exact-computed','reordered-keys','duplicate-records']) {
   const test=fixture.cases.find(row=>row.id===id);
-  equal(after.normalizeBridgeLivePidSnapshot(test.input).monitorInsights.length,test.input.monitorInsights.length,id+': append suppressed only for exact generated content');
+  equal(after.normalizeBridgeLivePidSnapshot(test.input).monitorInsights.length,test.input.monitorInsights.length+1,id+': legacy unscoped text retained beside scoped result');
+  const generated=plain(after.analyzeMonitorValues(test.input.values)[0]);
+  const reordered=Object.fromEntries(Object.entries(generated).reverse());
+  const currentInput={...test.input,monitorInsights:[generated,reordered]};
+  equal(after.normalizeBridgeLivePidSnapshot(currentInput).monitorInsights,currentInput.monitorInsights,id+': identical scoped text not appended and supplied duplicates kept');
 }
 console.log(`Insight retention production regression: ${checks} checks passed / ${selectedCases.length} cases; production code and frozen legacy evidence, no vehicle I/O`);

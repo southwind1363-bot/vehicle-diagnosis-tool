@@ -44,6 +44,7 @@ import "./validate-raw-pid-display-label.js";
 import "./validate-analysis-raw-proposal.js";
 import "./validate-insight-origin-proposal.js";
 import "./validate-insight-retention-proposal.js";
+import "./validate-monitor-scope-proposal.js";
 import "./validate-pid69-raw-proposal.js";
 import "./validate-scanner-navigation.js";
 import "./validate-ecu-info-display.js";
@@ -833,7 +834,7 @@ const mergeDiagnosticInputsFunctionSource = source.match(/function mergeDiagnost
 const readoutCoverageInputFunctionSource = source.match(/function getReadoutCoverageInput[\s\S]*?return input\.readoutCoverage \|\| input\.readout_coverage \|\| input\.readoutCoverageResponse \|\| input\.readout_coverage_response \|\| null;\r?\n  \}/);
 const monitorValueSummaryFunctionSource = source.match(/function resolveMonitorValueSummary[\s\S]*?text_count: textCount\r?\n    \};\r?\n  \}/);
 const buildMonitorValueSummaryFunctionSource = source.match(/function buildMonitorValueSummary[\s\S]*?text_count: textCount\r?\n    \};\r?\n  \}/);
-const analyzeMonitorValuesFunctionSource = source.match(/function analyzeMonitorValues[\s\S]*?return insights\.slice\(0, 6\);\r?\n  \}/);
+const analyzeMonitorValuesFunctionSource = source.match(/function analyzeMonitorValuesWithinScope[\s\S]*?return insights\.slice\(0, 6\);\r?\n  \}/);
 const fuelTrimInsightFunctionSource = source.match(/function addFuelTrimInsight[\s\S]*?\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);

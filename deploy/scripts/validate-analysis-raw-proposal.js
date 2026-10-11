@@ -7,17 +7,19 @@ const c = vm.createContext({ window: {} }); vm.runInContext(source, c);
 const after = c.window.ObdReadOnly;
 const plain = x => JSON.parse(JSON.stringify(x));
 const golden = JSON.parse(fs.readFileSync(new URL('./fixtures/analysis-raw-legacy-3.13.671.json', import.meta.url), 'utf8'));
+// Approved scope annotation; frozen legacy thresholds and text remain unchanged.
+const scoped = rows => rows.map(row=>({...row,detail:'対象: ECU "7E8" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 '+row.detail}));
 let checks=0;
 const eq=(a,b,message)=>{assert.deepEqual(plain(a),plain(b),message);checks++;};
 const flags=[{decoded:false},{undecodedRaw:true},{undecoded_raw:true},{valueType:'raw_hex'},{value_type:'raw_hex'},{valueType:'text'},{value_type:'text'},{decoded:false,valueType:'number'}];
 for(const test of golden.cases){
   assert.ok(test.oldInsights.length > 0); checks++;
   const regular=test.rows.map(({decoded,...row})=>row);
-  eq(after.analyzeMonitorValues(regular),test.regularInsights,'normal values/zero '+test.id);
+  eq(after.analyzeMonitorValues(regular),scoped(test.regularInsights),'normal values/zero '+test.id);
   for(const flag of flags) for(let index=0;index<regular.length;index++){
     const rows=regular.map((row,i)=>i===index?{...row,...flag}:{...row});
     const original=JSON.stringify(rows);
-    const expected=test.excludedOperandInsights[index];
+    const expected=scoped(test.excludedOperandInsights[index]);
     eq(after.analyzeMonitorValues(rows),expected,'exclude only RAW/text operand '+test.id);
     assert.equal(JSON.stringify(rows),original);checks++;
   }

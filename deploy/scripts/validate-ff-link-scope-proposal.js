@@ -14,8 +14,13 @@ const before={buildDiagnosticScanSession(input){
 // Compare only affected snapshots and permissions; unrelated session analyses are outside this regression.
 const select = s => ({dtcSnapshot:s.dtcSnapshot,freezeFrameSnapshot:s.freezeFrameSnapshot,vehicleCommandEnabled:s.vehicleCommandEnabled,wouldTransmit:s.wouldTransmit});
 const plain = x => JSON.parse(JSON.stringify(x));
+// Scoped derived text is covered by validate-monitor-scope-proposal.js.
+// Keep the original FF values, associations and permissions as frozen evidence.
+const withoutDerivedInsights = value => Array.isArray(value) ? value.map(withoutDerivedInsights)
+ : !value || typeof value !== 'object' ? value
+ : Object.fromEntries(Object.entries(value).filter(([key])=>!['monitorInsights','monitor_insights'].includes(key)).map(([key,item])=>[key,withoutDerivedInsights(item)]));
 let checks=0;
-const eq=(a,b,label)=>{assert.deepEqual(plain(a),plain(b),label);checks++;};
+const eq=(a,b,label)=>{assert.deepEqual(withoutDerivedInsights(plain(a)),withoutDerivedInsights(plain(b)),label);checks++;};
 const envelope=JSON.parse(fs.readFileSync(new URL('./fixtures/timeline-legacy-3.13.655.json',import.meta.url),'utf8')).mixedArchive;
 const make=(dtc,trigger,value=trigger)=>({
  dtc_snapshot:{dtc_readout_status:'reported',dtcs:[{code:'P0171',status:'stored',ecu:'7E8',...dtc}]},

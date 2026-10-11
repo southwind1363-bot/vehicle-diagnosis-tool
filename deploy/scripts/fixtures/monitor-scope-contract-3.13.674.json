@@ -1,0 +1,290 @@
+{
+  "version": "3.13.674",
+  "cases": [
+    {
+      "id": "different-ecu-low-first",
+      "oldDigest": "c3490100cd28ae92a523ed1c40cfecc490f2f957b6044beff23bf56dd248b6ac",
+      "approvedNonInsightDigest": "c3490100cd28ae92a523ed1c40cfecc490f2f957b6044beff23bf56dd248b6ac"
+    },
+    {
+      "id": "different-ecu-low-last",
+      "oldDigest": "c980ce300786d128d01b45d620a7200c2fd71d729352dc7e70f646b398973f81",
+      "approvedNonInsightDigest": "c980ce300786d128d01b45d620a7200c2fd71d729352dc7e70f646b398973f81"
+    },
+    {
+      "id": "different-networkBus",
+      "oldDigest": "c80ca9f684809989dbfb667c544c9c104325d49c5fc04e9911b373f6dc00aad7",
+      "approvedNonInsightDigest": "c80ca9f684809989dbfb667c544c9c104325d49c5fc04e9911b373f6dc00aad7"
+    },
+    {
+      "id": "different-networkChannel",
+      "oldDigest": "6354f32296af59ac1608a5cbca5bb9a015226127cada2c6b2bd3f6dacdec55b9",
+      "approvedNonInsightDigest": "6354f32296af59ac1608a5cbca5bb9a015226127cada2c6b2bd3f6dacdec55b9"
+    },
+    {
+      "id": "different-gatewayRoute",
+      "oldDigest": "6cc506da1ede24bf23d6de3a52f82a8835bb7eb8db7c734e6b6bc72c16899f30",
+      "approvedNonInsightDigest": "6cc506da1ede24bf23d6de3a52f82a8835bb7eb8db7c734e6b6bc72c16899f30"
+    },
+    {
+      "id": "cross-ecu-trim",
+      "oldDigest": "88e7fda1357e1642406db9675ccdca78e4094376a9805d1ad1a212b31afc0906",
+      "approvedNonInsightDigest": "88e7fda1357e1642406db9675ccdca78e4094376a9805d1ad1a212b31afc0906"
+    },
+    {
+      "id": "cross-route-trim",
+      "oldDigest": "9d7fc808c2cf25380e613dd2fa47ef2b883cbefe3dce66c6e6851651172c7bf8",
+      "approvedNonInsightDigest": "9d7fc808c2cf25380e613dd2fa47ef2b883cbefe3dce66c6e6851651172c7bf8"
+    },
+    {
+      "id": "same-scope-trim",
+      "oldDigest": "e0097a1207ef2a0b172ddbda88ff37d292d595f86fa303e25414822940cb6807",
+      "approvedNonInsightDigest": "e0097a1207ef2a0b172ddbda88ff37d292d595f86fa303e25414822940cb6807"
+    },
+    {
+      "id": "missing-route-trim",
+      "oldDigest": "043d410faaa50839c2012361f636d18729960953db2c1538dd429db0b84b8958",
+      "approvedNonInsightDigest": "043d410faaa50839c2012361f636d18729960953db2c1538dd429db0b84b8958"
+    },
+    {
+      "id": "missing-ecu-mixed",
+      "oldDigest": "9951b5c8206c58a043e0a74b1deb4c52a725df5f01afff2d2bd79db69dbf7128",
+      "approvedNonInsightDigest": "170c5f5f629b33e104992ff593598b8b5a62484def96e4150182f072de5868f4"
+    },
+    {
+      "id": "legacy-no-scope",
+      "oldDigest": "cbe3cf73b26d7eaca5fdc4d1f48cfac2d1114a72976a3d02100780ccb6e0c5a5",
+      "approvedNonInsightDigest": "cbe3cf73b26d7eaca5fdc4d1f48cfac2d1114a72976a3d02100780ccb6e0c5a5"
+    },
+    {
+      "id": "route-conflict",
+      "oldDigest": "8d042f07d2d7f00b92040416c6f56370a50c755f6d8331558f96b475c8fef650",
+      "approvedNonInsightDigest": "8d042f07d2d7f00b92040416c6f56370a50c755f6d8331558f96b475c8fef650"
+    },
+    {
+      "id": "ecu-conflict",
+      "oldDigest": "c8f446bb6229568fd4afcee719d228feac0888ecde94d1062c2d6ee9fa5c79e5",
+      "approvedNonInsightDigest": "c8f446bb6229568fd4afcee719d228feac0888ecde94d1062c2d6ee9fa5c79e5"
+    },
+    {
+      "id": "separator-routes",
+      "oldDigest": "6d2513fedfee0544bc7d574fb388d5a388fe1a838d2cde2f967107823f8229d0",
+      "approvedNonInsightDigest": "6d2513fedfee0544bc7d574fb388d5a388fe1a838d2cde2f967107823f8229d0"
+    },
+    {
+      "id": "raw-other-ecu",
+      "oldDigest": "d535cd3c05469b229a400bebd10fc370be55ab8af9730e64c212cf0c2188e5a2",
+      "approvedNonInsightDigest": "d535cd3c05469b229a400bebd10fc370be55ab8af9730e64c212cf0c2188e5a2"
+    },
+    {
+      "id": "raw-same-ecu",
+      "oldDigest": "c779c8d4bd8ade79b6024f077b62a6d2543d2d661a0a9386819a7625afedf183",
+      "approvedNonInsightDigest": "c779c8d4bd8ade79b6024f077b62a6d2543d2d661a0a9386819a7625afedf183"
+    },
+    {
+      "id": "later-scope-after-six",
+      "oldDigest": "920d30f255e433a1b72b343053e2cc96f4f02e05d217b24590978fceef1bf6d5",
+      "approvedNonInsightDigest": "920d30f255e433a1b72b343053e2cc96f4f02e05d217b24590978fceef1bf6d5"
+    },
+    {
+      "id": "all-conflicting",
+      "oldDigest": "51627d25461685cf64c33701c5953d036bd367fd232c7bb96779763bd0bdd118",
+      "approvedNonInsightDigest": "51627d25461685cf64c33701c5953d036bd367fd232c7bb96779763bd0bdd118"
+    },
+    {
+      "id": "unknown-low-mixed",
+      "oldDigest": "9fc3d883a11431d2fe42c78735fd63fcc644ec3ef93c700cec2ee8349ae45adc",
+      "approvedNonInsightDigest": "5ccfce7a2260b29540a2ae93b7b1abcdc14b549925f95a141c5cb4a168d1da02"
+    }
+  ],
+  "raw": [
+    {
+      "id": "low_voltage",
+      "regular": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ],
+      "raw": [
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ]
+    },
+    {
+      "id": "high_voltage",
+      "regular": [
+        {
+          "level": "caution",
+          "title": "過電圧側の確認が必要",
+          "detail": "制御モジュール電圧が高めです。過電圧は制御モジュールやセンサー値に影響します。",
+          "nextStep": "充電制御、バッテリー端子、電圧検出線をメーカー整備書で確認する"
+        }
+      ],
+      "raw": [
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ]
+    },
+    {
+      "id": "running_voltage",
+      "regular": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        },
+        {
+          "level": "caution",
+          "title": "運転中電圧の確認が必要",
+          "detail": "エンジン運転中と思われる条件で制御モジュール電圧が低めです。充電系や電源経路を先に確認します。",
+          "nextStep": "オルタネーター出力、ベルト、電源配線、アースを実測する"
+        }
+      ],
+      "raw": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        }
+      ]
+    },
+    {
+      "id": "key_on",
+      "regular": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        },
+        {
+          "level": "info",
+          "title": "キーON停止中の可能性",
+          "detail": "エンジン回転数と車速がどちらも0です。運転中データとキーON停止中データは分けて扱います。",
+          "nextStep": "エンジン運転中、アイドル、負荷時の値を別スナップショットで確認する"
+        }
+      ],
+      "raw": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        }
+      ]
+    },
+    {
+      "id": "trim1",
+      "regular": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        },
+        {
+          "level": "caution",
+          "title": "バンク1の燃料補正合計が大きい",
+          "detail": "短期補正と長期補正の合計が約20.0%です。リーン/リッチの原因を断定せず、条件をそろえて確認します。",
+          "nextStep": "吸気漏れ、燃圧不足、MAF/MAP、排気漏れ、O2/A/Fセンサー、燃料品質を順に確認する"
+        }
+      ],
+      "raw": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        }
+      ]
+    },
+    {
+      "id": "trim2",
+      "regular": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        },
+        {
+          "level": "caution",
+          "title": "バンク2の燃料補正合計が大きい",
+          "detail": "短期補正と長期補正の合計が約-20.0%です。リーン/リッチの原因を断定せず、条件をそろえて確認します。",
+          "nextStep": "燃圧過多、インジェクター漏れ、EVAPパージ、MAF/MAP、O2/A/Fセンサーを順に確認する"
+        }
+      ],
+      "raw": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        }
+      ]
+    },
+    {
+      "id": "temperature",
+      "regular": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        },
+        {
+          "level": "info",
+          "title": "温度条件を分けて比較",
+          "detail": "冷却水温と吸気温の差が大きいスナップショットです。冷間時か暖機後かで判断が変わります。",
+          "nextStep": "冷間始動直後と完全暖機後を分け、温度センサー値の立ち上がりを比較する"
+        }
+      ],
+      "raw": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        }
+      ]
+    },
+    {
+      "id": "map",
+      "regular": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        },
+        {
+          "level": "info",
+          "title": "吸気圧は負荷条件と比較",
+          "detail": "停止アイドルと思われる条件でMAPが高めに見えます。断定せず、回転数、負荷、スロットル、標高/大気圧と合わせます。",
+          "nextStep": "大気圧または同条件の基準値を追加で取得して比較する"
+        }
+      ],
+      "raw": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        }
+      ]
+    }
+  ]
+}

@@ -12,7 +12,12 @@ const before={...after,normalizeBridgeLivePidSnapshot(input){
  assert.ok(record,'missing frozen baseline');return record.output;
 }};
 const plain=x=>JSON.parse(JSON.stringify(x));let checks=0;
-const eq=(a,b,label)=>{assert.deepEqual(plain(a),plain(b),label);checks++;};
+// Derived analysis text now includes its ECU/route; its behavior has a dedicated
+// regression. This frozen contract covers scope inheritance and retained values.
+const withoutDerivedInsights = value => Array.isArray(value) ? value.map(withoutDerivedInsights)
+ : !value || typeof value !== 'object' ? value
+ : Object.fromEntries(Object.entries(value).filter(([key])=>!['monitorInsights','monitor_insights'].includes(key)).map(([key,item])=>[key,withoutDerivedInsights(item)]));
+const eq=(a,b,label)=>{assert.deepEqual(withoutDerivedInsights(plain(a)),withoutDerivedInsights(plain(b)),label);checks++;};
 const make=(scopes,topScope={})=>({ok:true,blocked:false,would_transmit:false,data:{
  monitor_values:[{id:'engine_speed',value:9999,unit:'rpm',source_ecu:'7E8',...topScope}],
  ecu_snapshots:scopes.map((scope,i)=>({source_ecu:'7E8',...scope,live_pid_readout_status:'reported',
