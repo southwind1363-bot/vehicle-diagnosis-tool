@@ -5750,6 +5750,9 @@
   }
 
   function normalizeBridgeLivePidSnapshot(response = {}) {
+    if (hasConflictingJsonEcuAliases(response)) {
+      response = { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} };
+    }
     const firstLivePidArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
       || values.find(Array.isArray)
       || [];
@@ -38301,9 +38304,11 @@
 
   function hasConflictingJsonEcuAliases(input) {
     const pending = [input];
+    const visited = new WeakSet();
     while (pending.length) {
       const item = pending.pop();
-      if (!item || typeof item !== "object") continue;
+      if (!item || typeof item !== "object" || visited.has(item)) continue;
+      visited.add(item);
       if (!Array.isArray(item)) {
         const camel = item.sourceEcu;
         const snake = item.source_ecu;

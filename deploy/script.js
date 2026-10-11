@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.677";
+const APP_VERSION = "3.13.678";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -14394,6 +14394,12 @@ function renderObdDeveloperSessionSummary(session = null) {
     : ecuInfoSnapshot?.protocol || session?.protocol || NO_DATA;
   const freezeFrameSnapshot = session?.freezeFrameSnapshot || session?.freeze_frame_snapshot || null;
   const livePidSnapshot = session?.livePidSnapshot || session?.live_pid_snapshot || null;
+  const liveEcuErrors = livePidSnapshot?.errorCodes || livePidSnapshot?.error_codes || [];
+  if ((livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status) === "blocked"
+    && !(livePidSnapshot?.monitorValues || livePidSnapshot?.monitor_values || []).length
+    && Array.isArray(liveEcuErrors) && liveEcuErrors.includes("source_ecu_alias_conflict")) {
+    obdMonitorStatus.textContent = "このライブ記録は、同じ箇所の2つのECU番号が一致しないか形式が不正なため、読取拒否として記録されています。取得元の応答内容を確認してください。";
+  }
   const livePidTimeline = session?.livePidTimeline || session?.live_pid_timeline || null;
   const livePidTimelineSummary = session?.livePidTimelineSummary || session?.live_pid_timeline_summary || null;
   const manufacturerPidVehicleReadoutSummary = session?.manufacturerPidVehicleReadoutSummary || session?.manufacturer_pid_vehicle_readout_summary || null;

@@ -1,3 +1,4 @@
+import "./validate-live-ecu-alias-normalization-proposal.js";
 import "./validate-late-pid-boundary-review.js";
 import "./validate-readout-scope-identity-review.js";
 import "./validate-inventory-pid-mode06-key-review.js";

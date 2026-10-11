@@ -12,6 +12,7 @@ const load=source=>{
  vm.runInContext(source,c);c.window.ObdReadOnly.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL('../data/obd-monitor-definitions.json',import.meta.url),'utf8')));return c.window.ObdReadOnly;
 };
 const after=load(core);
+const blockedFixture=JSON.parse(fs.readFileSync(new URL('./fixtures/live-ecu-alias-normalization-legacy-3.13.677.json',import.meta.url),'utf8')).blocked;
 const digest=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 function extract(source,name){
  const start=source.search(new RegExp('^(?:async )?function '+name+'\\(','m'));
@@ -34,7 +35,7 @@ function client(source,api,response,{cancel=false,missing=false}={}){
 let checks=0;const eq=(a,b,m)=>{assert.equal(a,b,m);checks++;};
 for(const test of bridgeEcuAliasCases){
  const original=JSON.stringify(test.response),golden=fixture.cases.find(x=>x.id===test.id);
- eq(digest(after.normalizeBridgeLivePidSnapshot(test.response)),golden.outputSha256,test.id+' direct normalizer explicitly unchanged');
+ eq(digest(after.normalizeBridgeLivePidSnapshot(test.response)),test.reject?digest(blockedFixture):golden.outputSha256,test.id+' approved normalizer rejection or unchanged normal output');
  eq(after.hasConflictingJsonEcuAliases(test.response),test.reject,test.id+' conflict classification');
  for(const intent of readIntents){
   const app=client(ui,after,test.response);await app.run(intent);

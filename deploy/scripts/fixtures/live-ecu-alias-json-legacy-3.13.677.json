@@ -1,0 +1,142 @@
+{
+  "version": "3.13.677",
+  "commit": "45fdfbf0c1620e943739f60db377a23b2292afda",
+  "jsonCases": [
+    {
+      "id": "row-conflict",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "false-trim",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "header-conflict",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "child-conflict",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "report-wrapper",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "export-wrapper",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "top-level-array",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "freeze-frame",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "metadata-conflict",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "dual-nonstring",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "dual-empty",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "same-aliases",
+      "outputSha256": "7c62a84b20bd501eef4c9ad7df2e41e6097825644c6119e4ffcc83a4bca3adbd",
+      "conflict": false
+    },
+    {
+      "id": "case-space",
+      "outputSha256": "7b2714062e12f0148ef4cbd574b2e81a6749a55c66fe7e83c56dc2650e7194a6",
+      "conflict": false
+    },
+    {
+      "id": "one-alias",
+      "outputSha256": "51305540be8a377ebdfe9e86e4007e67e444dd7d02f33bbc2feecfeaec4e15ae",
+      "conflict": false
+    },
+    {
+      "id": "null-alias",
+      "outputSha256": "e09b621dbc6cba570d5f9acb9a83c7392b2d03cafc737ae7dabbe71be652b751",
+      "conflict": false
+    },
+    {
+      "id": "no-alias",
+      "outputSha256": "d262b2e5d82d288c8c5aab7f85aa159be11ba6f3c72fec9b22d9fe40348aa09a",
+      "conflict": false
+    },
+    {
+      "id": "separate-ecus",
+      "outputSha256": "bde0ea184673280744e24e5e0b713b61a671c221395b7cc05aeaf2563f219b08",
+      "conflict": false
+    },
+    {
+      "id": "other-alias-deferred",
+      "outputSha256": "43059abe24d5ecdf7307a666923cd6a677f47285cb77e084d9bc194f6576900e",
+      "conflict": false
+    },
+    {
+      "id": "parent-child-deferred",
+      "outputSha256": "3c31ce01e2e2f9b0fb24e10438b4f28f682641b539ea7444322e3ae2f7203489",
+      "conflict": false
+    },
+    {
+      "id": "outer-envelope-conflict",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "raw-header-conflict",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "canonical-values-conflict",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "stored-insight-conflict",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "mixed-valid-and-conflict",
+      "outputSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "conflict": true
+    },
+    {
+      "id": "normal-zero",
+      "outputSha256": "dd114ac7bb23b43c576675db304a45ca9676eb81a00348d2a69965b4c0cef4a2",
+      "conflict": false
+    },
+    {
+      "id": "normal-raw",
+      "outputSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "conflict": false
+    },
+    {
+      "id": "normal-blocked",
+      "outputSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "conflict": false
+    }
+  ],
+  "normalCyclicSnapshotSha256": "7f5ed5e92c1c4b029c7c41a8e4d9ad40599fb86c7654e843ac21ed2be3e75876"
+}

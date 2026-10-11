@@ -1,0 +1,1135 @@
+{
+  "version": "3.13.677",
+  "commit": "45fdfbf0c1620e943739f60db377a23b2292afda",
+  "blocked": {
+    "source": "local_bridge",
+    "intent": "read_live_pid_snapshot",
+    "ok": false,
+    "blocked": true,
+    "wouldTransmit": false,
+    "would_transmit": false,
+    "vehicleCommandEnabled": false,
+    "vehicle_command_enabled": false,
+    "errorCodes": [
+      "source_ecu_alias_conflict"
+    ],
+    "error_codes": [
+      "source_ecu_alias_conflict"
+    ],
+    "protocol": null,
+    "protocolProvenance": {
+      "primaryProtocol": null,
+      "primary_protocol": null,
+      "diagnosticProtocol": null,
+      "diagnostic_protocol": null,
+      "transportProtocol": null,
+      "transport_protocol": null,
+      "networkProtocol": null,
+      "network_protocol": null
+    },
+    "protocol_provenance": {
+      "primaryProtocol": null,
+      "primary_protocol": null,
+      "diagnosticProtocol": null,
+      "diagnostic_protocol": null,
+      "transportProtocol": null,
+      "transport_protocol": null,
+      "networkProtocol": null,
+      "network_protocol": null
+    },
+    "diagnosticProtocol": null,
+    "diagnostic_protocol": null,
+    "transportProtocol": null,
+    "transport_protocol": null,
+    "networkProtocol": null,
+    "network_protocol": null,
+    "sourceEcu": null,
+    "source_ecu": null,
+    "sourceEcuName": null,
+    "source_ecu_name": null,
+    "livePidScope": "unknown",
+    "live_pid_scope": "unknown",
+    "readoutEcuIds": [],
+    "readout_ecu_ids": [],
+    "livePidEcuSnapshots": [],
+    "live_pid_ecu_snapshots": [],
+    "livePidEcuAggregateSummary": null,
+    "live_pid_ecu_aggregate_summary": null,
+    "supportedPids": [],
+    "supported_pids": [],
+    "capturedAt": null,
+    "captured_at": null,
+    "observationCondition": "unspecified",
+    "observation_condition": "unspecified",
+    "monitorValues": [],
+    "monitor_values": [],
+    "monitorValueSummary": {
+      "totalCount": 0,
+      "total_count": 0,
+      "decodedCount": 0,
+      "decoded_count": 0,
+      "undecodedRawCount": 0,
+      "undecoded_raw_count": 0,
+      "numericCount": 0,
+      "numeric_count": 0,
+      "textCount": 0,
+      "text_count": 0
+    },
+    "monitor_value_summary": {
+      "totalCount": 0,
+      "total_count": 0,
+      "decodedCount": 0,
+      "decoded_count": 0,
+      "undecodedRawCount": 0,
+      "undecoded_raw_count": 0,
+      "numericCount": 0,
+      "numeric_count": 0,
+      "textCount": 0,
+      "text_count": 0
+    },
+    "monitorInsights": [],
+    "monitor_insights": [],
+    "livePidReadoutStatus": "blocked",
+    "live_pid_readout_status": "blocked",
+    "retainedRawText": false,
+    "retained_raw_text": false
+  },
+  "cases": [
+    {
+      "id": "row-conflict",
+      "snapshotSha256": "99f61082548fa7a9ed2cf3063a6c04f5b571f0f905df63726395df66a1c3c00b",
+      "sessionSha256": "15703e504a336d328c99a298be903cbc521f8ceb9305dead9dcbb64a28c7b607",
+      "restoredSha256": "3ce07da17696ab1ea250dead4562cce02d3729d5d9f194f91fe945774b243bec",
+      "directSha256": "d26c48437ffde1fa61dc2848a5e9ee10b620353a71abd7492d651fea7e140c8a",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "false-trim",
+      "snapshotSha256": "c1ebcfddaf59687e401377c9fa470000f84cbbc30e770e0efbdb2bc3b2879a60",
+      "sessionSha256": "82c2175321236eb3fe40d34680f29f79002bc820a61a728b87d695f9f6532cd8",
+      "restoredSha256": "a9d92939261d8be94986658b499b2df015351f2596e6ce6de73de756a92689e7",
+      "directSha256": "5c2e72afe2c3ca0528111c1caa53e631a29bc5510e88e63569612264e33e2723",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "stft_b1",
+          "label": "短期燃料補正 バンク1",
+          "value": 10,
+          "unit": "%",
+          "category": "燃料補正",
+          "valueType": "number",
+          "service": "01",
+          "pid": "06",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "長期補正と運転条件を合わせて確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        },
+        {
+          "id": "ltft_b1",
+          "label": "長期燃料補正 バンク1",
+          "value": 10,
+          "unit": "%",
+          "category": "燃料補正",
+          "valueType": "number",
+          "service": "01",
+          "pid": "07",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "短期補正と運転条件を合わせて確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 2
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "info",
+          "title": "単独値ではなく相関で見る",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+          "nextStep": "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+        },
+        {
+          "level": "caution",
+          "title": "バンク1の燃料補正合計が大きい",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 短期補正と長期補正の合計が約20.0%です。リーン/リッチの原因を断定せず、条件をそろえて確認します。",
+          "nextStep": "吸気漏れ、燃圧不足、MAF/MAP、排気漏れ、O2/A/Fセンサー、燃料品質を順に確認する"
+        }
+      ]
+    },
+    {
+      "id": "header-conflict",
+      "snapshotSha256": "99f61082548fa7a9ed2cf3063a6c04f5b571f0f905df63726395df66a1c3c00b",
+      "sessionSha256": "15703e504a336d328c99a298be903cbc521f8ceb9305dead9dcbb64a28c7b607",
+      "restoredSha256": "3ce07da17696ab1ea250dead4562cce02d3729d5d9f194f91fe945774b243bec",
+      "directSha256": "d26c48437ffde1fa61dc2848a5e9ee10b620353a71abd7492d651fea7e140c8a",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "child-conflict",
+      "snapshotSha256": "eee8c435463d659bac05c035553c03519ee8e0ad7fb1a62b6e410c80733f60dd",
+      "sessionSha256": "f86b0c23ca5aef487e3415aa80047834f72e5b37afe27d4f3cf7f906e28120a0",
+      "restoredSha256": "baa13fe2f8ad1d4b7e7df327fd9df6ee082e97f75dcee2b24e9421202f4c12e3",
+      "directSha256": "2ca7e73cd58ede82ff41b364fb486c1c494694a2850fc10a74256e5423b12bc2",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "report-wrapper",
+      "snapshotSha256": "7d0860c0775fc4d752ac2ce960ef50981984e8f955cb0c4cd4dd132e89b833d3",
+      "sessionSha256": "a2c87b21095ef0a8b4fed29ee73b1b341cd9bbffd355dbcd64da21e589e09ce0",
+      "restoredSha256": "d90ee1184b95772b4f2efe350c401c92891b4893bb99ab91e56a7bb4c663951c",
+      "directSha256": "c0a912da9ef1e39fff3c834d507728c242008c2fa4a1c0e86d20794491794674",
+      "oldStatus": "reported",
+      "oldValues": [],
+      "oldInsights": []
+    },
+    {
+      "id": "export-wrapper",
+      "snapshotSha256": "7d0860c0775fc4d752ac2ce960ef50981984e8f955cb0c4cd4dd132e89b833d3",
+      "sessionSha256": "a2c87b21095ef0a8b4fed29ee73b1b341cd9bbffd355dbcd64da21e589e09ce0",
+      "restoredSha256": "d90ee1184b95772b4f2efe350c401c92891b4893bb99ab91e56a7bb4c663951c",
+      "directSha256": "c0a912da9ef1e39fff3c834d507728c242008c2fa4a1c0e86d20794491794674",
+      "oldStatus": "reported",
+      "oldValues": [],
+      "oldInsights": []
+    },
+    {
+      "id": "top-level-array",
+      "snapshotSha256": "99f61082548fa7a9ed2cf3063a6c04f5b571f0f905df63726395df66a1c3c00b",
+      "sessionSha256": "15703e504a336d328c99a298be903cbc521f8ceb9305dead9dcbb64a28c7b607",
+      "restoredSha256": "3ce07da17696ab1ea250dead4562cce02d3729d5d9f194f91fe945774b243bec",
+      "directSha256": "d26c48437ffde1fa61dc2848a5e9ee10b620353a71abd7492d651fea7e140c8a",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "freeze-frame",
+      "snapshotSha256": "eae0615591bb6f5f438c2d030174834b5ddbef30719521afb447b5c07cc58f5f",
+      "sessionSha256": "72039129fea16610321d0a8f5a98ad83f3284e9ae598ae3ed53f569f9a4dce2b",
+      "restoredSha256": "57f4b2126c0330265eda401c61dbc307c2828fa25da42e779cfc1e0f494c1f3c",
+      "directSha256": "0224c942ffb50ceeeae077cec83fe3faa4b63a28d56532f2f69a0755ad1561c2",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": 0,
+          "freeze_frame_number": 0,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "metadata-conflict",
+      "snapshotSha256": "d85104da0311297bd3f0ea7b7bbbd3fefdbdbf6c7537e227265a9a4bd55ba26c",
+      "sessionSha256": "02101fbd466270e166b2ea1f669f67434e26c8a4b3e3d0b9bb2057fd3b9ccaed",
+      "restoredSha256": "dccad5d3253650f3e2584302526ba597a08e9b5eb84564f63475c5047b7dc59a",
+      "directSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "dual-nonstring",
+      "snapshotSha256": "c8b0779eb42116d7a81cbafb993bb6723acbc8c3288911d5d67bdfa33e4c7821",
+      "sessionSha256": "3c3cf27b11ebbe24d26dc9533ffe6f734b8407ec5b2508cc002380fe3c30b030",
+      "restoredSha256": "42053cf21b3e7dfaa86d9392d6e8887e730ec4c57c3e0414471ea8a9090b761c",
+      "directSha256": "f7ffc994ff7c96909efff2622d4867c749478579799b77a61fcb4b4d6c5a6272",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "2024",
+          "source_ecu": "2024",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"2024\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "dual-empty",
+      "snapshotSha256": "d85104da0311297bd3f0ea7b7bbbd3fefdbdbf6c7537e227265a9a4bd55ba26c",
+      "sessionSha256": "02101fbd466270e166b2ea1f669f67434e26c8a4b3e3d0b9bb2057fd3b9ccaed",
+      "restoredSha256": "dccad5d3253650f3e2584302526ba597a08e9b5eb84564f63475c5047b7dc59a",
+      "directSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "same-aliases",
+      "snapshotSha256": "d85104da0311297bd3f0ea7b7bbbd3fefdbdbf6c7537e227265a9a4bd55ba26c",
+      "sessionSha256": "02101fbd466270e166b2ea1f669f67434e26c8a4b3e3d0b9bb2057fd3b9ccaed",
+      "restoredSha256": "dccad5d3253650f3e2584302526ba597a08e9b5eb84564f63475c5047b7dc59a",
+      "directSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "case-space",
+      "snapshotSha256": "d85104da0311297bd3f0ea7b7bbbd3fefdbdbf6c7537e227265a9a4bd55ba26c",
+      "sessionSha256": "02101fbd466270e166b2ea1f669f67434e26c8a4b3e3d0b9bb2057fd3b9ccaed",
+      "restoredSha256": "dccad5d3253650f3e2584302526ba597a08e9b5eb84564f63475c5047b7dc59a",
+      "directSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "one-alias",
+      "snapshotSha256": "d85104da0311297bd3f0ea7b7bbbd3fefdbdbf6c7537e227265a9a4bd55ba26c",
+      "sessionSha256": "02101fbd466270e166b2ea1f669f67434e26c8a4b3e3d0b9bb2057fd3b9ccaed",
+      "restoredSha256": "dccad5d3253650f3e2584302526ba597a08e9b5eb84564f63475c5047b7dc59a",
+      "directSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "null-alias",
+      "snapshotSha256": "d85104da0311297bd3f0ea7b7bbbd3fefdbdbf6c7537e227265a9a4bd55ba26c",
+      "sessionSha256": "02101fbd466270e166b2ea1f669f67434e26c8a4b3e3d0b9bb2057fd3b9ccaed",
+      "restoredSha256": "dccad5d3253650f3e2584302526ba597a08e9b5eb84564f63475c5047b7dc59a",
+      "directSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "no-alias",
+      "snapshotSha256": "984c7a2bfdbe4e10efd3ec10b078daff3bf4c1b0f0fede7ee92697efe19a3493",
+      "sessionSha256": "2506b875a66d64bd5f5de0bddfffcd47a62d15a4ee13a3198c7a47eb50731cf4",
+      "restoredSha256": "21171dbc12e7e0bb314e27ed02b28a6df68b7f17e7939ecf0d7a26f4272235f4",
+      "directSha256": "b86416bf7a7f0ec824ce915f5f50c4c6885d1a5917f7f7ddf209adf19adeb5c6",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": null,
+          "source_ecu": null,
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "separate-ecus",
+      "snapshotSha256": "d1b157327b7c5a63b241534a151faeeda31fa962435073bef63ae15a5c8dc4b2",
+      "sessionSha256": "1efea3e3647e10fcde16e665a8f44e9a382e0c783467fcfab44438a29ef31881",
+      "restoredSha256": "843dea332b027c41ab8472643ad4478a180941ee67ec3d8f9b357494b974bfbd",
+      "directSha256": "47008087e88d06b0e5a1c14eb24bda511f18f5b2078b45ed05ae2f3aa2b97ae5",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        },
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 2
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "info",
+          "title": "ECU・通信経路を分けて分析",
+          "detail": "記録のECUと通信経路が一致する範囲で参考情報を再計算しました。出所の一致は同時測定や実車適合の証明ではありません。",
+          "nextStep": "対象ECU・通信経路と測定条件を確認して比較する"
+        },
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        },
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "other-alias-deferred",
+      "snapshotSha256": "d85104da0311297bd3f0ea7b7bbbd3fefdbdbf6c7537e227265a9a4bd55ba26c",
+      "sessionSha256": "02101fbd466270e166b2ea1f669f67434e26c8a4b3e3d0b9bb2057fd3b9ccaed",
+      "restoredSha256": "dccad5d3253650f3e2584302526ba597a08e9b5eb84564f63475c5047b7dc59a",
+      "directSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "parent-child-deferred",
+      "snapshotSha256": "1248eadc4745f565796eec56fb67ca1e9ba0fc2d5eda7f48a9b34126d6af4ea2",
+      "sessionSha256": "85e82fd9ef34dbbd4a87e7bcce9d3743f1411560e9bf1d809f3247fa56481f3a",
+      "restoredSha256": "f294098780a0d68bbdbd7b1f73977e3e94d986134f96ddc407dcce68ddd06b30",
+      "directSha256": "290f309709006a0328b055a41fe7fad69dfccefe1b5225f8a97e8d9effdf7a90",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "outer-envelope-conflict",
+      "snapshotSha256": "beefd3694e29af30f361011f155e89cb1fd346081058d4b49cb00f4c4eb24d4f",
+      "sessionSha256": "e8efd12bb21cce335492f279739bd40d4d9d1244972bfd7ee3af8a0d10550222",
+      "restoredSha256": "73ad97ce9b6826d8755175108cfcc5afc2a7034e525696085886b5a88152051d",
+      "directSha256": "70343b8b3ea5af5ee1e6a6e372f0878e4cd1447fa92bfd3cae1392a87e244f6d",
+      "oldStatus": "reported",
+      "oldValues": [],
+      "oldInsights": []
+    },
+    {
+      "id": "raw-header-conflict",
+      "snapshotSha256": "4583b2c375ecf859f276f9bb01430404b7e50ebdb10abce48bd90abc9eb3847e",
+      "sessionSha256": "597689342ab6d627ee7fdf873f38289a660db50c1552c2a3b386f79ea1e84800",
+      "restoredSha256": "3adbe52520782882dfb06e27166774f9e4d0981d9d9d9149d919f2695f245fd1",
+      "directSha256": "e3ff82f4aad6dd8d138e24d51d1857bc6c419db0f044a3ef102f6876f37ac927",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ]
+    },
+    {
+      "id": "canonical-values-conflict",
+      "snapshotSha256": "4583b2c375ecf859f276f9bb01430404b7e50ebdb10abce48bd90abc9eb3847e",
+      "sessionSha256": "597689342ab6d627ee7fdf873f38289a660db50c1552c2a3b386f79ea1e84800",
+      "restoredSha256": "3adbe52520782882dfb06e27166774f9e4d0981d9d9d9149d919f2695f245fd1",
+      "directSha256": "357815ed1d08dd65842ef5795816d11a36530093a5dac0c895402c2ddf9709a7",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ]
+    },
+    {
+      "id": "stored-insight-conflict",
+      "snapshotSha256": "9c7d46a07153c3dc5047f652466ee9524d435bf708e551051a85fe424836bf67",
+      "sessionSha256": "3cf544d3b579e4978fed30e1d9719f680b788a4b2174cae119155633f0711e51",
+      "restoredSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "directSha256": "8cf8396156f2b12c996b65445db8e44559d79c9539060c42d6f52975960a93a2",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "title": "保存した注記",
+          "detail": "元の文章",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E9"
+        },
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ]
+    },
+    {
+      "id": "mixed-valid-and-conflict",
+      "snapshotSha256": "f7d5045932cb8eff96a17bd1e49cc91f1b9a4dbccb23ceab7016efcea323aa4d",
+      "sessionSha256": "2157f94d8b8e2c07f4e217a34bf90ed12d8c38fe5bc774d7bfa024c01b8c1ed3",
+      "restoredSha256": "16afd945f6f8c4b901ea8d58f4064dc5a61bf39a62c06857c2fb23d9d71c12d0",
+      "directSha256": "b2f7a82a3470afcd1b62adaf1858032e78e9a54b581db7df91a514c8381beb6e",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        },
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 2
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "info",
+          "title": "ECU・通信経路を分けて分析",
+          "detail": "記録のECUと通信経路が一致する範囲で参考情報を再計算しました。出所の一致は同時測定や実車適合の証明ではありません。",
+          "nextStep": "対象ECU・通信経路と測定条件を確認して比較する"
+        },
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        },
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E9\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "normal-zero",
+      "snapshotSha256": "e5666cedbaf078ac61ca1151f3da6643d7510740026c6b182dc8454fe2aea5f8",
+      "sessionSha256": "cbae00b9059e9c52a31ff54f0ca98afa769a36e9f0b91efb78e7b951c80641ec",
+      "restoredSha256": "0d79ac44fec868198022a1e83e144e21bd3183c6caccece8be2ae59790b2a19e",
+      "directSha256": "c59514663afe813723203140eb521c41cef574068f93e77edcfc9e2d55862beb",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 0,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "caution",
+          "title": "電源電圧を優先確認",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+          "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+        }
+      ]
+    },
+    {
+      "id": "normal-raw",
+      "snapshotSha256": "7f5ed5e92c1c4b029c7c41a8e4d9ad40599fb86c7654e843ac21ed2be3e75876",
+      "sessionSha256": "8f4f4ee82bb429992ddc293254e1a9b8de9371354d1debe02f52f74853c60d59",
+      "restoredSha256": "74059314bb55014e52a2876bb7cfb72f83ab4fdc0539989538cac4c821a9f10b",
+      "directSha256": "f4f04d4531d9c34aaae93d9b8a858c3c114b902852bf4adfa9e39875fffe4fcb",
+      "oldStatus": "reported",
+      "oldValues": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ],
+      "oldInsights": [
+        {
+          "level": "info",
+          "title": "追加条件で比較",
+          "detail": "対象: ECU \"7E8\" / バス 未記録 / チャンネル 未記録 / ゲートウェイ経路 未記録。 読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+          "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+        }
+      ]
+    },
+    {
+      "id": "normal-blocked",
+      "snapshotSha256": "fdf4b0f6d8997c4e3773a22a0b6aae21ed4c181eae99d7c7df85bec7fd9bab65",
+      "sessionSha256": "d8a59c0558c160ee537982f0baa6de0c70f48f3581eaf2d718ea559214672ef3",
+      "restoredSha256": "87cc28ae22edee63e4ba36879916a8f214219e331fc67f926348c769af8ea35e",
+      "directSha256": "f013b8f2d70bd5e7c7251d621ac1b33ed45340c68b8387dc952e35c23173b415",
+      "oldStatus": "blocked",
+      "oldValues": [],
+      "oldInsights": []
+    }
+  ]
+}
