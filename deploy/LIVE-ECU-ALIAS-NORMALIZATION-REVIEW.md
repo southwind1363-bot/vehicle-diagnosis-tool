@@ -48,4 +48,4 @@
 - 主要5資産（index.html/script.js/obd-readonly.js/service-worker.js/offline-assets.json）は本体・ZIP別展開・ローカルHTTP200でLF正規化後の全文一致。
 - 全体画面回帰合格（readiness-review-ZP3pGb）。ローカルworkstation1,369項目・package766項目合格。JSON203ファイル/DTC3,878件、エラー・警告0。
 - OBD全体回帰7,447項目・エラー0、終了コード0。新規383項目、既存ブリッジ1,080項目、JSON取込63項目、取得元別分析231項目・原文保持589項目を含む関連回帰も合格。
-- 公開反映とHTTP照合は実装コミット後に確認する。
+- 実装88aad0c60fed06a5e42b31bafcb0ff6d75d03ef4をmainへpush。本番dpl_48udEZAb9qCpBfURsyRTD8ajMYVAは同SHA・production・READY、tool.mukiguri.comへ割当済み。公開サイト主要5資産はHTTP200・LF正規化後の全文一致を確認した。
