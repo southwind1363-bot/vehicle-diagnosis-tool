@@ -45527,7 +45527,7 @@
     const insights = [];
     const numeric = (id) => {
       const item = byId.get(id);
-      return item && item.valueType !== "text" && Number.isFinite(item.value) ? item.value : null;
+      return item && buildMonitorValueSummary([item]).numericCount === 1 ? item.value : null;
     };
     const add = (level, title, detail, nextStep) => {
       insights.push({ level, title, detail, nextStep });

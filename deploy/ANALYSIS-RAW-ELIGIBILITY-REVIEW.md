@@ -1,6 +1,8 @@
-# 未解析RAWの数値分析除外案（適用前）
+# 未解析RAWの数値分析除外（承認済み・本体適用）
 
-2026-10-11 / 本体3.13.671 / 調査対象コミット07be8c88
+2026-10-11 / 旧版3.13.671 / 適用版3.13.672 / 調査対象コミット07be8c88
+
+適用確認への「続けて」を受けて、検証済みの1条件を本体へ反映した。
 
 ## 確認した問題と到達範囲
 
@@ -8,11 +10,11 @@ analyzeMonitorValuesの数値選択はcamelCaseのtext分類と有限数値だ�
 
 通常のnormalizeBridgeLivePidSnapshot経路では同じRAWが文字列化され、この注意文は生成されなかった。通常JSON再取込でも既存の正規化が働く場合がある。したがって「すべてのRAW取込が誤分析される」とは扱わない。今回の証拠は公開APIと統合APIの合成検証であり、通常画面のファイル取込や実車での再現証拠ではない。
 
-## 適用案
+## 適用した変更
 
-analyzeMonitorValues内のnumeric関数の1条件を、既存のbuildMonitorValueSummary([item]).numericCount === 1へ変更する。タイムラインと同じ分類条件を使う。decoded:false、undecodedRaw/undecoded_raw、valueType/value_typeのraw_hexまたはtextを数値分析から除外する。
+analyzeMonitorValues内のnumeric関数の1条件を、既存のbuildMonitorValueSummary([item]).numericCount === 1へ変更した。タイムラインと同じ分類条件を使う。decoded:false、undecodedRaw/undecoded_raw、valueType/value_typeのraw_hexまたはtextを数値分析から除外する。
 
-| 入力・処理 | 現行 | 修正案 |
+| 入力・処理 | 3.13.671 | 3.13.672 |
 | --- | --- | --- |
 | 数値9を持つ未換算電圧RAW | 低電圧の注意文を生成 | その数値を根拠とした注意文を生成しない |
 | 通常の電圧9 V | 低電圧の注意文を生成 | 維持 |
@@ -26,8 +28,8 @@ analyzeMonitorValues内のnumeric関数の1条件を、既存のbuildMonitorValu
 
 ## 検証
 
-node deploy/scripts/validate-analysis-raw-proposal.js: 284項目合格。本体のコピーを別VM内で1条件だけ変更した。通常値と0、8分析ケース、8分類指定、非数値、各分析条件の一部だけRAWの組合せ、同じIDの優先順、統合API、入力不変、既存の保存復元結果一致を確認。
+適用前は本体のコピーを別VM内で1条件だけ変更し284項目合格。適用後のnode deploy/scripts/validate-analysis-raw-proposal.jsも本体284項目合格。旧3.13.671から通常値・分析対象外の各入力・保存復元の期待結果を固定fixtureへ追加し、本体コードだけを検証する方式へ切り替えた。通常値と0、8分析ケース、8分類指定、非数値、各分析条件の一部だけRAWの組合せ、同じIDの優先順、統合API、入力不変、既存の保存復元結果一致を確認。
 
-固定旧版結果: scripts/fixtures/analysis-raw-legacy-3.13.671.json。検証スクリプトは本体への未適用を前提としており、適用後は本体回帰へ切り替える必要がある。
+固定旧版結果: scripts/fixtures/analysis-raw-legacy-3.13.671.json。検証スクリプト名は既存参照のため維持し、全体OBD検証へ組み込んだ。全体検査の旧コード文字列を要求する1件も、承認済みの共通数値分類条件へ更新した（初回はこの旧期待値だけが不一致）。本体を置換するVMパッチは使用しない。
 
-本体・版番号・配布ZIPは変更していない。これは診断結果の契約に関わる変更（生成される注意文の減少）なので適用範囲を確認する。適用後に通常画面と全体OBD検証、配布検証、公開照合を実施する。
+診断結果の契約に関わる変更（生成される注意文の減少）として範囲確認後に適用した。通常画面・全体OBD・配布・公開の検証結果はDEVELOPMENT-ROADMAP.mdの3.13.672履歴へ記録する。実車適合の確認ではない。

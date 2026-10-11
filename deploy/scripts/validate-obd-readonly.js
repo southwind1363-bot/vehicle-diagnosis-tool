@@ -41,6 +41,7 @@ import "./validate-live-scope-inheritance-proposal.js";
 import "./validate-inventory-live-key-v2-proposal.js";
 import "./validate-temperature-conversion-display.js";
 import "./validate-raw-pid-display-label.js";
+import "./validate-analysis-raw-proposal.js";
 import "./validate-pid69-raw-proposal.js";
 import "./validate-scanner-navigation.js";
 import "./validate-ecu-info-display.js";
@@ -2068,7 +2069,7 @@ const analyzeMonitorValuesFunctionChecks = () => {
   if (analyzeMonitorValuesFunctionSource) {
     const functionBody = analyzeMonitorValuesFunctionSource[0];
     check(functionBody.includes('const byId = new Map(values.map((item) => [item.id, item]));'), "analyzeMonitorValues should index monitor values by id");
-    check(functionBody.includes('return item && item.valueType !== "text" && Number.isFinite(item.value) ? item.value : null;'), "analyzeMonitorValues should only treat finite non-text values as numeric inputs");
+    check(functionBody.includes('return item && buildMonitorValueSummary([item]).numericCount === 1 ? item.value : null;'), "analyzeMonitorValues should use shared numeric eligibility to exclude RAW/text values");
     check(functionBody.includes('const add = (level, title, detail, nextStep) => {') && functionBody.includes('insights.push({ level, title, detail, nextStep });'), "analyzeMonitorValues should normalize insight shape through a single add helper");
     check(functionBody.includes('const rpm = numeric("engine_speed");') && functionBody.includes('const voltage = numeric("control_module_voltage");'), "analyzeMonitorValues should derive core engine speed and voltage inputs");
     check(functionBody.includes('stftB1, ltftB1, add);') && functionBody.includes('stftB2, ltftB2, add);'), "analyzeMonitorValues should evaluate both fuel-trim banks");

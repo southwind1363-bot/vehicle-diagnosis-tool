@@ -411,6 +411,42 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
       console.log('Incomplete RAW: short/extra bytes, neutral note, old-name search, print, responsive themes and unchanged archive passed.');
     }
+    for(const kind of ['raw','numeric','saved']) {
+      const row={id:'control_module_voltage',pid:'42',value:9,unit:'V',sourceEcu:'7E8',decoded:kind==='numeric'};
+      const saved={title:'保存済みの分析メモ',level:'info',detail:'取得元の記録を維持',nextStep:'元の記録を確認'};
+      const mergeInput={bridgeImport:{monitorValues:[row],monitorInsights:kind==='saved'?[saved]:[]}};
+      const merged=model.mergeDiagnosticInputs(mergeInput);
+      const browserMerged=await page.evaluate(input=>window.ObdReadOnly.mergeDiagnosticInputs(input),mergeInput);
+      assert.equal(JSON.stringify(browserMerged.monitorInsights),JSON.stringify(merged.monitorInsights));
+      assert.equal(merged.monitorInsights.some(x=>x.title==='電源電圧を優先確認'),kind==='numeric');
+      assert.equal(merged.monitorValues[0].value,9);
+      const session=model.buildDiagnosticScanSession({livePidSnapshot:{schemaVersion:'live_pid_snapshot_v1',source:'local_bridge',monitorValues:merged.monitorValues,monitorInsights:merged.monitorInsights}});
+      const picker=page.waitForEvent('filechooser');page.once('dialog',dialog=>dialog.accept());
+      await page.getByRole('button',{name:'読取結果ファイルを開く',exact:true}).click();
+      await (await picker).setFiles({name:'raw-analysis-'+kind+'.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(session)))});
+      await page.waitForFunction(()=>obdDevSession.lastSession?.livePidSnapshot?.monitorValues?.[0]?.id==='control_module_voltage');
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+      await page.getByRole('button',{name:'ライブデータの詳細を開く',exact:true}).click();
+      const grid=page.locator('#obdMonitorGrid');await grid.waitFor({state:'visible'});
+      const before=await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession));
+      const insightText=await page.locator('#obdMonitorInsightList').innerText();
+      assert.equal(insightText.includes('電源電圧を優先確認'),kind==='numeric');
+      assert.equal(insightText.includes(saved.title),kind==='saved');
+      assert.ok((await grid.innerText()).includes(kind==='numeric'?'9 V':'RAW 9 / 未換算'));
+      for(const width of [390,1280]) for(const dark of [false,true]) {
+        await page.setViewportSize({width,height:844});await page.evaluate(dark=>document.body.classList.toggle('dark',dark),dark);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+        await page.screenshot({path:path.join(output,'raw-analysis-'+kind+'-'+width+'-'+dark+'.png')});
+      }
+      await require('./validate-readout-print.cjs')(page,output,'raw-analysis-'+kind);
+      assert.equal(await page.evaluate(()=>JSON.stringify(obdDevSession.lastSession)),before);
+      const archive=await page.evaluate(()=>JSON.stringify(window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession)));
+      const restored=model.buildDiagnosticScanSessionFromJson(archive);
+      assert.equal(restored.livePidSnapshot.monitorValues[0].decoded,kind==='numeric');
+      assert.equal(String(restored.livePidSnapshot.monitorValues[0].value),'9');
+      await page.getByRole('button',{name:'基本読取結果へ戻る',exact:true}).click();
+    }
+    console.log('RAW analysis browser: production merge, real JSON import, RAW exclusion, numeric warning and saved hint retained, print/themes/archive passed.');
     const compoundPayloads = [['A1','0F 80 41 0D 28 80 42 00 80'],['A2','41 0D'],['A4','03 41 0D 28'],['A5','03 80 01 00'],['6B', '0F 41 0D 28 42'], ['6D', '3F 41 0D 28 42 0D 02 28 41 42 00'], ['6E', '0F 41 0D 28 42 0D 02 28 00'], ['6F', '03 41 42'], ['70', '3F 41 0D 28 42 0D 02 28 00 00'], ['71', '3F 41 0D 28 42 00'], ['72', '0F 41 0D 28 42'], ['73', '03 41 0D 28 42'], ['74', '03 41 0D 28 42'], ['75', '0F 41 0D 28 42 00 00'], ['77', '0F 41 0D 28 42'], ['78', '0F 41 0D 28 42 0D 02 28 00'], ['79', '0F 42 0D 02 28 41 0D 28 00'], ['7A', '07 41 0D 28 42 00 00'], ['7C', '0F 41 0D 28 42 0D 02 28 00'], ['7F', '07 41 0D 28 42 0D 02 28 00 00 41 42 00'], ['83', '0F 41 0D 28 42 0D 02 28 00'], ['86', '03 41 0D 28 42'], ['87', '03 41 0D 28 42'], ['89', '1F 41 0D 28 42 0D 02 28 ' + Array(33).fill('00').join(' ')], ['8F', '0F 41 0D 28 42 00 00']];
     const legacyText = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/text-pid-legacy-3.13.651.json'), 'utf8'));
     const legacyPayloads = legacyText.live_pid_snapshot.monitor_values.map(row => [row.pid, row.value]);
