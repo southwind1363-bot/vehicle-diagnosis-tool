@@ -1,8 +1,8 @@
-# 分析文の出所と再計算結果の表示分離案（適用前）
+# 分析文の出所と再計算結果の表示分離の適用記録（3.13.673）
 
-2026-10-11 / 本体3.13.672 / 調査対象7ebc785f
+2026-10-11 / 調査時3.13.672・対象7ebc785f / 確認後に3.13.673へ適用
 
-## 本体で再現したこと
+## 3.13.672で再現したこと
 
 normalizeBridgeLivePidSnapshotとmergeDiagnosticInputsは、取込元の分析文と再計算結果を同じ配列へ統合する。記録内の分析文には作成元・作成時点を証明する情報がなく、画面は全体を「値・相関の見方」として先頭6件だけ表示する。
 
@@ -12,7 +12,7 @@ normalizeBridgeLivePidSnapshotとmergeDiagnosticInputsは、取込元の分析�
 
 合成入力による再現。実車の電圧や適合性を確認したものではない。旧版出力はscripts/fixtures/insight-origin-legacy-3.13.672.jsonへ固定した。
 
-## 適用する表示案
+## 適用した表示
 
 ライブ詳細の分析欄を、次の2群に分ける。
 
@@ -27,7 +27,7 @@ normalizeBridgeLivePidSnapshotとmergeDiagnosticInputsは、取込元の分析�
 
 同名分析文の上書きは正規化・統合段階で起こるため、この表示案では解消しない。既に失われた元文章は復元しない。元文章と作成情報の保存契約は別途検討する。複数ECU・経路の分析グループ分離と既存分析ルールの車両適合性も今回の変更範囲外。
 
-## 検証結果
+## 適用前の検証記録
 
 node deploy/scripts/validate-insight-origin-proposal.js --browser
 
@@ -37,4 +37,10 @@ node deploy/scripts/validate-insight-origin-proposal.js --browser
 - 390/1280px・明暗、展開前/後の印刷表示、記録全件への到達、元セッション不変と保存復元、外部/車両要求0を確認。
 - 成果物: insight-origin-proposal-wUL1HA。画面画像は固定ヘッダーが重なる場合があるが、印刷表示でも見出し・注意文・表示件数を確認した。実プリンター・実車試験ではない。
 
-本体・版番号・配布ZIPは3.13.672のまま。新たに再計算結果を表示し注意文の可視範囲が変わるため、適用範囲の確認後に本体へ反映して全体検証・公開確認を行う。
+## 本体適用後の検証
+
+ユーザーの適用確認後、renderObdMonitorInsightsと呼出箇所を本体へ反映し、版番号を3.13.673にそろえた。正規化・分析ルール・保存schemaは変更していない。
+
+validate-insight-origin-proposal.jsは本体script.jsの表示関数を直接検証し、全体OBD検証からも実行する。ブラウザーでの試作差替えは撤去した。27項目と4JSONの本体取込・段階表示・明暗/幅変更・印刷・保存不変・外部/車両要求0が合格。成果物: insight-origin-production-aoMcpY。印刷検証には分析群の見出し・注記・各行も追加した。
+
+全体検証・配布ZIP・公開確認の結果はDEVELOPMENT-ROADMAP.mdの3.13.673履歴へ記録する。実プリンター・実車の確認ではない。

@@ -42,6 +42,7 @@ import "./validate-inventory-live-key-v2-proposal.js";
 import "./validate-temperature-conversion-display.js";
 import "./validate-raw-pid-display-label.js";
 import "./validate-analysis-raw-proposal.js";
+import "./validate-insight-origin-proposal.js";
 import "./validate-pid69-raw-proposal.js";
 import "./validate-scanner-navigation.js";
 import "./validate-ecu-info-display.js";
