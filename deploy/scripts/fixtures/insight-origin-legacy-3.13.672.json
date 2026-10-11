@@ -1,0 +1,817 @@
+{
+  "version": "3.13.672",
+  "scope": "Synthetic stored and recalculated insights; no vehicle I/O",
+  "cases": [
+    {
+      "id": "stale",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "value": 14,
+            "unit": "V"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "title": "電源電圧を優先確認",
+            "level": "caution",
+            "detail": "保存時は9 V",
+            "nextStep": "電源を確認"
+          }
+        ]
+      },
+      "snapshot": {
+        "source": "local_bridge",
+        "intent": "read_live_pid_snapshot",
+        "ok": true,
+        "blocked": false,
+        "wouldTransmit": false,
+        "would_transmit": false,
+        "vehicleCommandEnabled": false,
+        "vehicle_command_enabled": false,
+        "errorCodes": [],
+        "error_codes": [],
+        "protocol": null,
+        "protocolProvenance": {
+          "primaryProtocol": null,
+          "primary_protocol": null,
+          "diagnosticProtocol": null,
+          "diagnostic_protocol": null,
+          "transportProtocol": null,
+          "transport_protocol": null,
+          "networkProtocol": null,
+          "network_protocol": null
+        },
+        "protocol_provenance": {
+          "primaryProtocol": null,
+          "primary_protocol": null,
+          "diagnosticProtocol": null,
+          "diagnostic_protocol": null,
+          "transportProtocol": null,
+          "transport_protocol": null,
+          "networkProtocol": null,
+          "network_protocol": null
+        },
+        "diagnosticProtocol": null,
+        "diagnostic_protocol": null,
+        "transportProtocol": null,
+        "transport_protocol": null,
+        "networkProtocol": null,
+        "network_protocol": null,
+        "sourceEcu": null,
+        "source_ecu": null,
+        "sourceEcuName": null,
+        "source_ecu_name": null,
+        "livePidScope": "unknown",
+        "live_pid_scope": "unknown",
+        "readoutEcuIds": [],
+        "readout_ecu_ids": [],
+        "livePidEcuSnapshots": [],
+        "live_pid_ecu_snapshots": [],
+        "livePidEcuAggregateSummary": null,
+        "live_pid_ecu_aggregate_summary": null,
+        "supportedPids": [],
+        "supported_pids": [],
+        "capturedAt": null,
+        "captured_at": null,
+        "observationCondition": "unspecified",
+        "observation_condition": "unspecified",
+        "monitorValues": [
+          {
+            "id": "control_module_voltage",
+            "label": "制御モジュール電圧",
+            "value": 14,
+            "unit": "V",
+            "category": "電源",
+            "valueType": "number",
+            "service": "01",
+            "pid": "42",
+            "scope": "standard-generic",
+            "sourceEcu": null,
+            "source_ecu": null,
+            "sourceEcuName": null,
+            "source_ecu_name": null,
+            "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+            "freezeFrameNumber": null,
+            "freeze_frame_number": null,
+            "decoded": true,
+            "note": null,
+            "sourceLine": 1
+          }
+        ],
+        "monitor_values": [
+          {
+            "id": "control_module_voltage",
+            "label": "制御モジュール電圧",
+            "value": 14,
+            "unit": "V",
+            "category": "電源",
+            "valueType": "number",
+            "service": "01",
+            "pid": "42",
+            "scope": "standard-generic",
+            "sourceEcu": null,
+            "source_ecu": null,
+            "sourceEcuName": null,
+            "source_ecu_name": null,
+            "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+            "freezeFrameNumber": null,
+            "freeze_frame_number": null,
+            "decoded": true,
+            "note": null,
+            "sourceLine": 1
+          }
+        ],
+        "monitorValueSummary": {
+          "totalCount": 1,
+          "total_count": 1,
+          "decodedCount": 1,
+          "decoded_count": 1,
+          "undecodedRawCount": 0,
+          "undecoded_raw_count": 0,
+          "numericCount": 1,
+          "numeric_count": 1,
+          "textCount": 0,
+          "text_count": 0
+        },
+        "monitor_value_summary": {
+          "totalCount": 1,
+          "total_count": 1,
+          "decodedCount": 1,
+          "decoded_count": 1,
+          "undecodedRawCount": 0,
+          "undecoded_raw_count": 0,
+          "numericCount": 1,
+          "numeric_count": 1,
+          "textCount": 0,
+          "text_count": 0
+        },
+        "monitorInsights": [
+          {
+            "title": "電源電圧を優先確認",
+            "level": "caution",
+            "detail": "保存時は9 V",
+            "nextStep": "電源を確認"
+          },
+          {
+            "level": "info",
+            "title": "追加条件で比較",
+            "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+            "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+          }
+        ],
+        "monitor_insights": [
+          {
+            "title": "電源電圧を優先確認",
+            "level": "caution",
+            "detail": "保存時は9 V",
+            "nextStep": "電源を確認"
+          },
+          {
+            "level": "info",
+            "title": "追加条件で比較",
+            "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+            "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+          }
+        ],
+        "livePidReadoutStatus": "reported",
+        "live_pid_readout_status": "reported",
+        "retainedRawText": false,
+        "retained_raw_text": false
+      },
+      "visibleTitles": [
+        "電源電圧を優先確認",
+        "追加条件で比較"
+      ]
+    },
+    {
+      "id": "collision",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "value": 9,
+            "unit": "V"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "title": "電源電圧を優先確認",
+            "level": "caution",
+            "detail": "保存時は9 V",
+            "nextStep": "電源を確認"
+          }
+        ]
+      },
+      "snapshot": {
+        "source": "local_bridge",
+        "intent": "read_live_pid_snapshot",
+        "ok": true,
+        "blocked": false,
+        "wouldTransmit": false,
+        "would_transmit": false,
+        "vehicleCommandEnabled": false,
+        "vehicle_command_enabled": false,
+        "errorCodes": [],
+        "error_codes": [],
+        "protocol": null,
+        "protocolProvenance": {
+          "primaryProtocol": null,
+          "primary_protocol": null,
+          "diagnosticProtocol": null,
+          "diagnostic_protocol": null,
+          "transportProtocol": null,
+          "transport_protocol": null,
+          "networkProtocol": null,
+          "network_protocol": null
+        },
+        "protocol_provenance": {
+          "primaryProtocol": null,
+          "primary_protocol": null,
+          "diagnosticProtocol": null,
+          "diagnostic_protocol": null,
+          "transportProtocol": null,
+          "transport_protocol": null,
+          "networkProtocol": null,
+          "network_protocol": null
+        },
+        "diagnosticProtocol": null,
+        "diagnostic_protocol": null,
+        "transportProtocol": null,
+        "transport_protocol": null,
+        "networkProtocol": null,
+        "network_protocol": null,
+        "sourceEcu": null,
+        "source_ecu": null,
+        "sourceEcuName": null,
+        "source_ecu_name": null,
+        "livePidScope": "unknown",
+        "live_pid_scope": "unknown",
+        "readoutEcuIds": [],
+        "readout_ecu_ids": [],
+        "livePidEcuSnapshots": [],
+        "live_pid_ecu_snapshots": [],
+        "livePidEcuAggregateSummary": null,
+        "live_pid_ecu_aggregate_summary": null,
+        "supportedPids": [],
+        "supported_pids": [],
+        "capturedAt": null,
+        "captured_at": null,
+        "observationCondition": "unspecified",
+        "observation_condition": "unspecified",
+        "monitorValues": [
+          {
+            "id": "control_module_voltage",
+            "label": "制御モジュール電圧",
+            "value": 9,
+            "unit": "V",
+            "category": "電源",
+            "valueType": "number",
+            "service": "01",
+            "pid": "42",
+            "scope": "standard-generic",
+            "sourceEcu": null,
+            "source_ecu": null,
+            "sourceEcuName": null,
+            "source_ecu_name": null,
+            "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+            "freezeFrameNumber": null,
+            "freeze_frame_number": null,
+            "decoded": true,
+            "note": null,
+            "sourceLine": 1
+          }
+        ],
+        "monitor_values": [
+          {
+            "id": "control_module_voltage",
+            "label": "制御モジュール電圧",
+            "value": 9,
+            "unit": "V",
+            "category": "電源",
+            "valueType": "number",
+            "service": "01",
+            "pid": "42",
+            "scope": "standard-generic",
+            "sourceEcu": null,
+            "source_ecu": null,
+            "sourceEcuName": null,
+            "source_ecu_name": null,
+            "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+            "freezeFrameNumber": null,
+            "freeze_frame_number": null,
+            "decoded": true,
+            "note": null,
+            "sourceLine": 1
+          }
+        ],
+        "monitorValueSummary": {
+          "totalCount": 1,
+          "total_count": 1,
+          "decodedCount": 1,
+          "decoded_count": 1,
+          "undecodedRawCount": 0,
+          "undecoded_raw_count": 0,
+          "numericCount": 1,
+          "numeric_count": 1,
+          "textCount": 0,
+          "text_count": 0
+        },
+        "monitor_value_summary": {
+          "totalCount": 1,
+          "total_count": 1,
+          "decodedCount": 1,
+          "decoded_count": 1,
+          "undecodedRawCount": 0,
+          "undecoded_raw_count": 0,
+          "numericCount": 1,
+          "numeric_count": 1,
+          "textCount": 0,
+          "text_count": 0
+        },
+        "monitorInsights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+          }
+        ],
+        "monitor_insights": [
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+          }
+        ],
+        "livePidReadoutStatus": "reported",
+        "live_pid_readout_status": "reported",
+        "retainedRawText": false,
+        "retained_raw_text": false
+      },
+      "visibleTitles": [
+        "電源電圧を優先確認"
+      ]
+    },
+    {
+      "id": "crowded",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "value": 9,
+            "unit": "V"
+          }
+        ],
+        "monitorInsights": [
+          {
+            "title": "保存メモ0",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ1",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ2",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ3",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ4",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ5",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ6",
+            "level": "info",
+            "detail": "以前の記録"
+          }
+        ]
+      },
+      "snapshot": {
+        "source": "local_bridge",
+        "intent": "read_live_pid_snapshot",
+        "ok": true,
+        "blocked": false,
+        "wouldTransmit": false,
+        "would_transmit": false,
+        "vehicleCommandEnabled": false,
+        "vehicle_command_enabled": false,
+        "errorCodes": [],
+        "error_codes": [],
+        "protocol": null,
+        "protocolProvenance": {
+          "primaryProtocol": null,
+          "primary_protocol": null,
+          "diagnosticProtocol": null,
+          "diagnostic_protocol": null,
+          "transportProtocol": null,
+          "transport_protocol": null,
+          "networkProtocol": null,
+          "network_protocol": null
+        },
+        "protocol_provenance": {
+          "primaryProtocol": null,
+          "primary_protocol": null,
+          "diagnosticProtocol": null,
+          "diagnostic_protocol": null,
+          "transportProtocol": null,
+          "transport_protocol": null,
+          "networkProtocol": null,
+          "network_protocol": null
+        },
+        "diagnosticProtocol": null,
+        "diagnostic_protocol": null,
+        "transportProtocol": null,
+        "transport_protocol": null,
+        "networkProtocol": null,
+        "network_protocol": null,
+        "sourceEcu": null,
+        "source_ecu": null,
+        "sourceEcuName": null,
+        "source_ecu_name": null,
+        "livePidScope": "unknown",
+        "live_pid_scope": "unknown",
+        "readoutEcuIds": [],
+        "readout_ecu_ids": [],
+        "livePidEcuSnapshots": [],
+        "live_pid_ecu_snapshots": [],
+        "livePidEcuAggregateSummary": null,
+        "live_pid_ecu_aggregate_summary": null,
+        "supportedPids": [],
+        "supported_pids": [],
+        "capturedAt": null,
+        "captured_at": null,
+        "observationCondition": "unspecified",
+        "observation_condition": "unspecified",
+        "monitorValues": [
+          {
+            "id": "control_module_voltage",
+            "label": "制御モジュール電圧",
+            "value": 9,
+            "unit": "V",
+            "category": "電源",
+            "valueType": "number",
+            "service": "01",
+            "pid": "42",
+            "scope": "standard-generic",
+            "sourceEcu": null,
+            "source_ecu": null,
+            "sourceEcuName": null,
+            "source_ecu_name": null,
+            "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+            "freezeFrameNumber": null,
+            "freeze_frame_number": null,
+            "decoded": true,
+            "note": null,
+            "sourceLine": 1
+          }
+        ],
+        "monitor_values": [
+          {
+            "id": "control_module_voltage",
+            "label": "制御モジュール電圧",
+            "value": 9,
+            "unit": "V",
+            "category": "電源",
+            "valueType": "number",
+            "service": "01",
+            "pid": "42",
+            "scope": "standard-generic",
+            "sourceEcu": null,
+            "source_ecu": null,
+            "sourceEcuName": null,
+            "source_ecu_name": null,
+            "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+            "freezeFrameNumber": null,
+            "freeze_frame_number": null,
+            "decoded": true,
+            "note": null,
+            "sourceLine": 1
+          }
+        ],
+        "monitorValueSummary": {
+          "totalCount": 1,
+          "total_count": 1,
+          "decodedCount": 1,
+          "decoded_count": 1,
+          "undecodedRawCount": 0,
+          "undecoded_raw_count": 0,
+          "numericCount": 1,
+          "numeric_count": 1,
+          "textCount": 0,
+          "text_count": 0
+        },
+        "monitor_value_summary": {
+          "totalCount": 1,
+          "total_count": 1,
+          "decodedCount": 1,
+          "decoded_count": 1,
+          "undecodedRawCount": 0,
+          "undecoded_raw_count": 0,
+          "numericCount": 1,
+          "numeric_count": 1,
+          "textCount": 0,
+          "text_count": 0
+        },
+        "monitorInsights": [
+          {
+            "title": "保存メモ0",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ1",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ2",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ3",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ4",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ5",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ6",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+          }
+        ],
+        "monitor_insights": [
+          {
+            "title": "保存メモ0",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ1",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ2",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ3",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ4",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ5",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "title": "保存メモ6",
+            "level": "info",
+            "detail": "以前の記録"
+          },
+          {
+            "level": "caution",
+            "title": "電源電圧を優先確認",
+            "detail": "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+            "nextStep": "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+          }
+        ],
+        "livePidReadoutStatus": "reported",
+        "live_pid_readout_status": "reported",
+        "retainedRawText": false,
+        "retained_raw_text": false
+      },
+      "visibleTitles": [
+        "保存メモ0",
+        "保存メモ1",
+        "保存メモ2",
+        "保存メモ3",
+        "保存メモ4",
+        "保存メモ5"
+      ]
+    },
+    {
+      "id": "raw",
+      "input": {
+        "values": [
+          {
+            "id": "control_module_voltage",
+            "value": 9,
+            "unit": "V",
+            "decoded": false
+          }
+        ],
+        "monitorInsights": [
+          {
+            "title": "電源電圧を優先確認",
+            "level": "caution",
+            "detail": "保存時は9 V",
+            "nextStep": "電源を確認"
+          }
+        ]
+      },
+      "snapshot": {
+        "source": "local_bridge",
+        "intent": "read_live_pid_snapshot",
+        "ok": true,
+        "blocked": false,
+        "wouldTransmit": false,
+        "would_transmit": false,
+        "vehicleCommandEnabled": false,
+        "vehicle_command_enabled": false,
+        "errorCodes": [],
+        "error_codes": [],
+        "protocol": null,
+        "protocolProvenance": {
+          "primaryProtocol": null,
+          "primary_protocol": null,
+          "diagnosticProtocol": null,
+          "diagnostic_protocol": null,
+          "transportProtocol": null,
+          "transport_protocol": null,
+          "networkProtocol": null,
+          "network_protocol": null
+        },
+        "protocol_provenance": {
+          "primaryProtocol": null,
+          "primary_protocol": null,
+          "diagnosticProtocol": null,
+          "diagnostic_protocol": null,
+          "transportProtocol": null,
+          "transport_protocol": null,
+          "networkProtocol": null,
+          "network_protocol": null
+        },
+        "diagnosticProtocol": null,
+        "diagnostic_protocol": null,
+        "transportProtocol": null,
+        "transport_protocol": null,
+        "networkProtocol": null,
+        "network_protocol": null,
+        "sourceEcu": null,
+        "source_ecu": null,
+        "sourceEcuName": null,
+        "source_ecu_name": null,
+        "livePidScope": "unknown",
+        "live_pid_scope": "unknown",
+        "readoutEcuIds": [],
+        "readout_ecu_ids": [],
+        "livePidEcuSnapshots": [],
+        "live_pid_ecu_snapshots": [],
+        "livePidEcuAggregateSummary": null,
+        "live_pid_ecu_aggregate_summary": null,
+        "supportedPids": [],
+        "supported_pids": [],
+        "capturedAt": null,
+        "captured_at": null,
+        "observationCondition": "unspecified",
+        "observation_condition": "unspecified",
+        "monitorValues": [
+          {
+            "id": "control_module_voltage",
+            "label": "制御モジュール電圧",
+            "value": "9",
+            "unit": "V",
+            "category": "電源",
+            "valueType": "raw_hex",
+            "service": "01",
+            "pid": "42",
+            "scope": "standard-generic",
+            "sourceEcu": null,
+            "source_ecu": null,
+            "sourceEcuName": null,
+            "source_ecu_name": null,
+            "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+            "freezeFrameNumber": null,
+            "freeze_frame_number": null,
+            "decoded": false,
+            "note": "未換算RAW値",
+            "sourceLine": 1
+          }
+        ],
+        "monitor_values": [
+          {
+            "id": "control_module_voltage",
+            "label": "制御モジュール電圧",
+            "value": "9",
+            "unit": "V",
+            "category": "電源",
+            "valueType": "raw_hex",
+            "service": "01",
+            "pid": "42",
+            "scope": "standard-generic",
+            "sourceEcu": null,
+            "source_ecu": null,
+            "sourceEcuName": null,
+            "source_ecu_name": null,
+            "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+            "freezeFrameNumber": null,
+            "freeze_frame_number": null,
+            "decoded": false,
+            "note": "未換算RAW値",
+            "sourceLine": 1
+          }
+        ],
+        "monitorValueSummary": {
+          "totalCount": 1,
+          "total_count": 1,
+          "decodedCount": 0,
+          "decoded_count": 0,
+          "undecodedRawCount": 1,
+          "undecoded_raw_count": 1,
+          "numericCount": 0,
+          "numeric_count": 0,
+          "textCount": 0,
+          "text_count": 0
+        },
+        "monitor_value_summary": {
+          "totalCount": 1,
+          "total_count": 1,
+          "decodedCount": 0,
+          "decoded_count": 0,
+          "undecodedRawCount": 1,
+          "undecoded_raw_count": 1,
+          "numericCount": 0,
+          "numeric_count": 0,
+          "textCount": 0,
+          "text_count": 0
+        },
+        "monitorInsights": [
+          {
+            "title": "電源電圧を優先確認",
+            "level": "caution",
+            "detail": "保存時は9 V",
+            "nextStep": "電源を確認"
+          },
+          {
+            "level": "info",
+            "title": "追加条件で比較",
+            "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+            "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+          }
+        ],
+        "monitor_insights": [
+          {
+            "title": "電源電圧を優先確認",
+            "level": "caution",
+            "detail": "保存時は9 V",
+            "nextStep": "電源を確認"
+          },
+          {
+            "level": "info",
+            "title": "追加条件で比較",
+            "detail": "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+            "nextStep": "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+          }
+        ],
+        "livePidReadoutStatus": "reported",
+        "live_pid_readout_status": "reported",
+        "retainedRawText": false,
+        "retained_raw_text": false
+      },
+      "visibleTitles": [
+        "電源電圧を優先確認",
+        "追加条件で比較"
+      ]
+    }
+  ]
+}
