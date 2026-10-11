@@ -63,3 +63,7 @@ JSONの解析後、正規化・native archive処理・他形式への分岐よ�
 配布構成766項目合格。データはJSON203ファイル・DTC3,878件でエラー/警告0。構文検査とgit diff --checkも合格。
 
 全体OBD検証7,447項目・エラー0で完了。取得元別分析231・原文保持589・FF関連付け258・経路継承133・模擬通信連携1,480・操作寿命1,066・操作記録127項目も合格。
+
+## 公開確認
+
+実装06d2a4b1e92cd632306328faab62448fdb9be8d1をmainへpush。自動デプロイ作成を確認できなかったため、同SHAを指定して既存プロジェクトへ本番デプロイを作成。本番dpl_Bm8oCE8HaJyMn8ZuPj4dUhzkWozQは同SHA・production・READY。https://tool.mukiguri.com/ の主要5資産がHTTP200・LF正規化後の全文一致であることを確認した。
