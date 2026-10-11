@@ -45794,6 +45794,7 @@
     normalizeBridgeAdapterIdentity,
     normalizeBridgeDtcSnapshot,
     normalizeBridgeLivePidSnapshot,
+    hasConflictingJsonEcuAliases,
     normalizeReadoutNetworkScope,
     normalizeLivePidTimeline,
     buildLivePidTimelineSummary,

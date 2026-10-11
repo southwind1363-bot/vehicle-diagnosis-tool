@@ -33,6 +33,10 @@ const check = (condition, message) => { assert.ok(condition, message); checks +=
 const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-token", j2534RegistryText: "" };
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+// Use the production ECU check in clients that otherwise stub diagnostic builders.
+const bridgeValidationContext = vm.createContext({ window: {} });
+vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), bridgeValidationContext);
+const bridgeEcuAliasCheck = bridgeValidationContext.window.ObdReadOnly.hasConflictingJsonEcuAliases;
 
 for (const [message, required] of [
   ["invalid_workstation_port", ["PORT", "LOCAL_BRIDGE_PORT", "0〜65535", "元のURLの保存データは残ります", "今回の起動は行っていません"]],
@@ -752,7 +756,7 @@ function createClient(webUrl, token, fetchRequest = fetch) {
     obdDtcClearTargetBindingController: { invalidate: () => {} },
     obdAccessUnlocked: true, obdAccessPasswordInput: { value: "" },
     OBD_ACCESS_MODE_KEY: "test-access", renderObdAccessGate: () => {},
-    localStorage: { getItem: () => token }, window: { crypto: webcrypto }, crypto: webcrypto,
+    localStorage: { getItem: () => token }, window: { crypto: webcrypto, ObdReadOnly: { hasConflictingJsonEcuAliases: bridgeEcuAliasCheck } }, crypto: webcrypto,
     fetch: fetchRequest, AbortController, Blob, setTimeout, clearTimeout, performance
   });
   const constants = ["OBD_DEV_TOKEN_KEY", "OBD_LOCAL_BRIDGE_PORTS", "OBD_LOCAL_BRIDGE_PATHS", "OBD_LOCAL_BRIDGE_TIMEOUT_MS"]
@@ -1377,6 +1381,7 @@ function addScannerImportHarness(client, format = "json") {
   for (const name of ["obdDetectedCodes", "obdMonitorGrid", "obdMonitorInsightList", "obdImportStatus", "obdMonitorStatus", "obdMonitorCount"]) client[name] = {};
   const analysis = { source: "imported", codes: [], monitorValues: [], monitorInsights: [] };
   client.window = { confirm: () => true, ObdReadOnly: {
+    hasConflictingJsonEcuAliases: bridgeEcuAliasCheck,
     buildDiagnosticScanSessionFromJson: () => format === "json" ? analysis : null,
     buildDiagnosticScanSessionFromCsv: () => format === "csv" ? analysis : null,
     analyzeScannerText: () => analysis,

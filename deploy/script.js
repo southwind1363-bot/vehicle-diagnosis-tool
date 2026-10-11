@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.676";
+const APP_VERSION = "3.13.677";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8632,6 +8632,9 @@ async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
     if (response.blocked === true || response.ok === false) {
       throw new Error((response.errors || []).join(" / ") || "bridge_response_not_ok");
     }
+    if (!isSafeLocalBridgeIntent(intent) && window.ObdReadOnly.hasConflictingJsonEcuAliases(response)) {
+      throw new Error("source_ecu_alias_conflict");
+    }
     onSuccess(response);
     // Only a completed read returns to the normal results route. A failed
     // request keeps its current controls and failure notice visible.
@@ -8684,6 +8687,7 @@ function finishObdBridgeOperation(operation, resultMessage) {
 
 function formatObdLocalBridgeFailure(error) {
   const codes = String(error?.message || error || "").split(" / ");
+  if (codes.includes("source_ecu_alias_conflict")) return "応答内の同じ箇所に記録された2つのECU番号が一致しないか、形式が不正なため、今回の結果は採用していません。現在の読取結果を保持しています。取得元の応答内容を確認してください。";
   if (codes.includes("bridge_response_invalid")) return "ブリッジの応答形式または要求IDが一致しません。結果は採用していません。PC側と画面の版を確認してください。";
   if (codes.includes("pairing_token_mismatch")) return "ブリッジ接続キーが一致しません。起動時のペアリング値を「ブリッジ接続キー（今回のみ）」へ入力し直してください。";
   if (codes.includes("bridge_pairing_token_not_configured")) return "ブリッジ側の接続キーが未設定です。ブリッジの起動設定を確認してください。";
