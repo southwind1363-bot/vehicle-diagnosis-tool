@@ -40,4 +40,4 @@ buildBridgeSessionSummary、buildBridgeSessionExportPayload、decodeLivePidRespo
 - 主要5資産は本体・別展開・ローカルHTTP200でLF正規化後の全文一致。
 - ブリッジ384・オフライン183・workstation1,369・package766項目合格。JSON203ファイル/DTC3,878件、エラー・警告0。全体画面回帰も合格（readiness-review-I721iH）。
 - OBD総合7,447項目・エラー0・終了コード0。新規3 API540項目、直接統合379項目、ライブ正規化391項目、既存JSON取込63項目・ブリッジ1,080項目・原文保持589項目を含む関連回帰も合格。
-- 公開反映とHTTP照合は実装コミット後に確認する。
+- 実装e52b06926db31cb400cc18a57c99816d71dc649fをmainへpush。本番dpl_8kmp8hKAShBphxd55t8dDcVQkUExは同SHA・production・READY、tool.mukiguri.comへ割当済み。公開主要5資産はHTTP200・LF正規化後の全文一致を確認した。
