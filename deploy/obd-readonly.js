@@ -13966,6 +13966,9 @@
   }
 
   function buildBridgeSessionSummary(parts = {}) {
+    if (hasConflictingJsonEcuAliases(parts)) {
+      parts = { livePidResponse: { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} } };
+    }
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
     const importClassification = resolveImportClassification(metadataOverrides.importClassification);
@@ -30265,6 +30268,9 @@
   }
 
   function buildBridgeSessionExportPayload(parts = {}) {
+    if (hasConflictingJsonEcuAliases(parts)) {
+      parts = { livePidResponse: { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} } };
+    }
     const summary = resolveBridgeSummary(parts);
     const exportSource = summary.source || summary.source_type || parts.source || parts.source_type || "local_bridge";
     const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
@@ -36955,6 +36961,9 @@
   }
 
   function decodeLivePidResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeLivePidSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     const sourceEcu = readObdResponseSourceEcu(input);
