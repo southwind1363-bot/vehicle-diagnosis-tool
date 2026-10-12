@@ -30580,6 +30580,9 @@
   }
 
   function buildBridgeDiagnosticImport(parts = {}) {
+    if (hasConflictingJsonEcuAliases(parts)) {
+      parts = { livePidResponse: { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} } };
+    }
     const summary = resolveBridgeSummary(parts);
     const causeCandidateLog = normalizeCauseCandidateLog(summary.causeCandidateLog || summary.cause_candidate_log || null);
     const causeCandidateLogReferenceComparisonSummary = normalizeCauseCandidateLogReferenceComparisonSummary(

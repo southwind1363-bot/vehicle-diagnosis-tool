@@ -23,8 +23,7 @@ for(const test of liveEcuAliasCases){
  if(test.reject){
   eq(snapshot,fixture.blocked,test.id+' complete failure shape, no input metadata adopted');
   checkBlocked(session.livePidSnapshot,test.id+' session');checkBlocked(restored.livePidSnapshot,test.id+' archive');
-  if(['raw-header-conflict','canonical-values-conflict'].includes(test.id))eq(digest(direct),golden.directSha256,test.id+' documented direct import bypass unchanged');
-  else checkBlocked(direct.bridgeSession.livePidSnapshot,test.id+' direct import');
+  checkBlocked(direct.bridgeSession.livePidSnapshot,test.id+' direct import');
  }else{
   for(const [value,key] of [[snapshot,'snapshotSha256'],[session,'sessionSha256'],[restored,'restoredSha256'],[direct,'directSha256']])eq(digest(value),golden[key],test.id+' normal '+key);
  }

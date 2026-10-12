@@ -1,0 +1,17 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
+import {directImportEcuCases} from './direct-import-ecu-alias-cases.js';
+const source=fs.readFileSync(new URL('../obd-readonly.js',import.meta.url),'utf8');
+const load=source=>{const c=vm.createContext({window:{}});vm.runInContext('Date = class extends Date { constructor(...args) { super(...(args.length ? args : [1791712800000])); } static now() { return 1791712800000; } };',c);vm.runInContext(source,c);c.window.ObdReadOnly.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL('../data/obd-monitor-definitions.json',import.meta.url),'utf8')));return {api:c.window.ObdReadOnly,c};};
+const after=load(source),digest=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
+const failureInput={livePidResponse:{ok:false,blocked:true,would_transmit:false,errors:['source_ecu_alias_conflict'],data:{}}};
+const failure=after.api.buildBridgeDiagnosticImport(failureInput);
+const file=new URL('./fixtures/direct-import-ecu-alias-legacy-3.13.678.json',import.meta.url);
+const fixture=JSON.parse(fs.readFileSync(file,'utf8'));let checks=0;const eq=(a,b,m)=>{assert.deepEqual(JSON.parse(JSON.stringify(a)),JSON.parse(JSON.stringify(b)),m);checks++;};
+eq(digest(failure),fixture.failureSha256,'existing complete empty rejection contract');
+for(const test of directImportEcuCases){const original=JSON.stringify(test.parts),golden=fixture.cases.find(x=>x.id===test.id);const result=after.api.buildBridgeDiagnosticImport(test.parts);const session=after.api.buildDiagnosticScanSession(result.bridgeSession);const restored=after.api.buildDiagnosticScanSessionFromJson(JSON.stringify(after.api.buildBridgeSessionExportPayload(session)));
+ if(test.reject){eq(digest(result),fixture.failureSha256,test.id+' entire input discarded, complete existing result shape');for(const s of [result.bridgeSession,session,restored]){eq(s.livePidSnapshot.livePidReadoutStatus,'blocked',test.id+' blocked');eq(s.livePidSnapshot.errorCodes,['source_ecu_alias_conflict'],test.id+' reason');eq(s.livePidSnapshot.monitorValues,[],test.id+' empty');eq(s.livePidSnapshot.monitorInsights,[],test.id+' no insights');}}else {eq(digest(result),golden.importSha256,test.id+' normal import');eq(digest(session),golden.sessionSha256,test.id+' normal session');eq(digest(restored),golden.restoredSha256,test.id+' normal archive');}
+ eq(JSON.stringify(test.parts),original,test.id+' input unmodified');}
+for(const conflict of [false,true]){const input={metadata:{}};input.metadata.self=input.metadata;if(conflict)Object.assign(input.metadata,{sourceEcu:'7E8',source_ecu:'7E9'});after.c.input=input;
+ if(conflict){vm.runInContext('result=window.ObdReadOnly.buildBridgeDiagnosticImport(input)',after.c,{timeout:10000});eq(digest(after.c.result),fixture.failureSha256,'cyclic conflict rejected before downstream recursion');}
+ else {for(const item of [after]){item.c.input=input;assert.throws(()=>vm.runInContext('window.ObdReadOnly.buildBridgeDiagnosticImport(input)',item.c,{timeout:10000}),e=>e.name==='RangeError'&&e.message.includes('Maximum call stack'),'existing downstream cycle limitation unchanged');checks++;}}eq(input.metadata.self===input.metadata,true,'cycle unmodified');}
+console.log('Direct import ECU alias production: '+directImportEcuCases.length+' cases / '+checks+' checks passed; complete result, session, archive and normal legacy hashes; no vehicle I/O.');

@@ -1,3 +1,4 @@
+import "./validate-direct-import-ecu-alias-proposal.js";
 import "./validate-live-ecu-alias-normalization-proposal.js";
 import "./validate-late-pid-boundary-review.js";
 import "./validate-readout-scope-identity-review.js";

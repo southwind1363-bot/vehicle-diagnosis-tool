@@ -1,0 +1,720 @@
+{
+  "version": "3.13.678",
+  "commit": "e9892a005618ab0dfd27e5839730c321f3b2173b",
+  "failureSha256": "f105374f4e350aed005aedb9fcdd48721e650579844448c7fc560896d2db478f",
+  "cases": [
+    {
+      "id": "row-conflict",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "false-trim",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "header-conflict",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "child-conflict",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "report-wrapper",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "export-wrapper",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "top-level-array",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "freeze-frame",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "metadata-conflict",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "dual-nonstring",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "dual-empty",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "same-aliases",
+      "importSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "sessionSha256": "3fda6213ba753336a019e5719467d90dc8aaef5f640c9c2baec49779a59872b2",
+      "restoredSha256": "837557fbf69f2f1dc8a39f7e8fc0b41d30cd86f633cd8b9b83097151ba38bf11",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "case-space",
+      "importSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "sessionSha256": "3fda6213ba753336a019e5719467d90dc8aaef5f640c9c2baec49779a59872b2",
+      "restoredSha256": "837557fbf69f2f1dc8a39f7e8fc0b41d30cd86f633cd8b9b83097151ba38bf11",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "one-alias",
+      "importSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "sessionSha256": "3fda6213ba753336a019e5719467d90dc8aaef5f640c9c2baec49779a59872b2",
+      "restoredSha256": "837557fbf69f2f1dc8a39f7e8fc0b41d30cd86f633cd8b9b83097151ba38bf11",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "null-alias",
+      "importSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "sessionSha256": "3fda6213ba753336a019e5719467d90dc8aaef5f640c9c2baec49779a59872b2",
+      "restoredSha256": "837557fbf69f2f1dc8a39f7e8fc0b41d30cd86f633cd8b9b83097151ba38bf11",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "no-alias",
+      "importSha256": "b86416bf7a7f0ec824ce915f5f50c4c6885d1a5917f7f7ddf209adf19adeb5c6",
+      "sessionSha256": "7b18c44b2ec56f27d46c063092f866e2ca7b40fe8f03bac54b12910841f7a50a",
+      "restoredSha256": "34c3a66e49c7177de23c99c3e9243b93049f0716efe24dbe68bbcc459b028813",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": null,
+          "source_ecu": null,
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "separate-ecus",
+      "importSha256": "47008087e88d06b0e5a1c14eb24bda511f18f5b2078b45ed05ae2f3aa2b97ae5",
+      "sessionSha256": "7c5084014a725f47a8a91155b04becae010890da2bb82bfc49b1a4f34e4171d2",
+      "restoredSha256": "1d6f749cb731395edec499ca3724b6dfc3101d6c82945be6de8836d9e5ec9f16",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        },
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 2
+        }
+      ]
+    },
+    {
+      "id": "other-alias-deferred",
+      "importSha256": "9d46e0f51e88eabde5c963041ee0b04b79eb682716a7d5b5af441da98a9f55f9",
+      "sessionSha256": "3fda6213ba753336a019e5719467d90dc8aaef5f640c9c2baec49779a59872b2",
+      "restoredSha256": "837557fbf69f2f1dc8a39f7e8fc0b41d30cd86f633cd8b9b83097151ba38bf11",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "parent-child-deferred",
+      "importSha256": "290f309709006a0328b055a41fe7fad69dfccefe1b5225f8a97e8d9effdf7a90",
+      "sessionSha256": "bf866dd020d889010b173e9655550cb6c33cf826b2588397465ff0e67d2e9176",
+      "restoredSha256": "96ed1642bf176998ecbd32e1ea62a8a30e58c7a26b7d2ee2c462383f3bd15ff1",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 9,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "outer-envelope-conflict",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "raw-header-conflict",
+      "importSha256": "e3ff82f4aad6dd8d138e24d51d1857bc6c419db0f044a3ef102f6876f37ac927",
+      "sessionSha256": "1ccc753718b6a015d5f9db29b3cdad66cc3269d7cf9c3698bbe60eeacabceb3a",
+      "restoredSha256": "172778a92c5a58625299dc92a919f9d18b09ce6011768af1d08e07bafb0980fc",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "canonical-values-conflict",
+      "importSha256": "357815ed1d08dd65842ef5795816d11a36530093a5dac0c895402c2ddf9709a7",
+      "sessionSha256": "37e8afbc0092636dd71c2e3536c32f52bb2cd55c6d0eb561b7610d7905ff98ac",
+      "restoredSha256": "3cf55164d9ff1ff38a79e96a72d52bf242d9606f20411f2152e452e7fca20567",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "pid": "42",
+          "value": 14,
+          "unit": "V",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E9"
+        }
+      ]
+    },
+    {
+      "id": "stored-insight-conflict",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "mixed-valid-and-conflict",
+      "importSha256": "a55f88b2aef6bddb3fedb97c1acbb0f9adb3946b7d4ab84298bc9d6c0c2b5855",
+      "sessionSha256": "2feba64b8c5cb86867a5634ae9b77f39fc2a73816a9bab8a28c1baa57c14488a",
+      "restoredSha256": "07642e698c41bf0873b541f451ac5b8b9103d0d7379465b67ea4437b2a5dedca",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "normal-zero",
+      "importSha256": "c59514663afe813723203140eb521c41cef574068f93e77edcfc9e2d55862beb",
+      "sessionSha256": "18253c9bdaeec20a08037a5303055c1ca3b0c548f020a879d94ff50fccb9f43e",
+      "restoredSha256": "4199e4ae02e7248678dc654866240e60ad654e8e2f4bcc4b1eb7428ac956b8a6",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 0,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "normal-raw",
+      "importSha256": "f4f04d4531d9c34aaae93d9b8a858c3c114b902852bf4adfa9e39875fffe4fcb",
+      "sessionSha256": "3d27207ed5e458a53fe248ad51b45f3762813522a3ba309b80af641c4ca5cdab",
+      "restoredSha256": "9e9520a820df50c17771d4fab5c5e83dc535a6479f4b361e447bb67460b4174e",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "normal-blocked",
+      "importSha256": "f013b8f2d70bd5e7c7251d621ac1b33ed45340c68b8387dc952e35c23173b415",
+      "sessionSha256": "df85bfda583a7539d51cd06e8aa2c7087f898504d1421158f720a14a0236ccd3",
+      "restoredSha256": "f2d574563ff6f9122f6911dc2e45f6154161a1fc39d9d8cd802f5ac0a47409bd",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "livePidSnapshot-raw",
+      "importSha256": "e3ff82f4aad6dd8d138e24d51d1857bc6c419db0f044a3ef102f6876f37ac927",
+      "sessionSha256": "1ccc753718b6a015d5f9db29b3cdad66cc3269d7cf9c3698bbe60eeacabceb3a",
+      "restoredSha256": "172778a92c5a58625299dc92a919f9d18b09ce6011768af1d08e07bafb0980fc",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "live_pid_snapshot-raw",
+      "importSha256": "e3ff82f4aad6dd8d138e24d51d1857bc6c419db0f044a3ef102f6876f37ac927",
+      "sessionSha256": "1ccc753718b6a015d5f9db29b3cdad66cc3269d7cf9c3698bbe60eeacabceb3a",
+      "restoredSha256": "172778a92c5a58625299dc92a919f9d18b09ce6011768af1d08e07bafb0980fc",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "live_pid_response-raw",
+      "importSha256": "e3ff82f4aad6dd8d138e24d51d1857bc6c419db0f044a3ef102f6876f37ac927",
+      "sessionSha256": "1ccc753718b6a015d5f9db29b3cdad66cc3269d7cf9c3698bbe60eeacabceb3a",
+      "restoredSha256": "172778a92c5a58625299dc92a919f9d18b09ce6011768af1d08e07bafb0980fc",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "top-values",
+      "importSha256": "f8cc1367c6bb19285668fed24f84ae9e0607ab78e01e55e69cf08ddec98a4d79",
+      "sessionSha256": "fe5f2026dd30e29340972d5543c243dc3e5d0cf9c0fa286a412016489da1a884",
+      "restoredSha256": "8a7c7b2593f08e177cf3ba3b9add68d3bfb76b5e649a771b5385c2e7a7ed76b9",
+      "status": "blocked",
+      "values": []
+    },
+    {
+      "id": "outer-metadata",
+      "importSha256": "2d6cc1c7b8faaee864296f4a84fda0753403cd43089b03f00f27cf46ab40fd5b",
+      "sessionSha256": "59dfefd0c80d2d3098da9f1d72eba956c2ca8b1b6301d15f1853dd1e97485542",
+      "restoredSha256": "988de21cc79919027afa8bd50febcb0b7380856f0334af262aa5f24c64a62ce1",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": null,
+          "source_ecu": null,
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "mixed-dtc",
+      "importSha256": "298dcb825799f4f636ec444cb9341ed567987fa994dacf50ea0d24eec6a92530",
+      "sessionSha256": "97ec6cb51d0aebf2116242dc5335bd7fb114f242cd52aee6e1de1966f909c7a6",
+      "restoredSha256": "c9dd9ed453023ca692208f5a38ad09037ba4432cde30ad3e1bb8daf180c49944",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E9",
+          "source_ecu": "7E9",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "dtc-conflict",
+      "importSha256": "3c5c0f5d82c86f612aed4e08a8ee3a37e9dbda13616965bc2c9acdeec7d5b1f9",
+      "sessionSha256": "fdaf7b84656f469f98be040ca9af1997fc69d62cab858f4ef3d76acd6fed8c54",
+      "restoredSha256": "2aaaa22f8c67ac1a8b383ed60ff03007646eacc31e8155282e06644485ad848c",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": null,
+          "source_ecu": null,
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "normal-mixed",
+      "importSha256": "b50989b136c28e9da981f1a10eac5edae07ae72a4209631e8445990e6672a745",
+      "sessionSha256": "c3849f420af2210cdd973918510ca30fa4fd89f840d86ca7050970e07ad78789",
+      "restoredSha256": "52adbee193af288cb09a40db5cca72e8bddfb1be2311de2527d788a469a4f55c",
+      "status": "reported",
+      "values": [
+        {
+          "id": "control_module_voltage",
+          "label": "制御モジュール電圧",
+          "value": 14,
+          "unit": "V",
+          "category": "電源",
+          "valueType": "number",
+          "service": "01",
+          "pid": "42",
+          "scope": "standard-generic",
+          "sourceEcu": "7E8",
+          "source_ecu": "7E8",
+          "sourceEcuName": null,
+          "source_ecu_name": null,
+          "supportNote": "端子実測値と差がある場合は電圧降下を確認する",
+          "freezeFrameNumber": null,
+          "freeze_frame_number": null,
+          "decoded": true,
+          "note": null,
+          "sourceLine": 1
+        }
+      ]
+    },
+    {
+      "id": "normal-empty",
+      "importSha256": "5b2591ae4f47a56fca5303957ad0322697a939a02dd7abcb23ef873cb16212d6",
+      "sessionSha256": "8626be01a8b08717849a214907bb9e3dc156dedd443fe54c21ca48636649fda2",
+      "restoredSha256": "96fa77cc09ebeb7fe68d9462e85cbbb79ce444707c19b47b5354f5efd0ff9c78",
+      "status": "blocked",
+      "values": []
+    }
+  ]
+}
