@@ -41,3 +41,5 @@ ECU応答一覧normalizeEcuResponseSummary、個別行の他API、ecu/address/mo
 最終ZIP: C:/Users/nagatomo/AppData/Local/Temp/vehicle-diagnosis-tool-3.13.685-final.zip（2,702,312 bytes、SHA256 32925DDA9BC454FF803B59826A24B11ADA1913159B7F64C297BE4BF910B82CCC）。別展開851ファイル / 17,036,081 bytesの整合性合格。主要5資産は本体・別展開・ローカルHTTP200の全文が改行も含め一致。これはコピー整合性であり、実車/VCI適合の証明ではない。
 
 全体OBD再実行は7,447項目・エラー0、終了コード0（obd-3.13.685-rerun.log）。旧版fixtureは変更せず、全呼出元を含む既存回帰を通過。
+
+実装コミット065d14c2cae9abcf1ef91aa4a5f6265b56eecb6eの本番dpl_JxaxCFiti2VAVLcSkYoWXxV7H68JがREADY。tool.mukiguri.comへの割当と主要5資産の公開HTTP200・LF正規化後の本体全文一致を確認。
