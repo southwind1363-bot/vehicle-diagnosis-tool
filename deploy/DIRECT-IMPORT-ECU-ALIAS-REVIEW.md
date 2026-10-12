@@ -42,4 +42,4 @@ buildBridgeDiagnosticImportの入口で、既存hasConflictingJsonEcuAliasesを�
 - 主要5資産は本体・別展開・ローカルHTTP200でLF正規化後の全文一致。
 - 全体画面回帰合格（readiness-review-7unu8s）。package766項目、JSON203ファイル/DTC3,878件、エラー・警告0。
 - OBD総合7,447項目・エラー0・終了コード0。直接統合379項目、ライブ正規化391項目、既存JSON取込63項目・ブリッジ1,080項目・取得元別分析231項目・原文保持589項目も合格。
-- 公開反映とHTTP照合は実装コミット後に確認する。
+- 実装9cb3b3060566c2319f97126e7568f30a42afa6ccをmainへpush。本番dpl_95u3eacMidXr2ZChvieJe46yUNdgは同SHA・production・READY、tool.mukiguri.comへ割当済み。公開主要5資産はHTTP200・LF正規化後の全文一致を確認した。
