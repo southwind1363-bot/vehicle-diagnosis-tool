@@ -41,4 +41,4 @@ buildSupportedPidMatrixへsupported_pids:[01,0C]とsourceEcu:7E8/source_ecu:7E9�
 - 主要5資産は本体・別展開・ローカルHTTP200でLF正規化後の全文一致。
 - ブリッジ384・オフライン183・Windowsローカル版1,369・パッケージ766項目が合格。データ203 JSON / DTC3,878件はエラー・警告0。
 - 診断画面全体のブラウザー回帰が合格（readiness-review-fTStgr）。実取込・検索・初期化・移動・画面幅/明暗・記録維持を確認。外部/車両要求0。
-- 全体OBD回帰7,447項目・エラー0で合格。公開確認は実行中。
+- 全体OBD回帰7,447項目・エラー0で合格。実装コミット806e0dd50e104b95368c7d3bbb7e4e49eed81e3bの本番dpl_DmyT19t6yAeC6f3p9y45NrbFyUXaがREADY。tool.mukiguri.comへの割当と、主要5資産の公開HTTP200・LF正規化後の本体全文一致を確認。実車/VCI試験ではない。
