@@ -25,3 +25,5 @@ buildObdEcuResponseDisplayLinesで、ECU矛盾フラグがtrueなら、表示番
 ZIP: C:/Users/nagatomo/AppData/Local/Temp/vehicle-diagnosis-tool-3.13.686.zip、2,702,450 bytes、SHA256 3520898748B1A8368F36EA6C30912D72CF3D979E1754A5332C122588FE8BC3E1。別展開851ファイル / 17,036,555 bytesの整合性合格。主要5資産は本体/別展開/ローカルHTTP200で全文一致。
 
 全体OBD7,447項目・エラー0・終了コード0（obd-3.13.686.log）。
+
+実装コミット5eb7ac5da42bcb041a5501a6bbd38962fc3fb71dの本番dpl_5iPmJaeyaS5e7xw3GbqbLsmhEkaKがREADY。主要5資産の公開HTTP200・LF正規化後の本体全文一致を確認。
