@@ -1,0 +1,222 @@
+{
+  "version": "3.13.684",
+  "commit": "07d37c55852ce3dbd0cf55368c22e132547524af",
+  "cases": {
+    "conflict": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "empty-alias": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "invalid-alias": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "metadata-conflict": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "row-conflict": {
+      "hashes": {
+        "output": "a617c9edcb22b365bc89e33b69951ace35c0b94ca810406e086b70a7b0dea1de",
+        "session": "2994aa726bfd8036a8f62b355fa557260321d3072348ca8489830466c7e43b9c",
+        "archive": "c61362e5e58baffc78ccf07585c3bcd710e72453d0c4466d3b64d9f3153c799c",
+        "restored": "93ad5a2f38a706f6ebcc1325088935a3288c0a28895d2282c47f2bfa1038f613"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "data-conflict": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "good-before-bad": {
+      "hashes": {
+        "output": "e8b12a50f42151bfd6417014b0781138bd9fd4c9653a36c3dc11f006d93e3203",
+        "session": "aeec4b55c088271356ed6455a172f9fcad62f5743768e7f4dabadfeda3ea8bb5",
+        "archive": "a4b266412b0ac7250d443479e9decb004b30f1efeaeada37ddfb631d7c9adeb9",
+        "restored": "47af7e7a0152374710d6a8988d2e0b058724997223f2a499a873fb0e1d6b14c0"
+      },
+      "status": "reported",
+      "codes": [
+        "P0420",
+        "P0300"
+      ]
+    },
+    "bad-before-good": {
+      "hashes": {
+        "output": "b307257d741162ae8a4dc68b5aa622e68cdee6c4979109db2f9ca3049a0e8a3b",
+        "session": "cf88e432a6a1bfa53afd0b9ce19ef24895ca5677a4bdd5420875a56ce0e71813",
+        "archive": "42f6c07737f7c6411d4f6ad4ebbf52ad8c722d7ceaf9f13a64b6e0ec0cb22a6b",
+        "restored": "5bb28d750c7f6220596338e6b9b7281d809137cbce0fafb05fce8c8b5355e104"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300",
+        "P0420"
+      ]
+    },
+    "normal": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "two-ecus": {
+      "hashes": {
+        "output": "b307257d741162ae8a4dc68b5aa622e68cdee6c4979109db2f9ca3049a0e8a3b",
+        "session": "cf88e432a6a1bfa53afd0b9ce19ef24895ca5677a4bdd5420875a56ce0e71813",
+        "archive": "42f6c07737f7c6411d4f6ad4ebbf52ad8c722d7ceaf9f13a64b6e0ec0cb22a6b",
+        "restored": "5bb28d750c7f6220596338e6b9b7281d809137cbce0fafb05fce8c8b5355e104"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300",
+        "P0420"
+      ]
+    },
+    "duplicate": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "empty-input": {
+      "hashes": {
+        "output": "e8ff2b6a1df23770fa8d9fd877f2223269e15613344a5539de8729201f8f0d55",
+        "session": "ea3a17c1ed114397c85f75d7c50cf19ae89ce9f05c2c5ad537408143ce2e9f1f",
+        "archive": "984b3078e35d3795c35adf50ad3727968a53726d274cafbba1add6e07300aa00",
+        "restored": "4b1eeec40cb9651a5626fe2b6d2169c70f302c57e356dcb05e8d448f93d7b991"
+      },
+      "status": "unknown",
+      "codes": []
+    },
+    "empty-snapshot": {
+      "hashes": {
+        "output": "3549e003fd507f9ee991fb26536b6f618d8a3423276a5143dbddc073126805cb",
+        "session": "9d0eee5e56e35e3707bb62ee50fb6e26aada648cf9c7d3a4f7b463d0130919ac",
+        "archive": "624850f03318ebba946986efd4585f8198ee02fb4ef531b43570281cfc9c715d",
+        "restored": "8d00b5292a51df649db8ba4980e770959b099cce48bf52120c3fb0ee1cf92459"
+      },
+      "status": "unknown",
+      "codes": []
+    },
+    "null-alias": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "space-case": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "other-aliases": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "separate-objects": {
+      "hashes": {
+        "output": "13c1d76332b50eb22ad17027a6ee06422307869d4d6765b40306d3da158313fa",
+        "session": "ee91c02b34c06e2b4e57f43deee6ded792b832982a14a1347120a7f49b6bd4cc",
+        "archive": "9c40f58fa917be6f4ecda1724ce413ab12d707af8406aee22be12217dabc1bfc",
+        "restored": "a79e995c92643bcfcc0accfc72c38da91f53f4a69de4c515c36735508187b9c2"
+      },
+      "status": "reported",
+      "codes": [
+        "P0300"
+      ]
+    },
+    "already-blocked": {
+      "hashes": {
+        "output": "9f2789286307126c486e1b03e56b577d09ab4274d2706ebf6c8ff7fb3e821dec",
+        "session": "7fe12c534bb9f6737d67c2d42d0d7707602fd8d211e00afcde34b7aec772ca0c",
+        "archive": "5369e9335601f3817c7c02f3d10c8efd4bd049f83601e53197124746e78a5f35",
+        "restored": "c5096aa38de5f41effc8e1641abcf3a4a5ec89f89b4b0ca31367e4ce3d82c44a"
+      },
+      "status": "blocked",
+      "codes": [
+        "P0420"
+      ]
+    }
+  },
+  "failure": "727e750fdc96192d686cf3bc5d70e288e9e3a2a5d6d29bd8940e2a4dcc1867cc"
+}
