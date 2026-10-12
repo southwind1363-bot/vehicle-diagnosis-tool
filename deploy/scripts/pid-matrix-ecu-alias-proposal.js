@@ -1,6 +1,6 @@
 import { pidMatrixKinds } from './pid-matrix-ecu-alias-cases.js';
 
-// Isolated review only; not imported by the application.
+// Historical 3.13.683 review patch, applied in 3.13.684. Not imported by runtime or tests.
 export function applyPidMatrixEcuAliasProposal(source) {
   for (const item of pidMatrixKinds) {
     const anchor = '  function ' + item.api + '(input = {}) {';

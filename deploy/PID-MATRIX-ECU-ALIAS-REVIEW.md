@@ -1,12 +1,12 @@
-# 対応PID一覧APIのECU同義項目チェック案
+# 対応PID一覧APIのECU同義項目チェック（3.13.684適用）
 
-2026-10-13 / 対象3.13.683・a63a06b7e0eaf05a3d95026555d2c93e8b310426 / 本体未適用
+2026-10-13 / 対象3.13.683・a63a06b7e0eaf05a3d95026555d2c93e8b310426 / 利用者の「続けて」で承認・3.13.684本体適用済み
 
 ## 再現
 
 buildSupportedPidMatrixへsupported_pids:[01,0C]とsourceEcu:7E8/source_ecu:7E9を同梱すると、現行はsourceEcu:7E9・reportedで両PIDを返す。配列直接入力の行に矛盾を含めてもreportedとなりPIDを採用する。いずれも合成入力の再現で、実車試験ではない。
 
-## 本体へ適用する具体案
+## 採用した変更
 
 対象はbuildSupportedPidMatrixの1 API。入口で既存hasConflictingJsonEcuAliasesを使い、入力全体を走査する。同じオブジェクトのsourceEcu/source_ecuが両方null/欠落以外の場合、非文字列・空文字・前後空白/大小文字を除いた不一致を拒否する。
 
@@ -17,9 +17,9 @@ buildSupportedPidMatrixへsupported_pids:[01,0C]とsourceEcu:7E8/source_ecu:7E9�
 - 正常なオブジェクト/配列/行、空配列、同値・空白大小文字・片方指定・nullの既存出力を維持。別オブジェクト・親子・別PID行の異なるECUは、この同義項目チェックでは矛盾と扱わない。
 - 保存schema・通信権限は維持し、既存の日本語拒否表示を使用する。
 
-## 隔離検証
+## 適用前の隔離検証
 
-scripts/pid-matrix-ecu-alias-proposal.jsで読み込んだソース文字列だけに変更を適用。本体は変更していない。旧版の出力をscripts/fixtures/pid-matrix-ecu-alias-legacy-3.13.683.jsonへ固定。固定時刻1791712800000。
+適用前はscripts/pid-matrix-ecu-alias-proposal.jsでソース文字列だけに変更を適用し、本体を変更せず検証した。旧版の出力をscripts/fixtures/pid-matrix-ecu-alias-legacy-3.13.683.jsonへ固定。固定時刻1791712800000。
 
 - 21ケースと24呼出元出力、計253項目が合格。元入力不変、既存空拒否との全出力SHA256一致、拒否理由・ECUなし・保存復元後の送信/書込falseを確認。
 - 正常入力はAPI出力・セッション・保存・復元の全SHA256が旧版と一致。対応PIDの既存デコーダー/ブリッジ24入力の全出力も旧版と一致。この入力群以外の全呼出し状況まで保証するものではない。
@@ -30,4 +30,15 @@ scripts/pid-matrix-ecu-alias-proposal.jsで読み込んだソース文字列だ�
 
 個別行の他API、ecu/address/module等の別名、別オブジェクト間のECU差、循環参照/getterの下流動作は対象外。既に失われた矛盾は復元できない。
 
-診断結果の採用条件が変わるため、開発計画の「診断結果の契約・保存形式に変更が必要なら、その具体的な差分を先に提示する」に従って本体適用の確認を待つ。全体回帰・配布再生成は本体適用後に実施する。公開・本体・配布は3.13.683を維持する。
+## 本体適用と検証
+
+利用者の承認後、確認済みの対応PID一覧API入口検査を3.13.684へ適用。既存表示と保存schemaを維持。隔離パッチ参照とfixture生成処理を検査から外し、本体を直接検査する。固定旧版fixtureは変更しない。
+
+- 本体21ケース・24呼出元出力、計232項目合格。隔離時253項目から旧版再現21項目を除き、本体直接参照へ移行。固定fixtureは維持。
+- 本体ブラウザー5記録が合格（pid-matrix-ecu-alias-production-gfFvdb）。日本語拒否理由・保存復元・390/1280px明暗・正常復帰を確認し、ページ例外・外部/車両要求0。390px画面も目視確認。
+- 既存汎用5 API（generic-ecu-alias-production-GE3oAv）と基本読取12 API（core-readout-ecu-alias-production-IlFSd2）のブラウザー回帰も合格。
+- ZIP別展開851ファイル / 16,989,913 bytes一致。ZIP自体2,700,634 bytes、SHA256: 1AC70DDBFD59D0772AD3D244159D4620DD1D101F3C60D0F425CFAF9F9E402A07。
+- 主要5資産は本体・別展開・ローカルHTTP200でLF正規化後の全文一致。
+- ブリッジ384・オフライン183・Windowsローカル版1,369・パッケージ766項目が合格。データ203 JSON / DTC3,878件はエラー・警告0。
+- 診断画面全体のブラウザー回帰が合格（readiness-review-fTStgr）。実取込・検索・初期化・移動・画面幅/明暗・記録維持を確認。外部/車両要求0。
+- 全体OBD回帰7,447項目・エラー0で合格。公開確認は実行中。

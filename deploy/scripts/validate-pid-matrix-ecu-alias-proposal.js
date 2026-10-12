@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { pidMatrixCases, pidMatrixKinds } from './pid-matrix-ecu-alias-cases.js';
 import { coreReadoutEcuCases } from './core-readout-ecu-alias-cases.js';
-import { applyPidMatrixEcuAliasProposal } from './pid-matrix-ecu-alias-proposal.js';
 
 function load(source) {
   const context = vm.createContext({ window: {} });
@@ -16,7 +15,7 @@ function load(source) {
   return api;
 }
 const source = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
-const before = load(source), after = load(applyPidMatrixEcuAliasProposal(source));
+const after = load(source);
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function observe(api, test) {
   const output = api[test.api](test.input);
@@ -26,24 +25,11 @@ function observe(api, test) {
   return { output, session, archive, restored };
 }
 const fixturePath = new URL('./fixtures/pid-matrix-ecu-alias-legacy-3.13.683.json', import.meta.url);
-if (process.argv.includes('--freeze')) {
-  assert.equal(fs.existsSync(fixturePath), false, 'Never overwrite the legacy fixture');
-  const cases = {};
-  for (const test of pidMatrixCases) {
-    const observed = observe(before, test);
-    cases[test.id] = { hashes: Object.fromEntries(Object.entries(observed).map(([key, value]) => [key, hash(value)])), status: observed.output[test.status], ecu: observed.output.sourceEcu };
-  }
-  const failures = Object.fromEntries(pidMatrixKinds.map(item => [item.bridge, hash(before[item.bridge]({ ok: false, blocked: true, would_transmit: false, errors: ['source_ecu_alias_conflict'], data: {} }))]));
-  const callers = Object.fromEntries(coreReadoutEcuCases.filter(test => test.kind === 'SupportedPid').map(test => [test.api + ':' + test.id, hash(before[test.api](test.input))]));
-  fs.writeFileSync(fixturePath, JSON.stringify({ version: '3.13.683', commit: 'a63a06b7e0eaf05a3d95026555d2c93e8b310426', cases, failures, callers }, null, 2) + '\n');
-  console.log('Frozen legacy evidence: 21 matrix cases and 24 caller outputs');
-}
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 let checks = 0;
 function eq(actual, expected, label) { assert.deepEqual(JSON.parse(JSON.stringify(actual)), JSON.parse(JSON.stringify(expected)), label); checks++; }
 for (const test of pidMatrixCases) {
   const input = JSON.stringify(test.input), legacy = fixture.cases[test.id];
-  eq(hash(before[test.api](test.input)), legacy.hashes.output, test.id + ' legacy reproduction');
   const result = observe(after, test);
   if (test.reject) {
     eq(legacy.status, 'reported', test.id + ' previously accepted');
@@ -75,4 +61,4 @@ for (const kind of pidMatrixKinds) {
     eq(value.livePidSnapshot.monitorValues.map(row => row.value), [14], kind.kind + ' independent live retained');
   }
 }
-console.log('PID matrix ECU alias proposal: 21 cases and 24 caller outputs / ' + checks + ' checks passed; one API; synthetic only.');
+console.log('PID matrix ECU alias production: 21 cases and 24 caller outputs / ' + checks + ' checks passed; one API; synthetic only.');

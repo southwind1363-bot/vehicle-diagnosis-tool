@@ -41628,6 +41628,9 @@
   }
 
   function buildSupportedPidMatrix(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeSupportedPidSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
         ...inheritReadoutNetworkScope(input.data, input),
