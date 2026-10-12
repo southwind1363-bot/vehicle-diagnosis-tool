@@ -1,6 +1,6 @@
 import { genericKinds } from './generic-ecu-alias-cases.js';
 
-// Isolated review only; never imported by the application.
+// Historical 3.13.682 review patch, applied in 3.13.683. Not imported by runtime or tests.
 export function applyGenericEcuAliasProposal(source) {
   for (const item of genericKinds) {
     const anchor = '  function ' + item.api + '(input = {}) {';

@@ -5,7 +5,6 @@ import { createHash } from 'node:crypto';
 import { genericAliasCases, genericKinds } from './generic-ecu-alias-cases.js';
 import { coreReadoutEcuCases } from './core-readout-ecu-alias-cases.js';
 import { udsAliasCases } from './uds-ecu-alias-cases.js';
-import { applyGenericEcuAliasProposal } from './generic-ecu-alias-proposal.js';
 
 function load(source) {
   const context = vm.createContext({ window: {} });
@@ -17,7 +16,7 @@ function load(source) {
   return api;
 }
 const source = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
-const before = load(source), after = load(applyGenericEcuAliasProposal(source));
+const after = load(source);
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function observe(api, test) {
   const output = api[test.api](test.input);
@@ -27,24 +26,11 @@ function observe(api, test) {
   return { output, session, archive, restored };
 }
 const fixturePath = new URL('./fixtures/generic-ecu-alias-legacy-3.13.682.json', import.meta.url);
-if (process.argv.includes('--freeze')) {
-  assert.equal(fs.existsSync(fixturePath), false, 'Never overwrite the legacy fixture');
-  const cases = {};
-  for (const test of genericAliasCases) {
-    const observed = observe(before, test);
-    cases[test.id] = { hashes: Object.fromEntries(Object.entries(observed).map(([key, value]) => [key, hash(value)])), status: observed.output[test.status], ecu: observed.output.sourceEcu };
-  }
-  const failures = Object.fromEntries(genericKinds.map(item => [item.bridge, hash(before[item.bridge]({ ok: false, blocked: true, would_transmit: false, errors: ['source_ecu_alias_conflict'], data: {} }))]));
-  const callers = Object.fromEntries([...coreReadoutEcuCases, ...udsAliasCases].map(test => [test.api + ':' + test.id, hash(before[test.api](test.input))]));
-  fs.writeFileSync(fixturePath, JSON.stringify({ version: '3.13.682', commit: 'abd5c6ba2458a157883b3c47771ee987c38461c0', cases, failures, callers }, null, 2) + '\n');
-  console.log('Frozen legacy evidence: 80 generic cases and 378 caller outputs');
-}
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 let checks = 0;
 function eq(actual, expected, label) { assert.deepEqual(JSON.parse(JSON.stringify(actual)), JSON.parse(JSON.stringify(expected)), label); checks++; }
 for (const test of genericAliasCases) {
   const input = JSON.stringify(test.input), legacy = fixture.cases[test.id];
-  eq(hash(before[test.api](test.input)), legacy.hashes.output, test.id + ' legacy reproduction');
   const result = observe(after, test);
   if (test.reject) {
     eq(legacy.status, 'reported', test.id + ' previously accepted');
@@ -76,4 +62,4 @@ for (const kind of genericKinds) {
     eq(value.livePidSnapshot.monitorValues.map(row => row.value), [14], kind.kind + ' independent live retained');
   }
 }
-console.log('Generic ECU alias proposal: 80 cases and 378 caller outputs / ' + checks + ' checks passed; five APIs; synthetic only.');
+console.log('Generic ECU alias production: 80 cases and 378 caller outputs / ' + checks + ' checks passed; five APIs; synthetic only.');

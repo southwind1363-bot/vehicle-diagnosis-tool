@@ -32290,6 +32290,9 @@
   }
 
   function normalizeDtcSnapshot(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
         ...inheritReadoutNetworkScope(input.data, input),
@@ -33229,6 +33232,9 @@
   }
 
   function normalizeFreezeFrameSnapshot(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeFreezeFrameSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
         ...inheritReadoutNetworkScope(input.data, input),
@@ -33935,6 +33941,9 @@
   }
 
   function normalizeReadinessSnapshot(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeReadinessSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
         ...inheritReadoutNetworkScope(input.data, input),
@@ -34924,6 +34933,9 @@
   }
 
   function normalizeEcuInfoSnapshot(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeEcuInfoSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
         ...inheritReadoutNetworkScope(input.data, input),
@@ -35404,6 +35416,9 @@
   }
 
   function normalizeOnboardMonitorSnapshot(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeOnboardMonitorSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
         ...inheritReadoutNetworkScope(input.data, input),
