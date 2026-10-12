@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.685";
+const APP_VERSION = "3.13.686";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10939,6 +10939,11 @@ function buildObdEcuResponseDisplayLines(summary = null, indexOffset = 0) {
     const prefix = `#${indexOffset + index + 1} [${address}]`;
     const statusLabel = Object.prototype.hasOwnProperty.call(statusLabels, statusKey) ? statusLabels[statusKey] : "未分類";
     lines.push(`${prefix} ${label} / 記録状態: ${statusLabel} (${status})`);
+    if (row.ecuResponseConflict === true || row.ecu_response_conflict === true) {
+      lines.push(`${prefix} 注意: ECU識別情報に矛盾があります。表示中のECU番号は確定情報ではなく、適合判定の根拠に使えません。`);
+    } else if (row.applicabilityEvidenceEligible === false || row.applicability_evidence_eligible === false) {
+      lines.push(`${prefix} 注意: この応答記録は適合判定の根拠対象外です。`);
+    }
     if (row.id && row.id !== row.address && row.id !== row.name) lines.push(`${prefix} 記録ID: ${row.id}`);
     lines.push(`${prefix} 報告DTC件数: ${formatCount(row.dtcCount ?? row.dtc_count)} / 応答回数: ${formatCount(row.responseCount ?? row.response_count)}`);
     lines.push(`${prefix} 記録の負応答集計: ${formatCount(row.negativeResponseCount ?? row.negative_response_count)} / うち保留: ${formatCount(row.pendingNegativeResponseCount ?? row.pending_negative_response_count)}`);
