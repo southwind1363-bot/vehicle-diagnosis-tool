@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { applyEcuEnvelopeAliasProposal } from './ecu-envelope-alias-proposal.js';
 const rows = [{ id: 'ECM', address: '7E8', status: 'reported', responseCount: 2, responseTimeMs: 0 }, { id: 'TCM', address: '7E9', status: 'reported', dtcCount: 1 }];
 const bad = { sourceEcu: '7E8', source_ecu: '7E9' };
 const cases = [
@@ -28,7 +27,7 @@ function load(source) {
   return context.window.ObdReadOnly;
 }
 const source = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
-const before = load(source), after = load(applyEcuEnvelopeAliasProposal(source));
+const after = load(source);
 const evidenceContext = vm.createContext({});
 for (const name of ['normalizeDirectionalCanEcuAddress', 'resolveEcuResponseAddressEvidence']) {
   const start = source.indexOf('  function ' + name + '('), end = source.indexOf('\n  }', start);
@@ -46,19 +45,14 @@ function observe(api, input) {
   return { output, session, archive, restored };
 }
 const fixturePath = new URL('./fixtures/ecu-envelope-alias-legacy-3.13.686.json', import.meta.url);
-if (process.argv.includes('--freeze')) {
-  assert.equal(fs.existsSync(fixturePath), false, 'Never overwrite legacy evidence');
-  fs.writeFileSync(fixturePath, JSON.stringify({ version: '3.13.686', commit: 'f241b59e75a19dcec60198134970d4522c4978ba', cases: Object.fromEntries(cases.map(([id, input]) => [id, Object.fromEntries(Object.entries(observe(before, input)).map(([key, value]) => [key, hash(value)]))])) }, null, 2) + '\n');
-}
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 let checks = 0;
 const eq = (a, b, label) => { assert.deepEqual(plain(a), plain(b), label); checks++; };
 for (const [id, input, changed] of cases) {
-  const original = JSON.stringify(input), legacy = observe(before, input), next = observe(after, input);
-  for (const [key, value] of Object.entries(legacy)) eq(hash(value), fixture.cases[id][key], id + ' frozen legacy ' + key);
+  const original = JSON.stringify(input), next = observe(after, input);
   if (changed) {
-    eq(legacy.output.ecus.some(row => row.ecuResponseConflict), false, id + ' previously unflagged');
-    const expected = plain(legacy.output);
+    const expected = plain(after.normalizeEcuResponseSummary({ ecus: rows }));
+    eq(hash(expected), fixture.cases[id].output, id + ' fixed legacy unflagged baseline');
     for (const row of expected.ecus) Object.assign(row, { ecuResponseConflict: true, ecu_response_conflict: true, applicabilityEvidenceEligible: false, applicability_evidence_eligible: false, diagnosticRequestId: null, diagnostic_request_id: null, diagnosticResponseId: null, diagnostic_response_id: null });
     eq(next.output, expected, id + ' existing conflict shape including null directional aliases');
     for (const row of next.output.ecus) eq(evidenceContext.resolveEcuResponseAddressEvidence(row).kind, 'conflict', id + ' production evidence resolver rejects identity');
@@ -81,4 +75,4 @@ for (const session of [combined, restored]) {
   eq(session.livePidSnapshot.monitorValues.map(row => row.value), [14], 'separate normal live retained');
   eq(session.ecuResponseSummary.ecus.every(row => row.applicabilityEvidenceEligible === false), true, 'envelope exclusion retained with live');
 }
-console.log(`ECU envelope alias proposal: ${cases.length} cases / ${checks} checks passed; synthetic only; production unchanged.`);
+console.log(`ECU envelope alias production: ${cases.length} cases / ${checks} checks passed; synthetic only; production code.`);

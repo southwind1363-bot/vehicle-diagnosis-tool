@@ -1,4 +1,4 @@
-// Isolated proposal only. Never imported by the application.
+// Historical proposal applied in 3.13.687. Never imported by the application.
 export function applyEcuEnvelopeAliasProposal(source) {
   const anchor = '  function normalizeEcuResponseSummary(input = {}) {';
   const rowAnchor = '      const ecuResponseConflict = ecuResponseAddressEvidence.conflict === true;';
