@@ -1,0 +1,90 @@
+{
+  "version": "3.13.686",
+  "commit": "f241b59e75a19dcec60198134970d4522c4978ba",
+  "cases": {
+    "outer": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "data": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "outer-with-data": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "empty-alias": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "invalid-alias": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "normal": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "array": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "case-space": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "null": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "one-alias": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "parent-child-different": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "metadata-not-envelope": {
+      "output": "b05ffaf815227c8082a89ee6befb56276b086219cd6249ef78e68caed6c562e1",
+      "session": "4d2f5307dd73b73b00c728aaed9cfdf2a36b86eefdfd972cd8b370e56bc71f22",
+      "archive": "71ef725380cc5f767cabef683f9de36fa79f6d9df61b8f28414518e5c1c66c41",
+      "restored": "694442d8ed3c583f5e610602877f1e0587bf8dea56db4b506a766d1d8ec6c407"
+    },
+    "empty-rows": {
+      "output": "c2eb121bdb0648e0f945dde75d7518b85b5c1ad90a060a26c1fac69d442e1644",
+      "session": "a4791df6e6f36c2f14c2f5a2b9d3eb7ddf0a5642cde647f6b3a2751591d0237f",
+      "archive": "c9487eb94ea17a29948078cc7b37750a77b0494ca54f9c7cd78c38a1109a1e14",
+      "restored": "5a3421518569e7457a4c02783b90afd0a5feb7958226ff57353970c82e4fd000"
+    },
+    "existing-row-conflict": {
+      "output": "9c8b62c3a8befd68489b0a764d6a24f494ce9f3148df21282e1fb40e248b5839",
+      "session": "3aaa46141e351ca1c7cf01f6c944ed8e65aec680350f9614c527d7afbc0aa885",
+      "archive": "3fd9f2e43ef4a39221559a15f8eb734675111c819b0a7e7e7acad60f6a12daad",
+      "restored": "9489c93ea2282cf64ed1f903506a8fb62d7a5c2ceed1eb07a498076b675e374a"
+    }
+  }
+}
