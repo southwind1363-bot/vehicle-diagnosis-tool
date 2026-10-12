@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.680";
+const APP_VERSION = "3.13.681";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -13152,6 +13152,7 @@ function formatReadoutErrorCodes(errorCodes = []) {
     .map((value) => String(value || "").trim())
     .filter(Boolean)
     .map((code) => {
+      if (code === "source_ecu_alias_conflict") return "同じ箇所のECU番号が不一致または形式不正";
       if (code === "vci_not_detected") return "VCI未検出";
       if (code === "vci_not_connected") return "VCI未接続";
       if (code === "adapter_timeout") return "アダプター応答タイムアウト";
@@ -14116,6 +14117,24 @@ function renderObdSimpleResultSummary(session = null) {
       ? { label: "読取中", tone: "reading" }
       : { label: capturedPercent === null ? "状態未集計" : capturedPercent === 100 ? "完了" : "未完了", tone: capturedPercent === 100 ? "captured" : "missing" }, "obdReadoutDetails", "obdReadoutDetails"]
   ];
+  const ecuAliasRefusedLabels = [];
+  for (const [label, snapshot, statusKey] of [
+    ["DTC", dtcSnapshot, "dtcReadoutStatus"],
+    ["フリーズフレーム", freezeFrameSnapshot, "freezeFrameReadoutStatus"],
+    ["レディネス", readinessSnapshot, "readinessReadoutStatus"],
+    ["ECU情報", ecuInfoSnapshot, "ecuInfoReadoutStatus"],
+    ["対応PID", supportedPidMatrix, "supportedPidReadoutStatus"],
+    ["Mode06", onboardMonitorSnapshot, "onboardMonitorReadoutStatus"]
+  ]) {
+    const errors = snapshot?.errorCodes || snapshot?.error_codes || [];
+    const snakeStatusKey = statusKey.replace(/[A-Z]/g, (letter) => "_" + letter.toLowerCase());
+    if ((snapshot?.[statusKey] || snapshot?.[snakeStatusKey]) !== "blocked" || !Array.isArray(errors) || !errors.includes("source_ecu_alias_conflict")) continue;
+    ecuAliasRefusedLabels.push(label);
+    const metric = metrics.find((row) => row[0] === label);
+    metric[1] = "—";
+    metric[2] = { label: "読取拒否", tone: "missing" };
+    metric[5] = "同じ箇所のECU番号が不一致または形式不正";
+  }
   metrics.forEach(([label, value, state, targetId, fallbackTargetId, detail = ""]) => {
     const item = document.createElement("button");
     const term = document.createElement("span");
@@ -14168,6 +14187,10 @@ function renderObdSimpleResultSummary(session = null) {
   obdSimpleResultNote.textContent = (developmentSource ? "J2534開発検証データ（実車読取ではありません）。 " : "") + dtcNote
     + (pendingIds.length ? " 未完了の主要読取は" + pendingIds.length + "項目です。" : "")
     + " 消去・作動系は実行しません。";
+  if (ecuAliasRefusedLabels.length) {
+    obdSimpleResultBadge.textContent = "読取拒否あり";
+    obdSimpleResultNote.textContent += " " + ecuAliasRefusedLabels.join("・") + "はECU番号の不一致または形式不正により拒否された記録です。取得元の応答内容を確認してください。";
+  }
   obdSimpleResultSummary.hidden = false;
 }
 

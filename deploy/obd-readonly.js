@@ -4576,6 +4576,9 @@
   }
 
   function normalizeBridgeDtcSnapshot(response = {}) {
+    if (hasConflictingJsonEcuAliases(response)) {
+      response = { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} };
+    }
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedDtcPayload = Boolean(nestedData && [
       "dtcs", "codes", "dtc_codes", "dtcCodes",
@@ -6513,6 +6516,9 @@
   }
 
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
+    if (hasConflictingJsonEcuAliases(response)) {
+      response = { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} };
+    }
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedSupportedPidPayload = Boolean(nestedData && [
       "supported_pids", "supportedPids", "pids", "pid_list", "pidList", "supported_pid_rows", "supportedPidRows",
@@ -6703,6 +6709,9 @@
   }
 
   function normalizeBridgeFreezeFrameSnapshot(response = {}) {
+    if (hasConflictingJsonEcuAliases(response)) {
+      response = { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} };
+    }
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedFreezeFramePayload = Boolean(nestedData && [
       "values", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "monitor_values", "monitorValues", "pid_values", "pidValues",
@@ -6867,6 +6876,9 @@
   }
 
   function normalizeBridgeReadinessSnapshot(response = {}) {
+    if (hasConflictingJsonEcuAliases(response)) {
+      response = { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} };
+    }
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedReadinessPayload = Boolean(nestedData && [
       "mil_on", "milStatus", "mil",
@@ -7221,6 +7233,9 @@
   }
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
+    if (hasConflictingJsonEcuAliases(response)) {
+      response = { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} };
+    }
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedEcuInfoPayload = Boolean(nestedData && ([
       "values", "items", "ecu_info", "ecu_info_items", "ecu_info_rows", "ecuInfo", "ecuInfoItems", "ecuInfoRows",
@@ -7419,6 +7434,9 @@
   }
 
   function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
+    if (hasConflictingJsonEcuAliases(response)) {
+      response = { ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} };
+    }
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedOnboardMonitorPayload = Boolean(nestedData && [
       "tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests",
@@ -35913,6 +35931,9 @@
   }
 
   function decodeObdDtcResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const hasResponseInput = hasObdResponseInput(input);
     const sourceEcu = readObdResponseSourceEcu(input);
@@ -36901,6 +36922,9 @@
   }
 
   function decodeSupportedPidResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeSupportedPidSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const supportedPids = [];
     const supportedPidPageBases = [];
@@ -37000,6 +37024,9 @@
   }
 
   function decodeFreezeFrameResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeFreezeFrameSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     const sourceEcu = readObdResponseSourceEcu(input);
@@ -37093,6 +37120,9 @@
   }
 
   function decodeEcuInfoResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeEcuInfoSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     const protocolEvidence = [input?.protocol, input?.obd_protocol, input?.diagnostic_protocol, input?.diagnosticProtocol].filter(Boolean).join(" ");
@@ -37230,6 +37260,9 @@
   }
 
   function decodeReadinessResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeReadinessSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const serviceIndex = bytes.findIndex((byte, index) => byte === 0x41 && bytes[index + 1] === 0x01);
@@ -37296,6 +37329,9 @@
   }
 
   function decodeOnboardMonitorResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeOnboardMonitorSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const tests = [];
     const sourceEcu = readObdResponseSourceEcu(input);

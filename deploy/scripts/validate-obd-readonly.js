@@ -1,3 +1,4 @@
+import "./validate-core-readout-ecu-alias-proposal.js";
 import "./validate-remaining-ecu-alias-proposal.js";
 import "./validate-direct-import-ecu-alias-proposal.js";
 import "./validate-live-ecu-alias-normalization-proposal.js";
