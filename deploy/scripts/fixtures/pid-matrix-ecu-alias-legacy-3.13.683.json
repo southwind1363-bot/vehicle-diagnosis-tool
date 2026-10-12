@@ -1,0 +1,245 @@
+{
+  "version": "3.13.683",
+  "commit": "a63a06b7e0eaf05a3d95026555d2c93e8b310426",
+  "cases": {
+    "SupportedPid-conflict": {
+      "hashes": {
+        "output": "05fabe2ece23b742f6bab4b2235ac358103dce53ec99ddd611d23d4b62c0c35d",
+        "session": "11ff3d600186a7785f810c8a4352d58b807873abfa8809315796ea3c8b53a6ac",
+        "archive": "292061e93a77cead26273d29b105f3a9efc3e5d8e2152551e9823a16db0ee652",
+        "restored": "09417d64fbe1611f442f6b2bb1c5729ddbc7a3d90d852d7084cccdb75446f64c"
+      },
+      "status": "reported",
+      "ecu": "7E9"
+    },
+    "SupportedPid-empty-alias": {
+      "hashes": {
+        "output": "6e45e6ac5e50ef654e3f21fb8f632ecaa27d88df99da25deb48cb57e13283dbf",
+        "session": "01cd096eef226dea13b993d2587ed352c7f49a046c6d90b0f8bf6fa5964b79d9",
+        "archive": "2ea7f4fbe5257f8f4ad0c61addce6cecb995a1af3174af000e29d0b31c482105",
+        "restored": "7eb3aacc510a1d5c0d785871d0129acd0a0ebb9992033f9fa19533512185033b"
+      },
+      "status": "reported",
+      "ecu": "7E8"
+    },
+    "SupportedPid-invalid-alias": {
+      "hashes": {
+        "output": "d4cf8e83593a464c6486478bd0ed5d3ad0b22e02e0385793d3cb3675c5b52673",
+        "session": "4f76f0b3cc28c216392548a80c17a5bb9ad4ddb2fb468a223fc5893e7f264391",
+        "archive": "c05a5d73f5e7ca9034c2bfefd8a68dcd58edcadc5a2dbcbfaccc97e5b42c5db4",
+        "restored": "25558566a8fc4b7616f76721e44d3548b164edc8ea29e66604e34d86aad5758f"
+      },
+      "status": "reported",
+      "ecu": "7"
+    },
+    "SupportedPid-metadata-conflict": {
+      "hashes": {
+        "output": "1680133916a647fd17dbbbcbbcb3db762231e8d9a03e9338efa8d605ea24525e",
+        "session": "6f3b2cde63bddce2f444424d10cd0b07e24658757d6834ab14d9bd6ce7a7cf11",
+        "archive": "3c49968f0e8c3a46e031d9ae1d7c59dda4125357c2737a76c8152c28df3e6495",
+        "restored": "52f2b96b98160e16d5fdfcda8ea61f42321319dff87ed8fc9c4eb1c0c4cb9776"
+      },
+      "status": "reported",
+      "ecu": null
+    },
+    "SupportedPid-nested-conflict": {
+      "hashes": {
+        "output": "1680133916a647fd17dbbbcbbcb3db762231e8d9a03e9338efa8d605ea24525e",
+        "session": "6f3b2cde63bddce2f444424d10cd0b07e24658757d6834ab14d9bd6ce7a7cf11",
+        "archive": "3c49968f0e8c3a46e031d9ae1d7c59dda4125357c2737a76c8152c28df3e6495",
+        "restored": "52f2b96b98160e16d5fdfcda8ea61f42321319dff87ed8fc9c4eb1c0c4cb9776"
+      },
+      "status": "reported",
+      "ecu": null
+    },
+    "SupportedPid-envelope-conflict": {
+      "hashes": {
+        "output": "05fabe2ece23b742f6bab4b2235ac358103dce53ec99ddd611d23d4b62c0c35d",
+        "session": "11ff3d600186a7785f810c8a4352d58b807873abfa8809315796ea3c8b53a6ac",
+        "archive": "292061e93a77cead26273d29b105f3a9efc3e5d8e2152551e9823a16db0ee652",
+        "restored": "09417d64fbe1611f442f6b2bb1c5729ddbc7a3d90d852d7084cccdb75446f64c"
+      },
+      "status": "reported",
+      "ecu": "7E9"
+    },
+    "SupportedPid-data-conflict": {
+      "hashes": {
+        "output": "05fabe2ece23b742f6bab4b2235ac358103dce53ec99ddd611d23d4b62c0c35d",
+        "session": "11ff3d600186a7785f810c8a4352d58b807873abfa8809315796ea3c8b53a6ac",
+        "archive": "292061e93a77cead26273d29b105f3a9efc3e5d8e2152551e9823a16db0ee652",
+        "restored": "09417d64fbe1611f442f6b2bb1c5729ddbc7a3d90d852d7084cccdb75446f64c"
+      },
+      "status": "reported",
+      "ecu": "7E9"
+    },
+    "SupportedPid-normal": {
+      "hashes": {
+        "output": "1680133916a647fd17dbbbcbbcb3db762231e8d9a03e9338efa8d605ea24525e",
+        "session": "6f3b2cde63bddce2f444424d10cd0b07e24658757d6834ab14d9bd6ce7a7cf11",
+        "archive": "3c49968f0e8c3a46e031d9ae1d7c59dda4125357c2737a76c8152c28df3e6495",
+        "restored": "52f2b96b98160e16d5fdfcda8ea61f42321319dff87ed8fc9c4eb1c0c4cb9776"
+      },
+      "status": "reported",
+      "ecu": null
+    },
+    "SupportedPid-one-alias": {
+      "hashes": {
+        "output": "6e45e6ac5e50ef654e3f21fb8f632ecaa27d88df99da25deb48cb57e13283dbf",
+        "session": "01cd096eef226dea13b993d2587ed352c7f49a046c6d90b0f8bf6fa5964b79d9",
+        "archive": "2ea7f4fbe5257f8f4ad0c61addce6cecb995a1af3174af000e29d0b31c482105",
+        "restored": "7eb3aacc510a1d5c0d785871d0129acd0a0ebb9992033f9fa19533512185033b"
+      },
+      "status": "reported",
+      "ecu": "7E8"
+    },
+    "SupportedPid-same-aliases": {
+      "hashes": {
+        "output": "6e45e6ac5e50ef654e3f21fb8f632ecaa27d88df99da25deb48cb57e13283dbf",
+        "session": "01cd096eef226dea13b993d2587ed352c7f49a046c6d90b0f8bf6fa5964b79d9",
+        "archive": "2ea7f4fbe5257f8f4ad0c61addce6cecb995a1af3174af000e29d0b31c482105",
+        "restored": "7eb3aacc510a1d5c0d785871d0129acd0a0ebb9992033f9fa19533512185033b"
+      },
+      "status": "reported",
+      "ecu": "7E8"
+    },
+    "SupportedPid-space-case": {
+      "hashes": {
+        "output": "6e45e6ac5e50ef654e3f21fb8f632ecaa27d88df99da25deb48cb57e13283dbf",
+        "session": "01cd096eef226dea13b993d2587ed352c7f49a046c6d90b0f8bf6fa5964b79d9",
+        "archive": "2ea7f4fbe5257f8f4ad0c61addce6cecb995a1af3174af000e29d0b31c482105",
+        "restored": "7eb3aacc510a1d5c0d785871d0129acd0a0ebb9992033f9fa19533512185033b"
+      },
+      "status": "reported",
+      "ecu": "7E8"
+    },
+    "SupportedPid-null-alias": {
+      "hashes": {
+        "output": "6e45e6ac5e50ef654e3f21fb8f632ecaa27d88df99da25deb48cb57e13283dbf",
+        "session": "01cd096eef226dea13b993d2587ed352c7f49a046c6d90b0f8bf6fa5964b79d9",
+        "archive": "2ea7f4fbe5257f8f4ad0c61addce6cecb995a1af3174af000e29d0b31c482105",
+        "restored": "7eb3aacc510a1d5c0d785871d0129acd0a0ebb9992033f9fa19533512185033b"
+      },
+      "status": "reported",
+      "ecu": "7E8"
+    },
+    "SupportedPid-other-aliases": {
+      "hashes": {
+        "output": "6e45e6ac5e50ef654e3f21fb8f632ecaa27d88df99da25deb48cb57e13283dbf",
+        "session": "01cd096eef226dea13b993d2587ed352c7f49a046c6d90b0f8bf6fa5964b79d9",
+        "archive": "2ea7f4fbe5257f8f4ad0c61addce6cecb995a1af3174af000e29d0b31c482105",
+        "restored": "7eb3aacc510a1d5c0d785871d0129acd0a0ebb9992033f9fa19533512185033b"
+      },
+      "status": "reported",
+      "ecu": "7E8"
+    },
+    "SupportedPid-parent-child": {
+      "hashes": {
+        "output": "05fabe2ece23b742f6bab4b2235ac358103dce53ec99ddd611d23d4b62c0c35d",
+        "session": "11ff3d600186a7785f810c8a4352d58b807873abfa8809315796ea3c8b53a6ac",
+        "archive": "292061e93a77cead26273d29b105f3a9efc3e5d8e2152551e9823a16db0ee652",
+        "restored": "09417d64fbe1611f442f6b2bb1c5729ddbc7a3d90d852d7084cccdb75446f64c"
+      },
+      "status": "reported",
+      "ecu": "7E9"
+    },
+    "SupportedPid-separate-objects": {
+      "hashes": {
+        "output": "1680133916a647fd17dbbbcbbcb3db762231e8d9a03e9338efa8d605ea24525e",
+        "session": "6f3b2cde63bddce2f444424d10cd0b07e24658757d6834ab14d9bd6ce7a7cf11",
+        "archive": "3c49968f0e8c3a46e031d9ae1d7c59dda4125357c2737a76c8152c28df3e6495",
+        "restored": "52f2b96b98160e16d5fdfcda8ea61f42321319dff87ed8fc9c4eb1c0c4cb9776"
+      },
+      "status": "reported",
+      "ecu": null
+    },
+    "SupportedPid-empty-input": {
+      "hashes": {
+        "output": "7b1f44bdb3318d4cf64cffe15eb653906cecd8005db165c483393c559a9f996e",
+        "session": "43a3870caa66e5ca8e7571add8545c93d67c40cf1b1330960d360e583c5a7c76",
+        "archive": "10f552b39b54b6607a1fd002b1077fe93bd8000edc80b2c70c870ac7718056da",
+        "restored": "241529233ca77e0533cf51c52663f0de22147e2ae9f039f89f66865166ca0a42"
+      },
+      "status": "unknown",
+      "ecu": null
+    },
+    "SupportedPid-array-normal": {
+      "hashes": {
+        "output": "a9a1573cb56316d1eda6354b7808e9daf9a6cc39d7aa0585210ebc146ce58317",
+        "session": "5331cbce71cc082447808838abfedaef8bfd6cb6a93c52bf432eac0b96102ec7",
+        "archive": "547034cafdb860a1e27354ac968d3627ce6c85c64240e7cea3649f6bce024047",
+        "restored": "a64ab425daf95db03f8b66023690792fc1c144be4f86ee3eadd517e2e6f511de"
+      },
+      "status": "reported",
+      "ecu": null
+    },
+    "SupportedPid-array-conflict": {
+      "hashes": {
+        "output": "1680133916a647fd17dbbbcbbcb3db762231e8d9a03e9338efa8d605ea24525e",
+        "session": "6f3b2cde63bddce2f444424d10cd0b07e24658757d6834ab14d9bd6ce7a7cf11",
+        "archive": "3c49968f0e8c3a46e031d9ae1d7c59dda4125357c2737a76c8152c28df3e6495",
+        "restored": "52f2b96b98160e16d5fdfcda8ea61f42321319dff87ed8fc9c4eb1c0c4cb9776"
+      },
+      "status": "reported",
+      "ecu": null
+    },
+    "SupportedPid-mixed-rows-conflict": {
+      "hashes": {
+        "output": "a9a1573cb56316d1eda6354b7808e9daf9a6cc39d7aa0585210ebc146ce58317",
+        "session": "5331cbce71cc082447808838abfedaef8bfd6cb6a93c52bf432eac0b96102ec7",
+        "archive": "547034cafdb860a1e27354ac968d3627ce6c85c64240e7cea3649f6bce024047",
+        "restored": "a64ab425daf95db03f8b66023690792fc1c144be4f86ee3eadd517e2e6f511de"
+      },
+      "status": "reported",
+      "ecu": null
+    },
+    "SupportedPid-rows-normal": {
+      "hashes": {
+        "output": "a9a1573cb56316d1eda6354b7808e9daf9a6cc39d7aa0585210ebc146ce58317",
+        "session": "5331cbce71cc082447808838abfedaef8bfd6cb6a93c52bf432eac0b96102ec7",
+        "archive": "547034cafdb860a1e27354ac968d3627ce6c85c64240e7cea3649f6bce024047",
+        "restored": "a64ab425daf95db03f8b66023690792fc1c144be4f86ee3eadd517e2e6f511de"
+      },
+      "status": "reported",
+      "ecu": null
+    },
+    "SupportedPid-empty-array": {
+      "hashes": {
+        "output": "7b1f44bdb3318d4cf64cffe15eb653906cecd8005db165c483393c559a9f996e",
+        "session": "43a3870caa66e5ca8e7571add8545c93d67c40cf1b1330960d360e583c5a7c76",
+        "archive": "10f552b39b54b6607a1fd002b1077fe93bd8000edc80b2c70c870ac7718056da",
+        "restored": "241529233ca77e0533cf51c52663f0de22147e2ae9f039f89f66865166ca0a42"
+      },
+      "status": "unknown",
+      "ecu": null
+    }
+  },
+  "failures": {
+    "normalizeBridgeSupportedPidSnapshot": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d"
+  },
+  "callers": {
+    "decodeSupportedPidResponse:SupportedPid-decode-conflict": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "decodeSupportedPidResponse:SupportedPid-decode-empty-alias": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "decodeSupportedPidResponse:SupportedPid-decode-invalid-alias": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "decodeSupportedPidResponse:SupportedPid-decode-metadata-conflict": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "decodeSupportedPidResponse:SupportedPid-decode-nested-conflict": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "decodeSupportedPidResponse:SupportedPid-decode-normal": "3c898485af20005809fa23bb994dea0470a34763379b7b45071e496c5d8c7fb2",
+    "decodeSupportedPidResponse:SupportedPid-decode-one-alias": "aafd4e169f9622b6b6b6bcd354e969bce506702a5a6c64575c0a838ecdd44b64",
+    "decodeSupportedPidResponse:SupportedPid-decode-same-aliases": "aafd4e169f9622b6b6b6bcd354e969bce506702a5a6c64575c0a838ecdd44b64",
+    "decodeSupportedPidResponse:SupportedPid-decode-space-case": "aafd4e169f9622b6b6b6bcd354e969bce506702a5a6c64575c0a838ecdd44b64",
+    "decodeSupportedPidResponse:SupportedPid-decode-null-alias": "aafd4e169f9622b6b6b6bcd354e969bce506702a5a6c64575c0a838ecdd44b64",
+    "decodeSupportedPidResponse:SupportedPid-decode-other-aliases": "aafd4e169f9622b6b6b6bcd354e969bce506702a5a6c64575c0a838ecdd44b64",
+    "decodeSupportedPidResponse:SupportedPid-decode-separate-objects": "3c898485af20005809fa23bb994dea0470a34763379b7b45071e496c5d8c7fb2",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-conflict": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-empty-alias": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-invalid-alias": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-metadata-conflict": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-nested-conflict": "207c4ad8e76a6b4247395b2a702cda4ee348fe6c948f8de20427f94c5b73c75d",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-normal": "dfa516fb8c6bbbf6c782966bca456bce8c6653fe1037241b5d9536aadb904f90",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-one-alias": "149b16e3a4336e2db7d1813f6d75a0f2d7a015b545add7a9c494246a06f3c349",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-same-aliases": "149b16e3a4336e2db7d1813f6d75a0f2d7a015b545add7a9c494246a06f3c349",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-space-case": "149b16e3a4336e2db7d1813f6d75a0f2d7a015b545add7a9c494246a06f3c349",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-null-alias": "149b16e3a4336e2db7d1813f6d75a0f2d7a015b545add7a9c494246a06f3c349",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-other-aliases": "149b16e3a4336e2db7d1813f6d75a0f2d7a015b545add7a9c494246a06f3c349",
+    "normalizeBridgeSupportedPidSnapshot:SupportedPid-bridge-separate-objects": "dfa516fb8c6bbbf6c782966bca456bce8c6653fe1037241b5d9536aadb904f90"
+  }
+}
