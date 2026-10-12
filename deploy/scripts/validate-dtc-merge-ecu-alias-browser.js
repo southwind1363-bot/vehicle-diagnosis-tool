@@ -1,12 +1,11 @@
 import fs from 'node:fs';import path from 'node:path';import os from 'node:os';import assert from 'node:assert/strict';import {createRequire} from 'node:module';import {fileURLToPath} from 'node:url';
 import {dtcMergeAliasCases} from './dtc-merge-ecu-alias-cases.js';
-import {applyDtcMergeEcuAliasProposal} from './dtc-merge-ecu-alias-proposal.js';
 
 
 
 const require=createRequire(import.meta.url),root=fileURLToPath(new URL('../',import.meta.url));
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const output=fs.mkdtempSync(path.join(os.tmpdir(),'dtc-merge-ecu-alias-proposal-'));
+const output=fs.mkdtempSync(path.join(os.tmpdir(),'dtc-merge-ecu-alias-production-'));
 const browser=await chromium.launch({channel:'chrome',headless:true}),errors=[],blocked=[];
 try{
  const context=await browser.newContext({serviceWorkers:'block'});
@@ -15,7 +14,7 @@ try{
   const url=new URL(route.request().url());if(url.origin!=='http://127.0.0.1'||route.request().method()!=='GET'){blocked.push(url.href);return route.abort();}
   const file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname))),relative=path.relative(root,file);
   if(relative.startsWith('..')||path.isAbsolute(relative)||!fs.existsSync(file))return route.fulfill({status:404,body:''});
-  const body=path.basename(file)==='obd-readonly.js'?Buffer.from(applyDtcMergeEcuAliasProposal(fs.readFileSync(file,'utf8'))):fs.readFileSync(file);
+  const body=fs.readFileSync(file);
   await route.fulfill({contentType:{'.js':'text/javascript','.json':'application/json','.html':'text/html','.css':'text/css','.svg':'image/svg+xml'}[path.extname(file)]||'text/plain',body});
  });
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
@@ -34,5 +33,5 @@ try{
  fs.writeFileSync(path.join(output,id+'-visible.txt'),await page.locator('body').innerText());
  }else {assert.equal(result.snapshot.dtcReadoutStatus,'reported');assert.ok(result.snapshot.codes.includes('P0300'));assert.ok(!(await page.locator('#obdSimpleResultSummary').innerText()).includes('読取拒否あり')); }
  }
- assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);console.log('DTC merge ECU browser proposal: 3 refused combinations plus normal before/after; visible refusal, archive restore, responsive themes; no page errors or external/vehicle requests. Artifacts: '+output);
+ assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);console.log('DTC merge ECU browser production: 3 refused combinations plus normal before/after; visible refusal, archive restore, responsive themes; no page errors or external/vehicle requests. Artifacts: '+output);
 }finally{await browser.close();}

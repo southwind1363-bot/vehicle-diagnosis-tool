@@ -1,10 +1,10 @@
 # DTC統合APIのECU同義項目チェック案
 
-2026-10-13 / 対象3.13.684・07d37c55852ce3dbd0cf55368c22e132547524af / 本体未適用
+2026-10-13 / 旧版3.13.684・07d37c55852ce3dbd0cf55368c22e132547524af / 承認後3.13.685へ適用
 
 ## 再現と対象
 
-対象は公開API mergeDtcSnapshots(...snapshots)。reportedのDTC記録へsourceEcu:7E8/source_ecu:7E9とP0300を同梱すると、現行本体はreportedのままP0300を返す。別の正常記録P0420も渡した場合、順序にかかわらず両コードを残すことを再現した。状態を持たない生の最小入力ではunknownとなったため、その試行をreported再現の根拠にしていない。すべて合成入力で実車試験ではない。
+対象は公開API mergeDtcSnapshots(...snapshots)。reportedのDTC記録へsourceEcu:7E8/source_ecu:7E9とP0300を同梱すると、旧版本体はreportedのままP0300を返す。別の正常記録P0420も渡した場合、順序にかかわらず両コードを残すことを再現した。状態を持たない生の最小入力ではunknownとなったため、その試行をreported再現の根拠にしていない。すべて合成入力で実車試験ではない。
 
 ## 本体へ適用する具体案
 
@@ -18,7 +18,7 @@
 
 ## 隔離検証
 
-scripts/dtc-merge-ecu-alias-proposal.jsでソース文字列だけに修正を適用。本体は変更していない。旧版の出力をscripts/fixtures/dtc-merge-ecu-alias-legacy-3.13.684.jsonへ固定。固定時刻1791712800000。
+scripts/dtc-merge-ecu-alias-proposal.jsでソース文字列だけに修正を適用した当初の隔離検証。現在は承認後、本体へ同じ3行を適用した。旧版の出力をscripts/fixtures/dtc-merge-ecu-alias-legacy-3.13.684.jsonへ固定。固定時刻1791712800000。
 
 - 18ケース・208項目合格。正常入力のAPI出力・セッション・保存・復元は全SHA256が旧版と一致。拒否出力は既存空拒否と全SHA256一致。
 - 拒否記録の状態・理由・コードなし、保存復元後の送信/書込false、元引数不変を確認。別途正常ライブ14 Vを同梱する4項目も合格。
@@ -26,6 +26,18 @@ scripts/dtc-merge-ecu-alias-proposal.jsでソース文字列だけに修正を�
 
 ## 適用境界
 
-ECU応答一覧normalizeEcuResponseSummary、個別行の他API、ecu/address/module等の別名、親子/別引数の明示的なECU差、循環参照/getterの下流動作は今回の対象外。既に失われた矛盾は復元できない。全呼出元・全体回帰・配布再生成は本体適用後に確認する。
+ECU応答一覧normalizeEcuResponseSummary、個別行の他API、ecu/address/module等の別名、親子/別引数の明示的なECU差、循環参照/getterの下流動作は今回の対象外。既に失われた矛盾は復元できない。呼出元は基本/ブリッジ/JSONセッション、解析統合、テキスト/CSV取込、Web Serialで利用される。既存呼出元を全体回帰と画面検証の対象にする。
 
-診断結果の採用条件が変わり、同じ統合に渡した正常DTCも不採用となるため、開発計画の「診断結果の契約・保存形式に変更が必要なら、その具体的な差分を先に提示する」に従って本体適用の確認を待つ。公開・本体・配布は3.13.684を維持する。
+診断結果の採用条件が変わり、同じ統合に渡した正常DTCも不採用となるため、開発計画の「診断結果の契約・保存形式に変更が必要なら、その具体的な差分を先に提示する」に従って具体案を提示し、ユーザーの「続けて」を受けて本体へ適用した。
+
+## 本体適用の検証（3.13.685）
+
+本体を直接読み込む18ケース・190項目が合格。隔離パッチ依存を外し、旧版fixtureは変更せず、全体OBD検証へ組み込んだ。実ブラウザー5記録、日本語拒否理由、保存復元、390/1280px明暗、正常復帰が合格。ページ例外・外部/車両要求0。成果物: C:/Users/nagatomo/AppData/Local/Temp/dtc-merge-ecu-alias-production-qweMiU。390px混在拒否表示を目視確認。
+
+ブリッジ384・オフライン183・Windowsローカル1,369・パッケージ766項目が合格。データ203 JSON / DTC3,878件はエラー・警告0。診断画面全体の回帰も合格（C:/Users/nagatomo/AppData/Local/Temp/readiness-review-58pR5L）。
+
+最初の全体OBD検証はscript.jsの改行変換により既存検証のソース抽出で停止した。元のLFへ戻し、停止箇所39項目を単独確認後、全体を再実行した。診断処理変更は承認済み3行のみ。配布物も修正後に再生成した。
+
+最終ZIP: C:/Users/nagatomo/AppData/Local/Temp/vehicle-diagnosis-tool-3.13.685-final.zip（2,702,312 bytes、SHA256 32925DDA9BC454FF803B59826A24B11ADA1913159B7F64C297BE4BF910B82CCC）。別展開851ファイル / 17,036,081 bytesの整合性合格。主要5資産は本体・別展開・ローカルHTTP200の全文が改行も含め一致。これはコピー整合性であり、実車/VCI適合の証明ではない。
+
+全体OBD再実行は7,447項目・エラー0、終了コード0（obd-3.13.685-rerun.log）。旧版fixtureは変更せず、全呼出元を含む既存回帰を通過。

@@ -36457,6 +36457,9 @@
   }
 
   function mergeDtcSnapshots(...snapshots) {
+    if (hasConflictingJsonEcuAliases(snapshots)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const readSnapshotCapturedAt = (snapshot) => snapshot?.capturedAt || snapshot?.captured_at || null;
     const readSnapshotCapturedAtValues = (snapshot) => [...new Set([
       readSnapshotCapturedAt(snapshot),

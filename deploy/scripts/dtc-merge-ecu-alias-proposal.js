@@ -1,4 +1,4 @@
-// Isolated review only; not imported by the application.
+// Historical isolated proposal, applied to production in 3.13.685; not imported by the application.
 export function applyDtcMergeEcuAliasProposal(source) {
   const anchor = '  function mergeDtcSnapshots(...snapshots) {';
   if (source.split(anchor).length !== 2) throw new Error('Unexpected merge anchor');

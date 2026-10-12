@@ -1,3 +1,4 @@
+import './validate-dtc-merge-ecu-alias-proposal.js';
 import "./validate-pid-matrix-ecu-alias-proposal.js";
 import "./validate-generic-ecu-alias-proposal.js";
 import "./validate-uds-ecu-alias-proposal.js";
