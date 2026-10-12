@@ -36124,6 +36124,9 @@
   }
 
   function decodeUdsDtcSnapshotResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeFreezeFrameSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const networkScopeFields = readoutNetworkScopeFields(normalizeReadoutNetworkScope(input));
@@ -36193,6 +36196,9 @@
   }
 
   function decodeUdsDtcStoredDataResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeFreezeFrameSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const networkScopeFields = readoutNetworkScopeFields(normalizeReadoutNetworkScope(input));
@@ -36215,6 +36221,9 @@
   }
 
   function decodeUdsDtcExtendedDataResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const responseIndex = bytes.indexOf(0x59);
@@ -36268,6 +36277,9 @@
   }
 
   function decodeUdsDtcExtendedDataByRecordNumberResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const responseIndex = bytes.indexOf(0x59);
@@ -36305,6 +36317,9 @@
   }
 
   function decodeUdsDtcFaultDetectionCounterResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const responseIndex = bytes.indexOf(0x59);
@@ -36351,6 +36366,9 @@
   }
 
   function decodeUdsDtcSeverityResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const responseIndex = bytes.indexOf(0x59);
@@ -36371,6 +36389,9 @@
   }
 
   function decodeUdsWwhObdDtcResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const responseIndex = bytes.indexOf(0x59);
@@ -36386,6 +36407,9 @@
   }
 
   function decodeUdsWwhObdPermanentDtcResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const responseIndex = bytes.indexOf(0x59);
@@ -36400,6 +36424,9 @@
   }
 
   function decodeUdsDtcReadinessGroupResponse(input = {}) {
+    if (hasConflictingJsonEcuAliases(input)) {
+      return normalizeBridgeDtcSnapshot({ ok: false, blocked: true, would_transmit: false, errors: ["source_ecu_alias_conflict"], data: {} });
+    }
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const responseIndex = bytes.indexOf(0x59);

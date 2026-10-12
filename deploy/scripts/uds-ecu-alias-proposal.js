@@ -1,6 +1,6 @@
 import { udsSamples } from './uds-ecu-alias-cases.js';
 
-// Isolated review only. The runtime does not import this patch.
+// Historical 3.13.681 review patch, applied in 3.13.682. Not imported by runtime or tests.
 export function applyUdsEcuAliasProposal(source) {
   for (const sample of new Map(udsSamples.map(item => [item.api, item])).values()) {
     const anchor = '  function ' + sample.api + '(input = {}) {';

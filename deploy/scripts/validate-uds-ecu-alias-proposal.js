@@ -3,7 +3,6 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { udsAliasCases, udsSamples } from './uds-ecu-alias-cases.js';
-import { applyUdsEcuAliasProposal } from './uds-ecu-alias-proposal.js';
 
 const source = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
 function load(text) {
@@ -12,7 +11,7 @@ function load(text) {
   vm.runInContext(text, context);
   return context.window.ObdReadOnly;
 }
-const before = load(source), after = load(applyUdsEcuAliasProposal(source));
+const after = load(source);
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function observe(api, test) {
   const output = api[test.api](test.input);
@@ -22,27 +21,11 @@ function observe(api, test) {
   return { output, session, archive, restored };
 }
 const fixturePath = new URL('./fixtures/uds-ecu-alias-legacy-3.13.681.json', import.meta.url);
-if (process.argv.includes('--freeze')) {
-  assert.equal(fs.existsSync(fixturePath), false, 'Never overwrite the legacy fixture');
-  const cases = {};
-  for (const test of udsAliasCases) {
-    const observed = observe(before, test);
-    cases[test.id] = {
-      hashes: Object.fromEntries(Object.entries(observed).map(([key, value]) => [key, digest(value)])),
-      status: observed.output[test.status], ecu: observed.output.sourceEcu
-    };
-  }
-  const failures = Object.fromEntries(['normalizeBridgeDtcSnapshot', 'normalizeBridgeFreezeFrameSnapshot'].map(name => [name,
-    digest(before[name]({ ok: false, blocked: true, would_transmit: false, errors: ['source_ecu_alias_conflict'], data: {} }))]));
-  fs.writeFileSync(fixturePath, JSON.stringify({ version: '3.13.681', commit: 'd1707ba080d4dcbac4cb846fea8c731d07979f17', cases, failures }, null, 2) + '\n');
-  console.log('Frozen legacy evidence: ' + udsAliasCases.length + ' cases');
-}
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 let checks = 0;
 const eq = (actual, expected, label) => { assert.deepEqual(JSON.parse(JSON.stringify(actual)), JSON.parse(JSON.stringify(expected)), label); checks++; };
 for (const test of udsAliasCases) {
   const original = JSON.stringify(test.input), legacy = fixture.cases[test.id];
-  eq(digest(before[test.api](test.input)), legacy.hashes.output, test.id + ' legacy reproduction');
   const observed = observe(after, test);
   if (test.reject) {
     eq(legacy.status, 'reported', test.id + ' previously accepted');
@@ -71,4 +54,4 @@ for (const sample of new Map(udsSamples.map(item => [item.api, item])).values())
     eq(result.livePidSnapshot.monitorValues.map(row => row.value), [14], sample.api + ' independent live retained');
   }
 }
-console.log('UDS ECU alias proposal: ' + udsAliasCases.length + ' cases / ' + checks + ' checks passed; nine APIs; synthetic only.');
+console.log('UDS ECU alias production: ' + udsAliasCases.length + ' cases / ' + checks + ' checks passed; nine APIs; synthetic only.');
