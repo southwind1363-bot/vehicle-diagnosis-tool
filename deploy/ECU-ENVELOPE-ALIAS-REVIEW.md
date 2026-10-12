@@ -40,3 +40,5 @@ metadata等の任意入れ子、各行の空文字同義項目、他別名、親
 ブリッジ384・オフライン183・Windowsローカル1,369・パッケージ766項目、データ203 JSON / DTC3,878件はエラー0。表示単体の専用32・Readiness26・FF7・Mode06 7・検索6項目も合格。
 
 全体OBD7,447項目・エラー0・終了コード0（obd-3.13.687.log）。通常のセッション・テキスト/CSV/JSON・ブリッジ経路を含む既存回帰が合格。
+
+実装コミット8fe56b7d51e7b03f082d89882cfe43e945c8f82fの本番dpl_CuhpvHiAR5tj2sditFAqXyw2JrcLがREADY。tool.mukiguri.comへの割当と主要5資産の公開HTTP200・LF正規化後の本体全文一致を確認。
