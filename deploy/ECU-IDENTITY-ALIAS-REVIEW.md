@@ -41,3 +41,5 @@ scripts/ecu-identity-alias-proposal.jsに保存した案を承認後、本体へ
 ブリッジ384・オフライン183・Windowsローカル1,369・パッケージ766項目、データ203 JSON / DTC3,878件はエラー0。表示回帰は通信経路74・識別矛盾32・Readiness26・FF7・Mode06 7・検索6項目が合格。DTC定義の集計レポートも正常終了した。
 
 全体OBD7,447項目はエラー0で終了。専用71ケース・575項目も全体回帰の入口で実行した。実車・VCIへの通信は行っていない。
+
+実装コミットa8fec80d573ab267ad1685817ac3ff0430ef70a4の本番dpl_4mNqaV3RHDuZMcGsV41krfrHft5bがREADY。tool.mukiguri.comへの割当と主要5資産の公開HTTP200・LF正規化後の本体全文一致を確認。
