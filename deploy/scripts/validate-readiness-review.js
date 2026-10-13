@@ -1,3 +1,4 @@
+import './validate-ecu-network-display.js';
 import './validate-ecu-response-conflict-display.js';
 import assert from "node:assert/strict";
 import fs from "node:fs";
