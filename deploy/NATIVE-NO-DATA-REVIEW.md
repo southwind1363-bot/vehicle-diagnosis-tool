@@ -1,4 +1,4 @@
-# iPhone nativeのNO DATA取得判定：適用前レビュー
+# iPhone nativeのNO DATA取得判定：修正と検証記録
 
 事前確認日: 2026-10-13。以下は適用前レビュー。2026-10-14の承認後、末尾の適用記録に従って反映。公開Web本体は3.13.692。
 
@@ -45,3 +45,7 @@ Web Serial側は3.13.692でこの例外を廃止済み。nativeは独立実装�
 適用確認への「続けて」を受け、6種類のNO DATA空取得例外を廃止した。通常の正応答デコーダー・空結果factory・送信計画・保存schemaは維持。旧レビューpatchは履歴として残し、再適用しない。
 
 Swift単体検査に6種類の失敗通知のJSON復元と空取得preview除外、正応答DTC0件、エラー優先順位を追加。host検査には6件すべて未取得として完了集計する検査を追加。既存macOS CIへSwift生成6通知→Web本体取込/保存復元の検査を接続した。ローカルでは本体ソース条件と模擬入力106項目・JS構文・差分検査が合格。Swift/Simulatorの結果はCI完了後に記録する。BLE・実車試験は未実施。
+
+実装コミット: `5238423b03c01949e555eaad4fe11a7a874d6d5d`。[Web CI 38471951533](https://github.com/southwind1363-bot/vehicle-diagnosis-tool/actions/runs/38471951533)は4ジョブすべて成功。全体OBD7,447項目・エラー0、Linuxブリッジ365項目・エラー0をログで確認。Chromiumオフライン画面、Windows非実行調査、Windows配布パッケージも成功。公開Webの主要5資産はHTTP200・LF正規化後の本体全文一致を確認した。
+
+[iOS CI 38471951566](https://github.com/southwind1363-bot/vehicle-diagnosis-tool/actions/runs/38471951566)も成功。Swift単体113テスト・失敗0、Swift生成6通知のWeb取込/保存復元を含む132項目、Simulator host20テスト・失敗0をログで確認した。追加した `NativeNoDataTests` の2テストと `testNoDataFailuresDoNotCountAsCaptured` が成功し、hostビルドも成功。これはCI上の検証で、実際のBluetooth接続・実車適合は未確認。
