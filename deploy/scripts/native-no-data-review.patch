@@ -1,0 +1,56 @@
+diff --git a/native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/ELM327BLEConnector.swift b/native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/ELM327BLEConnector.swift
+--- a/native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/ELM327BLEConnector.swift
++++ b/native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/ELM327BLEConnector.swift
+@@ -23,14 +23,10 @@
+     return normalized.contains("NO DATA") ? .noData : .process
+ }
+
+-func isExpectedEmptyELMReadoutCommand(_ command: ELMReadCommand) -> Bool {
+-    switch command {
+-    case .storedDTC, .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .onboardMonitor, .mode09SupportedInfoTypes:
+-        return true
+-    default:
+-        return false
+-    }
+-}
++func isExpectedEmptyELMReadoutCommand(_ command: ELMReadCommand) -> Bool {
++    // NO DATA is not evidence of an acquired empty diagnostic result.
++    return false
++}
+
+ func isCompletedELMAdapterSetupResponse(command: ELMReadCommand, response: String) -> Bool {
+     guard command.isAdapterSetup else { return false }
+diff --git a/native/ios/ELM327BLEConnector/Tests/ELM327BLEConnectorTests/ELMReadCommandTests.swift b/native/ios/ELM327BLEConnector/Tests/ELM327BLEConnectorTests/ELMReadCommandTests.swift
+--- a/native/ios/ELM327BLEConnector/Tests/ELM327BLEConnectorTests/ELMReadCommandTests.swift
++++ b/native/ios/ELM327BLEConnector/Tests/ELM327BLEConnectorTests/ELMReadCommandTests.swift
+@@ -87,18 +87,18 @@
+         XCTAssertFalse(ELMReadCommand.quickReadoutCommands.contains(.mode09SupportedInfoTypes))
+     }
+
+-    func testExpectedEmptyReadoutCommandsStayNarrow() {
+-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.storedDTC))
+-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.pendingDTC))
+-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.permanentDTC))
+-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.freezeFrameCapabilities))
+-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.onboardMonitor))
+-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.mode09SupportedInfoTypes))
+-        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.readinessStatus))
+-        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.supportedPIDs))
+-        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.engineRPM))
+-        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.identifyAdapter))
+-    }
++    func testNoDataDoesNotSupplyEmptyReadoutCoverage() {
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.storedDTC))
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.pendingDTC))
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.permanentDTC))
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.freezeFrameCapabilities))
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.onboardMonitor))
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.mode09SupportedInfoTypes))
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.readinessStatus))
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.supportedPIDs))
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.engineRPM))
++        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.identifyAdapter))
++    }
+
+     func testProtocolCaptureFollowsTheFirstVehicleReadout() {
+         for plan in [ELMReadCommand.initialReadoutCommands, ELMReadCommand.quickReadoutCommands] {
