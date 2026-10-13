@@ -93,7 +93,7 @@ const unchangedCases = String.raw`
   const client = createClient(successfulResponses);
   for (const command of ['0202', '06', '0900']) {
     const outcome = client.context.buildWebSerialReadoutOutcome([command], [{ command, response: 'NO DATA' }]);
-    check(outcome.expectedEmptyCommandCount === 1 && outcome.readoutCompleted, 'Proposal changed an out-of-scope command');
+    check(outcome.expectedEmptyCommandCount === 0 && !outcome.readoutCompleted, 'Remaining NO DATA exception was restored');
   }
   for (const [command, response] of [['03', '43 00 00'], ['07', '47 00 00'], ['0A', '4A 00 00']]) {
     const outcome = client.context.buildWebSerialReadoutOutcome([command], [{ command, response }]);

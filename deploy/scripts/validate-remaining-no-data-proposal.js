@@ -1,4 +1,4 @@
-// Isolated review of the three remaining NO DATA exceptions; no runtime asset edits.
+// Production regression for the three NO DATA exceptions removed in 3.13.692.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -19,9 +19,6 @@ async function run(source, body, label) {
     { assert, fs, vm, URL, TextEncoder, TextDecoder, setTimeout, clearTimeout, performance, Date, console });
 }
 
-const oldFunction = production.match(/function isWebSerialExpectedEmptyResponse\(command, response\) \{[\s\S]*?\r?\n\}/)?.[0];
-assert.ok(oldFunction?.includes('["0202", "06", "0900"]'), "Unexpected exception contract");
-const proposed = production.replace(oldFunction, 'function isWebSerialExpectedEmptyResponse(command, response) {\n  return false;\n}');
 const cases = String.raw`
 const cases = [
   ['0202', 'freezeFrameSnapshot', 'freezeFrameReadoutStatus'],
@@ -36,14 +33,14 @@ for (const [command, snapshot, status] of cases) {
   await connect(client);
   await client.context.readObdDeveloperCoreScan();
   const session = client.context.obdDevSession.lastSession;
-  check(session.webSerialReadoutSummary.noDataCount === 1 && session.webSerialReadoutSummary.expectedEmptyCommandCount === 1, 'Current empty exception missing');
-  check(session.webSerialReadoutSummary.incompleteCount === 0 && session.webSerialReadoutSummary.partialCount === 0, 'Current completed behavior changed');
-  console.log(JSON.stringify({ command, currentReadoutStatus: session[snapshot][status], complete: session.webSerialReadoutSummary.completedCount }));
+  check(session.webSerialReadoutSummary.noDataCount === 1 && session.webSerialReadoutSummary.expectedEmptyCommandCount === 0, 'NO DATA was classified as an acquired empty result');
+  check(session.webSerialReadoutSummary.incompleteCount === 1 && session.webSerialReadoutSummary.partialCount === 0, 'NO DATA must remain incomplete');
+  check(session[snapshot][status] !== 'reported', 'NO DATA supplied acquired coverage');
   await client.context.disconnectObdDeveloperVci();
 }
-`, "Current remaining exceptions");
+`, "Production missing readouts");
 
-await run(proposed, cases + String.raw`
+await run(production, cases + String.raw`
 for (const [command, snapshot, status] of cases) {
   const client = createClient(successfulResponses, { fragmentResponses: true, fragmentSize: 1 });
   const state = client.context.obdDevSession;
@@ -78,12 +75,12 @@ for (const [command, snapshot, status] of cases) {
   const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(JSON.stringify(client.context.ObdReadOnly.buildBridgeSessionExportPayload(recovered)));
   check(restored[snapshot][status] === 'reported' && restored.webSerialReadoutSummary.noDataCount === 0, 'Recovery archive lost acquired status');
   check(JSON.stringify(first) === firstJson && JSON.stringify(missing) === missingJson, 'Later read mutated prior records');
-  check(recovered.vehicleCommandEnabled === false && recovered.wouldTransmit === false, 'Proposal granted vehicle authority');
+  check(recovered.vehicleCommandEnabled === false && recovered.wouldTransmit === false, 'NO DATA recovery granted vehicle authority');
   check(client.port.calls.select === 1 && client.port.calls.open === 1, 'Recovery reopened the port');
   await client.context.disconnectObdDeveloperVci();
   check(client.port.closed && !client.port.readerLocked && !client.port.writerLocked, 'Recovery leaked locks');
 }
-`, "Remaining NO DATA proposal recovery");
+`, "Production remaining NO DATA recovery");
 
 const controls = String.raw`
 {
@@ -102,4 +99,3 @@ const controls = String.raw`
 }
 `;
 await run(production, controls, "Production unchanged controls");
-await run(proposed, controls, "Proposal unchanged controls");

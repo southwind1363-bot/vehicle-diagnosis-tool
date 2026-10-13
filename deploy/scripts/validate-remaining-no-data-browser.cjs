@@ -1,4 +1,4 @@
-// Isolated remaining-NO-DATA proposal in a browser; never changes runtime assets.
+// Production remaining-NO-DATA regression using real JSON import in a browser.
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -22,7 +22,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const relative = path.relative(root, file);
       if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(file)) return route.fulfill({ status: 404, body: '' });
       const contentType = { '.js': 'text/javascript', '.json': 'application/json', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml' }[path.extname(file)] || 'text/plain';
-      await route.fulfill({ contentType, body: path.basename(file) === 'script.js' ? fs.readFileSync(file, 'utf8').replace(/function isWebSerialExpectedEmptyResponse\(command, response\) \{[\s\S]*?\r?\n\}/, 'function isWebSerialExpectedEmptyResponse(command, response) { return false; }') : fs.readFileSync(file) });
+      await route.fulfill({ contentType, body: fs.readFileSync(file) });
     });
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
@@ -60,6 +60,6 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(restored, label);
     }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
-    console.log('Remaining NO DATA proposal browser passed: isolated outcome, real JSON import, incomplete vs positive-response summary, save/restore, no external or vehicle requests.');
+    console.log('Remaining NO DATA production browser passed: production outcome, real JSON import, incomplete vs positive-response summary, save/restore, no external or vehicle requests.');
   } finally { await context.close(); await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
