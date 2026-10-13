@@ -648,6 +648,51 @@ for (const interruptedCommand of ["03", "07", "0A", "0101"]) {
     && port.calls.releaseReader === 1 && port.calls.releaseWriter === 1, "Stream-loss recovery did not release each resource exactly once");
 }
 
+// The receive limit applies to the accumulated response, even across small chunks.
+// A plausible DTC prefix in an oversized response must not become a saved result.
+for (const fragmentResponses of [false, true]) {
+  for (const command of ["03", "07", "0A", "0101"]) {
+    const client = createClient(successfulResponses, { fragmentResponses, fragmentSize: 127 });
+    const state = client.context.obdDevSession;
+    await connect(client);
+    const ticket = state.settingsObservation.ticket;
+    let capture;
+    client.port.responses[command] = () => {
+      capture = state.coreRawReadoutCapture;
+      client.port.enqueue("7E8 03 43 06 00\r" + " ".repeat(12000) + ">");
+      return Promise.resolve();
+    };
+    await client.context.readObdDeveloperCoreScan();
+    check(state.connectionState === "disconnected" && state.textBuffer === "", "Oversized response retained an active transport or buffer");
+    check(state.lastDisconnectReason === "serial_response_too_large", "Overflow lost its specific stop reason");
+    check(capture.take() === null && capture.inspect().count === 0 && capture.inspect().formatReview === null,
+      "Oversized response left a usable partial raw aggregate");
+    check(!state.settingsObservation.owner.inspect(ticket).ok, "Overflow retained its settings generation");
+    check(client.port.calls.writes.at(-1) === command && client.port.calls.writes.filter(value => value === command).length === 1,
+      "Overflow sent a follow-up command or retried");
+    const partial = state.lastSession, partialJson = JSON.stringify(partial);
+    check(!partial?.dtcSnapshot?.codes?.includes("P0600"), "Oversized response supplied its plausible DTC prefix");
+    if (command !== "03") check(partial?.dtcSnapshot?.codes?.includes("P0133"), "Overflow discarded previously acquired DTCs");
+    const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 03 00" });
+    client.context.navigator.serial.requestPort = async () => replacement;
+    await connect(client);
+    client.port.enqueue("7E8 03 43 04 20\r>");
+    await client.context.readObdDeveloperCoreScan();
+    check(state.lastSession.dtcSnapshot.codes.join(",") === "P0300", "Overflow recovery mixed old or rejected data");
+    check(state.coreRawReadoutCapture.inspect().count === 4 && capture.take() === null,
+      "Overflow recovery reused an invalid aggregate");
+    const exported = JSON.stringify(client.context.ObdReadOnly.buildBridgeSessionExportPayload(state.lastSession));
+    const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(exported);
+    check(restored.dtcSnapshot.codes.join(",") === "P0300" && !exported.includes("coreRawReadoutCapture"),
+      "Overflow recovery export retained rejected or private data");
+    check(JSON.stringify(partial) === partialJson, "Recovery changed the overflow record");
+    await client.context.disconnectObdDeveloperVci();
+    for (const port of [client.port, replacement]) check(port.closed && !port.readerLocked && !port.writerLocked
+      && port.calls.cancel === 1 && port.calls.close === 1 && port.calls.releaseReader === 1 && port.calls.releaseWriter === 1,
+      "Overflow recovery did not release each transport resource exactly once");
+  }
+}
+
 // Explicit scan ownership across protocol inquiry and intervening reads.
 for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]) {
   const client = createClient(successfulResponses);
