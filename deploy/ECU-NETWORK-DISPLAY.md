@@ -25,3 +25,5 @@ camel/snake両形式のbooleanを確認し、文字列のtrue/falseから表示�
 ブリッジ384・オフライン183・Windowsローカル1,369・パッケージ766項目、データ203 JSON / DTC3,878件はエラー0。表示回帰は専用74・識別矛盾32・Readiness26・FF7・Mode06 7・検索6項目が合格。画面遷移も合格（詳細遷移59項目を含む）。
 
 全体OBD7,447項目はエラー0で終了。DTC定義の集計レポートも正常終了。実車・VCIへの通信は行っていない。
+
+実装コミットb8860bbb7217cd555889cf38d1b8b49104448dc4の本番dpl_GujcSbhhDdJNAyjZujZY39UkZq4dがREADY。tool.mukiguri.comへの割当と主要5資産の公開HTTP200・LF正規化後の本体全文一致を確認。
