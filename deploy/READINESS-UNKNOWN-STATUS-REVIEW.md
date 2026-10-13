@@ -8,7 +8,13 @@
 
 実ブラウザーのJSON選択から取込、正常/不明の5状態、保存復元、既存画面の分類が合格。画面はもともとnullable booleanを用いて不明と表示していたため、今回は保存するstatusとの不一致を補正した。幅390/1280pxで横方向のはみ出しなし、外部/車両通信なしを確認。
 
-ブリッジ384項目・オフライン183項目・データ203 JSON/DTC3,878件（警告0）・関連正規化1,183項目が合格。ブリッジ初回はsandboxのlocalhost EACCESと一時ファイルEPERMで停止し、コード変更なしの通常権限再実行で合格。本体の全体CI・配布物の別展開確認は続けて実施する。
+ブリッジ384項目・オフライン183項目・データ203 JSON/DTC3,878件（警告0）・関連正規化1,183項目が合格。ブリッジ初回はsandboxのlocalhost EACCESと一時ファイルEPERMで停止し、コード変更なしの通常権限再実行で合格。全体CIの結果は下記に記録する。
+
+配布ZIPを別フォルダーへ展開し、展開物の検証器で851ファイル／17,037,844 bytesが一致。ZIP SHA256: `DF02665B36FCF46AD90D51F0F54B2FD8409D5DF356A1C436FAB44DDD8930A7E9`。主要5資産は本体・別展開・ローカルHTTP・公開HTTPで一致。実装`70d20bff8f8c9cc8e84337ea5506fa8209169c9e`の本番`dpl_4yDhsWmHopp6YpTG5QDCrQLMRBhN`はREADYでtool.mukiguri.comへ割当済み。画面全体のブラウザー回帰とWindowsローカル1,369項目も合格。
+
+Web CI 38483591944は個別回帰通過後、全体OBD検査中に15分上限で中断した。直前の設定変更CI 38482667991も同じ上限で中断していたため、889be646で対象ジョブだけ30分へ変更。検査内容・他ジョブ・本体コードは維持し、[Web CI 38485242930](https://github.com/southwind1363-bot/vehicle-diagnosis-tool/actions/runs/38485242930)で再実行し、4ジョブすべて成功した（Windows配布766項目・エラー0を含む）。本体コードは実装70d20bffと同一。
+
+実装70d20bffの[iOS CI 38483591882](https://github.com/southwind1363-bot/vehicle-diagnosis-tool/actions/runs/38483591882)が成功。Swift単体113テスト・Simulator host20テスト、Swift生成RAW/NO DATAのWeb取込、全体OBD7,447項目（エラー0）を確認した。
 
 以下は適用前に確認した差分と境界の記録。
 
