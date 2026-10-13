@@ -50,3 +50,5 @@ iPhone nativeの独立したNO DATA判定は今回の対象外。Web Serialの�
 Windowsローカル検査は初回、依存する表示検査後に終了コード-1073740791で異常終了（失敗した検査式の出力なし）。他の検査が完了した後、本体・検査コードを変更せず単独再実行し、1,369項目・エラー0で完了した。初回終了の原因は未特定。
 
 パッケージ回帰検査766項目・エラー0で合格。変更したJavaScriptの構文検査と `git diff --check` も合格。
+
+実装コミット08472f119e8833cefcdb0e2abd92289313f9fe34の本番dpl_FvKVU631LMDeucfqjDZCzSZVjtopがREADY。tool.mukiguri.comへの割当と主要5資産の公開HTTP200・LF正規化後の本体全文一致を確認。
