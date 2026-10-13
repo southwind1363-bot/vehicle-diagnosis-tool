@@ -34519,6 +34519,8 @@
       const diagnosticResponseId = ecuResponseAddressEvidence.kind === "response" || ecuResponseAddressEvidence.kind === "conflict" ? ecuResponseAddressEvidence.responseAddress || null : null;
       const ecuResponseConflict = envelopeEcuAliasConflict
         || hasConflictingJsonEcuAliases({ sourceEcu: row?.sourceEcu, source_ecu: row?.source_ecu })
+        || [["ecuId", "ecu_id"], ["moduleId", "module_id"], ["controllerId", "controller_id"]]
+          .some(([camel, snake]) => hasConflictingJsonEcuAliases({ sourceEcu: row?.[camel], source_ecu: row?.[snake] }))
         || ecuResponseAddressEvidence.conflict === true;
       const addressingType = redactSensitiveText(String(row?.addressingType || row?.addressing_type || row?.diagnosticAddressing || row?.diagnostic_addressing || row?.addressingMode || row?.addressing_mode || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const sourceLogicalAddress = redactSensitiveText(String(row?.sourceLogicalAddress || row?.source_logical_address || row?.testerLogicalAddress || row?.tester_logical_address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;

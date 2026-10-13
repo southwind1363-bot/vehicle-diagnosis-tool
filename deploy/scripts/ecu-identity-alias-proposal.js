@@ -1,4 +1,4 @@
-// Isolated proposal; never imported by the application.
+// Historical proposal applied in 3.13.690; never imported by the application.
 export function applyEcuIdentityAliasProposal(source) {
   const anchor = '        || hasConflictingJsonEcuAliases({ sourceEcu: row?.sourceEcu, source_ecu: row?.source_ecu })';
   if (source.split(anchor).length !== 2) throw Error('Unexpected ECU identity alias anchor');

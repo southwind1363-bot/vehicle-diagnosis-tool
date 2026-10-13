@@ -5,9 +5,8 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
-  const { applyEcuIdentityAliasProposal } = await import('./ecu-identity-alias-proposal.js');
     const root = path.resolve(__dirname, '..');
-  const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ecu-identity-alias-proposal-'));
+  const output = fs.mkdtempSync(path.join(os.tmpdir(), 'ecu-identity-alias-production-'));
   const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true });
   const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
   const errors = [], blocked = [];
@@ -26,7 +25,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const relative = path.relative(root, file);
       if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(file)) return route.fulfill({ status: 404, body: '' });
       const contentType = { '.js': 'text/javascript', '.json': 'application/json', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml' }[path.extname(file)] || 'text/plain';
-      await route.fulfill({ contentType, body: path.basename(file) === 'obd-readonly.js' ? Buffer.from(applyEcuIdentityAliasProposal(fs.readFileSync(file, 'utf8'))) : fs.readFileSync(file) });
+      await route.fulfill({ contentType, body: fs.readFileSync(file) });
     });
     page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
@@ -36,7 +35,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const picker = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: '保存した読取結果を開く', exact: true }).click();
     const core = vm.createContext({ window: {} });
-    vm.runInContext(applyEcuIdentityAliasProposal(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8')), core);
+    vm.runInContext(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8'), core);
     const model = core.window.ObdReadOnly;
     const summary = model.normalizeEcuResponseSummary({ecus:[
       {id:'ecu-pair',ecuId:'',ecu_id:'7E8',status:'reported',response_count:2},
@@ -75,6 +74,6 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(restored.ecuResponseSummary.ecus[3].address,'7EB');
     assert.deepEqual(restored.ecuResponseSummary.ecus.map(row=>row.ecuResponseConflict??false),[true,true,true,false]);
     assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
-    console.log('ECU identity alias isolated browser: actual JSON import, visible warning, normal row, search/reset, immutable session/archive and responsive themes passed. Artifacts: '+output);
+    console.log('ECU identity alias production browser: actual JSON import, visible warning, normal row, search/reset, immutable session/archive and responsive themes passed. Artifacts: '+output);
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
