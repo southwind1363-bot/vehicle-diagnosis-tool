@@ -44,3 +44,5 @@ scripts/ecu-row-alias-proposal.jsに保存した差分を承認後、本体へ�
 ブリッジ384・オフライン183・Windowsローカル1,369・パッケージ766項目、データ203 JSON / DTC3,878件はエラー0。表示単体の専用32・Readiness26・FF7・Mode06 7・検索6項目も合格。
 
 全体OBD7,447項目はエラー0で終了。専用170項目も全体回帰の入口で実行。DTC定義の集計レポートも正常終了した。実車・VCIへの通信は行っていない。
+
+実装コミット21f0780641cb3ecc272061e48ffb911c3e4d5800の本番dpl_CHduixg3XgSKNgcypYAq61eJ3fP9がREADY。tool.mukiguri.comへの割当と主要5資産の公開HTTP200・LF正規化後の本体全文一致を確認。
