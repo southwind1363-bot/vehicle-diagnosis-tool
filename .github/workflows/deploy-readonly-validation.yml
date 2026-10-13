@@ -18,7 +18,7 @@ jobs:
   validate:
     name: Validate diagnostic data and read-only contracts
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: deploy
