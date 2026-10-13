@@ -1,8 +1,7 @@
-// Isolated proposal using production functions and synthetic ports only.
+// Production regression after approval and application in 3.13.691; synthetic ports only.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import { applyWebSerialNoDataProposal } from "./web-serial-no-data-proposal.js";
 
 const integrationUrl = new URL("./validate-serial-integration.js", import.meta.url);
 const integration = fs.readFileSync(integrationUrl, "utf8").replace(/\r\n/g, "\n");
@@ -12,7 +11,6 @@ const prefix = integration.slice(0, integration.indexOf(marker)).replace(/^impor
 const connect = integration.match(/async function connect\(client\) \{[\s\S]*?\n\}/)?.[0];
 assert.ok(connect, "Integration connector missing");
 const production = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
-assert.throws(() => applyWebSerialNoDataProposal(""), /unexpected_expected_empty_contract/);
 async function run(source, body, label) {
   const harness = prefix.replace(/const scriptSource = [^\n]+;/, () => "const scriptSource = " + JSON.stringify(source) + ";")
     .replaceAll("import.meta.url", JSON.stringify(integrationUrl.href));
@@ -28,14 +26,14 @@ for (const command of ['07', '0A']) {
   await client.context.readObdDeveloperCoreScan();
   const session = client.context.obdDevSession.lastSession;
   const status = command === '07' ? 'pending' : 'permanent';
-  check(session.webSerialReadoutSummary.noDataCount === 1, 'Legacy no-data count missing');
-  check(session.webSerialReadoutSummary.incompleteCount === 0 && session.webSerialReadoutSummary.partialCount === 0, 'Legacy completed behavior changed');
-  check(!session.dtcSnapshot.dtcStatusSummary.reportedStatuses.includes(status) && session.webSerialReadoutSummary.expectedEmptyCommandCount === 1, 'Legacy mismatch between coverage and completion changed');
+  check(session.webSerialReadoutSummary.noDataCount === 1, 'Production no-data count missing');
+  check(session.webSerialReadoutSummary.partialCount === 1 && session.webSerialReadoutSummary.expectedEmptyCommandCount === 0, 'NO DATA must remain partial');
+  check(!session.dtcSnapshot.dtcStatusSummary.reportedStatuses.includes(status) && session.webSerialReadoutSummary.expectedEmptyCommandCount === 0, 'Coverage and completion must agree');
   await client.context.disconnectObdDeveloperVci();
 }
 `, "Current production behavior");
 
-await run(applyWebSerialNoDataProposal(production), String.raw`
+await run(production, String.raw`
 // A completed response containing NO DATA is not an acquired empty diagnostic result.
 // Keep the port connected across success, no-data, and recovery scans.
 for (const missingCommand of ["03", "07", "0A", "0101"]) {
@@ -88,7 +86,7 @@ for (const missingCommand of ["03", "07", "0A", "0101"]) {
   check(client.port.closed && client.port.calls.close === 1 && !client.port.readerLocked && !client.port.writerLocked, "No-data recovery leaked transport resources");
 }
 
-`, "Isolated no-data recovery proposal");
+`, "Production no-data recovery");
 
 const unchangedCases = String.raw`
 {
@@ -115,4 +113,3 @@ const unchangedCases = String.raw`
 }
 `;
 await run(production, unchangedCases, "Unchanged production controls");
-await run(applyWebSerialNoDataProposal(production), unchangedCases, "Unchanged proposal controls");
