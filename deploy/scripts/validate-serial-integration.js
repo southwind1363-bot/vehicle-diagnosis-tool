@@ -540,6 +540,63 @@ for (const event of ["next_read", "protocol", "initialize", "reset", "disconnect
   if (!client.port.closed) await client.context.disconnectObdDeveloperVci();
 }
 
+// Keep one production client alive across successful, failed, and recovered connections.
+// New synthetic ports must not inherit a previous port's protocol or private raw records.
+{
+  const client = createClient(successfulResponses);
+  const state = client.context.obdDevSession;
+  await connect(client);
+  await client.context.readObdDeveloperCoreScan();
+  const captures = [state.coreRawReadoutCapture];
+  const tickets = [state.settingsObservation.ticket];
+  const originalSession = state.lastSession;
+  const originalJson = JSON.stringify(originalSession);
+  check(captures[0].inspect().count === 4, "Reconnect scenario needs a completed original aggregate");
+  await client.context.disconnectObdDeveloperVci();
+
+  for (const stage of ["initialization_failure", "unsupported_protocol", "recovered_protocol"]) {
+    const replies = { ...successfulResponses, ATDPN: stage === "unsupported_protocol" ? "A7" : "A6" };
+    const freshCode = stage === "unsupported_protocol" ? "P0100" : "P0300";
+    replies["03"] = stage === "unsupported_protocol" ? "7E8 05 43 01 00 00 00" : "7E8 05 43 03 00 00 00";
+    if (stage === "initialization_failure") replies.ATS0 = "ERROR";
+    const port = new MockElmPort(replies, { fragmentResponses: true, fragmentSize: 1 });
+    client.context.navigator.serial.requestPort = async () => port;
+    await client.context.connectObdDeveloperVci();
+    for (const ticket of tickets) check(!state.settingsObservation.owner.inspect(ticket).ok, stage + ": old settings survived reconnection");
+    for (const capture of captures) check(capture.take() === null && capture.inspect().count === 0, stage + ": old raw records revived");
+    if (stage === "initialization_failure") {
+      check(state.connectionState === "disconnected" && state.settingsObservation.ticket === null, "Failed setup left a usable settings generation");
+      check(state.lastSession !== originalSession && !state.lastSession?.dtcSnapshot?.codes?.includes("P0133"), "Failed new connection inherited the previous DTC result");
+      check(JSON.stringify(originalSession) === originalJson, "Reconnect mutated the previous diagnostic record");
+      assert.deepEqual(port.calls.writes, ["ATZ", "ATE0", "ATL0", "ATS0"]); checks++;
+    } else {
+      check(state.connectionState === "ready", stage + ": reconnect did not complete");
+      const ticket = state.settingsObservation.ticket;
+      check(ticket && tickets.every(old => old !== ticket), "Reconnect reused a settings ticket");
+      const before = state.settingsObservation.owner.inspect(ticket).summary;
+      check(before.phase === "awaiting_protocol" && before.protocolNumberReported === null, "Old protocol leaked into fresh initialization");
+      await client.context.readObdDeveloperCoreScan();
+      const capture = state.coreRawReadoutCapture, snapshot = capture.inspect();
+      check(snapshot.status === "finished" && snapshot.count === 4, stage + ": fresh scan did not collect its own records");
+      const review = snapshot.formatReview;
+      const expected = stage === "recovered_protocol" ? [false, true, true, true] : [false, false, false, false];
+      assert.deepEqual(Array.from(review.readoutConditions, row => row.protocol11bitReported), expected); checks++;
+      check(review.protocolObservedBeforeReadCount === expected.filter(Boolean).length, "Protocol count mixed connection generations");
+      check(review.profile === null && !review.profileVerified && !review.parserAllowed && !review.executionEnabled, "Reconnection inferred parser or execution authority");
+      check(state.settingsObservation.owner.inspect(ticket).summary.protocolNumberReported === replies.ATDPN, "New adapter report was replaced by old protocol");
+      assert.deepEqual(Array.from(state.lastSession.dtcSnapshot.codes), [freshCode], "New connection retained old DTCs or lost its own response"); checks++;
+      check(!JSON.stringify(state.lastSession).includes("settingsBeforeRead") && !Object.hasOwn(state.lastSession, "coreRawReadoutCapture"), "Private reconnect observations leaked into saved diagnostics");
+      assert.deepEqual(port.calls.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "03", "ATDP", "ATDPN", "07", "0A", "0202", "0101", "0900", "0904", "0906", "06", "0100", "010C"]); checks++;
+      captures.push(capture); tickets.push(ticket);
+      await client.context.disconnectObdDeveloperVci();
+      check(capture.inspect().formatReview === null, "Disconnected raw review survived its connection");
+    }
+    check(port.closed && !port.readerLocked && !port.writerLocked, stage + ": synthetic transport was not fully released");
+    check(port.calls.cancel === 1 && port.calls.close === 1 && port.calls.releaseReader === 1 && port.calls.releaseWriter === 1, stage + ": reconnect resources were not closed exactly once");
+    check(JSON.stringify(originalSession) === originalJson, "New read mutated the previous diagnostic record");
+  }
+}
+
 // Explicit scan ownership across protocol inquiry and intervening reads.
 for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]) {
   const client = createClient(successfulResponses);
