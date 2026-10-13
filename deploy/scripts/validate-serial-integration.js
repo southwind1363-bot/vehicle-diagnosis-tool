@@ -597,6 +597,57 @@ for (const event of ["next_read", "protocol", "initialize", "reset", "disconnect
   }
 }
 
+// Stream loss at every core capture command, followed by an explicit fresh connection.
+for (const interruptedCommand of ["03", "07", "0A", "0101"]) {
+  const client = createClient(successfulResponses, { fragmentResponses: true, fragmentSize: 1 });
+  const state = client.context.obdDevSession;
+  await connect(client);
+  const oldTicket = state.settingsObservation.ticket;
+  let interruptedCapture;
+  client.port.responses[interruptedCommand] = () => {
+    interruptedCapture = state.coreRawReadoutCapture;
+    check(interruptedCapture.inspect().status === "collecting", "Stream loss must interrupt an active aggregate");
+    client.port.finish();
+    return Promise.resolve();
+  };
+  await client.context.readObdDeveloperCoreScan();
+  check(state.connectionState === "disconnected", interruptedCommand + ": stream loss did not stop the scan");
+  check(interruptedCapture.take() === null && interruptedCapture.inspect().count === 0
+    && interruptedCapture.inspect().formatReview === null, "Interrupted aggregate remained usable");
+  check(!state.settingsObservation.owner.inspect(oldTicket).ok, "Interrupted connection retained its settings ticket");
+  check(client.port.calls.writes.at(-1) === interruptedCommand
+    && client.port.calls.writes.filter(command => command === interruptedCommand).length === 1, "Stream loss caused a retry or follow-up command");
+  check(client.port.closed && !client.port.readerLocked && !client.port.writerLocked, "Interrupted transport retained locks");
+  const partial = state.lastSession, partialJson = JSON.stringify(partial);
+  if (interruptedCommand !== "03") check(partial?.dtcSnapshot?.codes?.includes("P0133"), "Stream loss discarded an acquired stored DTC");
+  const oldWriteCount = client.port.calls.writes.length;
+  const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 03 00" }, { fragmentResponses: true, fragmentSize: 1 });
+  client.context.navigator.serial.requestPort = async () => { replacement.calls.select++; return replacement; };
+  await connect(client);
+  client.port.enqueue("7E8 03 43 04 20\r>");
+  await client.context.readObdDeveloperCoreScan();
+  const fresh = state.coreRawReadoutCapture;
+  check(fresh !== interruptedCapture && fresh.inspect().status === "finished" && fresh.inspect().count === 4, "Fresh scan reused a partial capture");
+  check(interruptedCapture.take() === null && !state.settingsObservation.owner.inspect(oldTicket).ok, "Recovery revived expired observations");
+  check(state.lastSession.dtcSnapshot.codes.join(",") === "P0300", "Late or partial DTCs contaminated the fresh scan");
+  const records = fresh.take();
+  assert.deepEqual(Array.from(records, row => row.command), ["03", "07", "0A", "0101"]); checks++;
+  assert.deepEqual(Array.from(records, row => row.settingsBeforeRead.protocol11bitReported), [false, true, true, true]); checks++;
+  check(records[0].transcript === "7E8 03 43 03 00>" && records.every(row => row.profile === null && !row.profileVerified
+    && !row.realTransportProofAvailable && !row.executionEnabled), "Fresh raw records mixed sources or granted authority");
+  const exported = JSON.stringify(client.context.ObdReadOnly.buildBridgeSessionExportPayload(state.lastSession));
+  const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(exported);
+  check(restored.dtcSnapshot.codes.join(",") === "P0300" && !exported.includes("settingsBeforeRead")
+    && !exported.includes("coreRawReadoutCapture"), "Recovered export mixed private capture or old DTCs");
+  check(JSON.stringify(partial) === partialJson, "Recovery mutated the interrupted diagnostic record");
+  check(client.port.calls.writes.length === oldWriteCount && replacement.calls.select === 1, "Recovery reused the old port or reselected automatically");
+  assert.deepEqual(replacement.calls.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "03", "ATDP", "ATDPN", "07", "0A", "0202", "0101", "0900", "0904", "0906", "06", "0100", "010C"]); checks++;
+  await client.context.disconnectObdDeveloperVci();
+  check(replacement.closed && !replacement.readerLocked && !replacement.writerLocked, "Recovered transport retained locks");
+  for (const port of [client.port, replacement]) check(port.calls.cancel === 1 && port.calls.close === 1
+    && port.calls.releaseReader === 1 && port.calls.releaseWriter === 1, "Stream-loss recovery did not release each resource exactly once");
+}
+
 // Explicit scan ownership across protocol inquiry and intervening reads.
 for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]) {
   const client = createClient(successfulResponses);
