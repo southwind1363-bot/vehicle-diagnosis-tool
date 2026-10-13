@@ -1,4 +1,4 @@
-// Isolated proposal only: no production file mutation and no transport access.
+// Production regression with the prior one-line inference reconstructed as a control.
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
@@ -6,14 +6,14 @@ import assert from 'node:assert/strict';
 const source = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
 const before = 'status: statusKey !== rawStatusKey ? statusKey : (statusAlias || (supported ? (complete ? "complete" : "not_complete") : "not_supported")),';
 const after = 'status: statusKey !== rawStatusKey ? statusKey : (statusAlias || (supported === false ? "not_supported" : supported === true && complete === true ? "complete" : supported === true && complete === false ? "not_complete" : "unknown")),';
-assert.equal(source.split(before).length, 2, 'Proposal anchor must be unique');
+assert.equal(source.split(after).length, 2, 'Production fix must be unique');
 function load(text) {
   const context = vm.createContext({ window: {} });
   vm.runInContext('Date = class extends Date { constructor(...args) { super(...(args.length ? args : [1791936000000])); } static now() { return 1791936000000; } };', context);
   vm.runInContext(text, context);
   return context.window.ObdReadOnly;
 }
-const current = load(source), proposed = load(source.replace(before, after));
+const current = load(source.replace(after, before)), proposed = load(source);
 let checks = 0;
 const plain = value => JSON.parse(JSON.stringify(value));
 function equal(actual, expected, message) { assert.deepEqual(plain(actual), plain(expected), message); checks++; }
@@ -59,4 +59,4 @@ for (const status of ['complete', 'not_complete', 'not_supported', 'unknown', 'u
 for (const response of ['41 01 00 07 00 00', '41 01 81 07 65 00', 'NO DATA', '']) {
   equal(proposed.decodeReadinessResponse(response), current.decodeReadinessResponse(response), 'Raw response unchanged');
 }
-console.log(`Readiness unknown-status isolated proposal: ${checks} checks passed; production unchanged.`);
+console.log(`Readiness unknown-status production: ${checks} checks passed.`);

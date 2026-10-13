@@ -34102,7 +34102,7 @@
         category: catalogItem?.category || monitor?.category || "状態",
         supported,
         complete,
-        status: statusKey !== rawStatusKey ? statusKey : (statusAlias || (supported ? (complete ? "complete" : "not_complete") : "not_supported")),
+        status: statusKey !== rawStatusKey ? statusKey : (statusAlias || (supported === false ? "not_supported" : supported === true && complete === true ? "complete" : supported === true && complete === false ? "not_complete" : "unknown")),
         sourceEcu: monitorSourceEcu,
         source_ecu: monitorSourceEcu,
         sourceEcuName: monitorSourceEcuName,
