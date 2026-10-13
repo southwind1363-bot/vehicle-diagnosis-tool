@@ -24,12 +24,8 @@ func classifyELMReadResponse(_ response: String) -> ELMReadResponseDisposition {
 }
 
 func isExpectedEmptyELMReadoutCommand(_ command: ELMReadCommand) -> Bool {
-    switch command {
-    case .storedDTC, .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .onboardMonitor, .mode09SupportedInfoTypes:
-        return true
-    default:
-        return false
-    }
+    // NO DATA is not evidence of an acquired empty diagnostic result.
+    return false
 }
 
 func isCompletedELMAdapterSetupResponse(command: ELMReadCommand, response: String) -> Bool {

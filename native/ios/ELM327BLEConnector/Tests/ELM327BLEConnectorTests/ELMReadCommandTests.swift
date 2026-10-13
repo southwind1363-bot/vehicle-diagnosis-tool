@@ -87,13 +87,13 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(ELMReadCommand.quickReadoutCommands.contains(.mode09SupportedInfoTypes))
     }
 
-    func testExpectedEmptyReadoutCommandsStayNarrow() {
-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.storedDTC))
-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.pendingDTC))
-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.permanentDTC))
-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.freezeFrameCapabilities))
-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.onboardMonitor))
-        XCTAssertTrue(isExpectedEmptyELMReadoutCommand(.mode09SupportedInfoTypes))
+    func testNoDataDoesNotSupplyEmptyReadoutCoverage() {
+        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.storedDTC))
+        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.pendingDTC))
+        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.permanentDTC))
+        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.freezeFrameCapabilities))
+        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.onboardMonitor))
+        XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.mode09SupportedInfoTypes))
         XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.readinessStatus))
         XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.supportedPIDs))
         XCTAssertFalse(isExpectedEmptyELMReadoutCommand(.engineRPM))

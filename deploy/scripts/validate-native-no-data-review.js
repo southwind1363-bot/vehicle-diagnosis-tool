@@ -1,5 +1,5 @@
-// Source-boundary review and synthetic envelopes -> production Web importer.
-// Does not compile Swift, simulate CoreBluetooth, or execute the proposed Swift change.
+// Production source boundary and synthetic/Swift-generated envelopes -> Web importer.
+// This JS runner does not compile Swift or simulate CoreBluetooth; CI supplies Swift-generated JSON.
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
@@ -17,7 +17,7 @@ base.adapter_transport = 'ble_gatt';
 base.readout_attempt = 0;
 let checks = 0;
 function check(value, message) { assert.ok(value, message); checks++; }
-check(connector.includes('case .storedDTC, .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .onboardMonitor, .mode09SupportedInfoTypes:'), 'Review baseline changed');
+check(/func isExpectedEmptyELMReadoutCommand[^}]*return false/.test(connector) && !/func isExpectedEmptyELMReadoutCommand[^}]*return true/.test(connector), 'NO DATA empty exception restored');
 check(connector.includes('if emitExpectedEmptyReadout(for: command, context: context) {') && connector.includes('emitFailure(for: command, error: "readout_not_available")'), 'Expected existing no-data failure path');
 check(factory.includes('data["readout_id"] = .string(readoutID)') && factory.includes('ok: false, errors: [error]'), 'Failure envelope contract changed');
 check(host.includes('guard envelope.ok, envelope.errors.isEmpty, !envelope.blocked, !envelope.wouldTransmit'), 'Host completion must exclude failed readouts');
@@ -46,7 +46,23 @@ for (const test of cases) {
       check(session.vehicleCommandEnabled === false && session.wouldTransmit === false, `${test.name}: gained authority`);
     }
     check(JSON.stringify(envelope) === before, `${test.name}: input mutated`);
-    console.log(`${test.name}: ${failed ? 'proposed failure shape' : 'current empty shape'} -> ${imported.session[test.slot][test.statusKey]}; archive retained`);
+    console.log(`${test.name}: ${failed ? 'current failure shape' : 'positive/legacy empty shape'} -> ${imported.session[test.slot][test.statusKey]}; archive retained`);
   }
 }
 console.log(`Native NO DATA review: ${checks} checks passed; source inspection and synthetic envelope import only; Swift/BLE not executed.`);
+
+if (process.argv[2]) {
+  const generated = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+  check(generated.length === cases.length, 'Swift fixture count');
+  check(new Set(generated.map(e => e.readout_id)).size === cases.length, 'Swift fixture coverage');
+  for (const test of cases) {
+    const envelope = generated.find(e => e.readout_id === test.id);
+    check(envelope?.intent === test.intent && envelope.ok === false && envelope.errors.join(',') === 'readout_not_available', 'Swift failure contract');
+    const result = obd.buildNativeConnectorDiagnosticImport(envelope);
+    check(result.accepted && result.session[test.slot][test.statusKey] !== 'reported', 'Swift missing result became acquired');
+    const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(result.session)));
+    check(restored[test.slot][test.statusKey] !== 'reported' && restored[test.slot].errorCodes.includes('readout_not_available'), 'Swift archive lost missing reason');
+    check(restored.vehicleCommandEnabled === false && restored.wouldTransmit === false, 'Swift archive gained authority');
+  }
+  console.log('Swift-generated NO DATA envelopes: all six imported and restored without acquisition coverage; ' + checks + ' total checks passed.');
+}

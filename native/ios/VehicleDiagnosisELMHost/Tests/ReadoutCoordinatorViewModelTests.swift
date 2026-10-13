@@ -5,6 +5,21 @@ import ELM327BLEConnector
 
 final class ReadoutCoordinatorViewModelTests: XCTestCase {
     @MainActor
+    func testNoDataFailuresDoNotCountAsCaptured() throws {
+        let commands: [ELMReadCommand] = [.storedDTC, .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .onboardMonitor, .mode09SupportedInfoTypes]
+        let envelopes = commands.enumerated().map { index, command in
+            NativeConnectorEnvelopeFactory.failedReadout(context: NativeConnectorSessionContext(), sequence: index + 1, command: command, error: "readout_not_available")
+        }
+        let restored = try JSONDecoder().decode([NativeConnectorEnvelope].self, from: JSONEncoder().encode(envelopes))
+        let ids = commands.compactMap(\.readoutID)
+        let summary = ReadoutCoordinatorViewModel.readoutCompletion(expectedReadoutIDs: ids, envelopes: restored)
+        XCTAssertEqual(summary.expectedCount, 6)
+        XCTAssertEqual(summary.capturedCount, 0)
+        XCTAssertEqual(summary.missingIDs, ids.sorted())
+        XCTAssertTrue(NativeConnectorReadoutPreview(envelopes: restored).emptyReadouts.isEmpty)
+    }
+
+    @MainActor
     func testPeripheralDetailKeepsAdvertisementEvidenceNonDiagnostic() {
         let candidate = BLEPeripheralCandidate(
             id: UUID(),
