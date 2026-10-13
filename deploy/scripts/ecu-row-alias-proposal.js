@@ -1,4 +1,4 @@
-// Isolated proposal only; never imported by the application.
+// Historical proposal applied in 3.13.688; never imported by the application.
 export function applyEcuRowAliasProposal(source) {
   const anchor = '      const ecuResponseConflict = envelopeEcuAliasConflict || ecuResponseAddressEvidence.conflict === true;';
   if (source.split(anchor).length !== 2) throw Error('Unexpected ECU row anchor');

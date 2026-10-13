@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { applyEcuRowAliasProposal } from './ecu-row-alias-proposal.js';
 
 const other = { id: 'TCM', address: '7EA', status: 'reported', responseCount: 1 };
 const row = pair => ({ id: 'ECM', sourceEcu: pair[0], source_ecu: pair[1], status: 'reported', responseCount: 2, responseTimeMs: 0 });
@@ -30,7 +29,7 @@ function load(source) {
   return c.window.ObdReadOnly;
 }
 const source = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
-const before = load(source), after = load(applyEcuRowAliasProposal(source));
+const after = load(source);
 const evidenceContext = vm.createContext({});
 for (const name of ['normalizeDirectionalCanEcuAddress', 'resolveEcuResponseAddressEvidence']) {
   const start = source.indexOf('  function ' + name + '('), end = source.indexOf('\n  }', start);
@@ -48,21 +47,11 @@ function observe(api, input) {
   return { output, session, archive, restored };
 }
 const fixturePath = new URL('./fixtures/ecu-row-alias-legacy-3.13.687.json', import.meta.url);
-if (process.argv.includes('--freeze')) {
-  assert.equal(fs.existsSync(fixturePath), false, 'Never overwrite legacy evidence');
-  const frozen = {};
-  for (const [id, input] of cases) {
-    const result = observe(before, input);
-    frozen[id] = { output: result.output, hashes: Object.fromEntries(Object.entries(result).map(([key, value]) => [key, hash(value)])) };
-  }
-  fs.writeFileSync(fixturePath, JSON.stringify({ version: '3.13.687', commit: '4ec0502f4d21e0958ad457237558f8a3163e5f4d', cases: frozen }, null, 2) + '\n');
-}
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 let checks = 0;
 const eq = (a, b, label) => { assert.deepEqual(plain(a), plain(b), label); checks++; };
 for (const [id, input, changed] of cases) {
-  const original = JSON.stringify(input), legacy = observe(before, input), next = observe(after, input);
-  for (const [key, value] of Object.entries(legacy)) eq(hash(value), fixture.cases[id].hashes[key], id + ' legacy ' + key);
+  const original = JSON.stringify(input), next = observe(after, input);
   if (changed) {
     const expected = plain(fixture.cases[id].output);
     eq(expected.ecus[0].ecuResponseConflict ?? false, false, id + ' previously unflagged');
@@ -87,4 +76,4 @@ for (const value of [session, restored]) {
   eq(value.livePidSnapshot.monitorValues.map(r=>r.value), [14], 'independent live retained');
   eq(value.ecuResponseSummary.ecus.map(r=>r.ecuResponseConflict??false), [true,false], 'only affected row marked');
 }
-console.log(`ECU row alias isolated proposal: ${cases.length} cases / ${checks} checks passed; synthetic only; production unchanged.`);
+console.log(`ECU row alias production: ${cases.length} cases / ${checks} checks passed; synthetic only; production code.`);

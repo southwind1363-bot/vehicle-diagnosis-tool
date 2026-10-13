@@ -1,3 +1,4 @@
+import './validate-ecu-row-alias-proposal.js';
 import './validate-ecu-envelope-alias-proposal.js';
 import './validate-dtc-merge-ecu-alias-proposal.js';
 import "./validate-pid-matrix-ecu-alias-proposal.js";

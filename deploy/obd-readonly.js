@@ -34517,7 +34517,9 @@
       const ecuResponseAddressEvidence = resolveEcuResponseAddressEvidence({ ...row, address });
       const diagnosticRequestId = ecuResponseAddressEvidence.requestAddress;
       const diagnosticResponseId = ecuResponseAddressEvidence.kind === "response" || ecuResponseAddressEvidence.kind === "conflict" ? ecuResponseAddressEvidence.responseAddress || null : null;
-      const ecuResponseConflict = envelopeEcuAliasConflict || ecuResponseAddressEvidence.conflict === true;
+      const ecuResponseConflict = envelopeEcuAliasConflict
+        || hasConflictingJsonEcuAliases({ sourceEcu: row?.sourceEcu, source_ecu: row?.source_ecu })
+        || ecuResponseAddressEvidence.conflict === true;
       const addressingType = redactSensitiveText(String(row?.addressingType || row?.addressing_type || row?.diagnosticAddressing || row?.diagnostic_addressing || row?.addressingMode || row?.addressing_mode || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const sourceLogicalAddress = redactSensitiveText(String(row?.sourceLogicalAddress || row?.source_logical_address || row?.testerLogicalAddress || row?.tester_logical_address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const targetLogicalAddress = redactSensitiveText(String(row?.targetLogicalAddress || row?.target_logical_address || row?.ecuLogicalAddress || row?.ecu_logical_address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;

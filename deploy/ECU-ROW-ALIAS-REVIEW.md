@@ -1,6 +1,6 @@
 # ECU応答行の同義項目チェック案
 
-2026-10-13 / 対象3.13.687・4ec0502f4d21e0958ad457237558f8a3163e5f4d / 本体未適用
+2026-10-13 / 旧版3.13.687・4ec0502f4d21e0958ad457237558f8a3163e5f4d / 承認後3.13.688へ適用
 
 ## 再現
 
@@ -8,7 +8,7 @@ normalizeEcuResponseSummaryの各行では、sourceEcu/source_ecuの片方が空
 
 ## 具体的な変更
 
-scripts/ecu-row-alias-proposal.jsに本体未適用の差分を保存した。normalizeEcuResponseSummary内の各行でsourceEcu/source_ecuだけを既存hasConflictingJsonEcuAliasesへ渡し、既存の外側矛盾/識別矛盾判定へOR条件を追加する。
+scripts/ecu-row-alias-proposal.jsに保存した差分を承認後、本体へ適用した。normalizeEcuResponseSummary内の各行でsourceEcu/source_ecuだけを既存hasConflictingJsonEcuAliasesへ渡し、既存の外側矛盾/識別矛盾判定へOR条件を追加する。
 
 両方がnull/欠落以外なら、非文字列・空文字・前後空白/大小文字を除いた不一致を矛盾とする。片方だけ、null、同じ文字列、空白大小文字だけの差は新たに除外しない。既存の識別矛盾判定は維持する。
 
@@ -29,8 +29,18 @@ scripts/ecu-row-alias-proposal.jsに本体未適用の差分を保存した。no
 
 ## 対象外
 
-各行metadata等の任意入れ子、sourceEcu/source_ecu以外の別名、親子/別行間の異なるECU、既に失われた矛盾、空一覧への拒否理由新設は対象外。全ての適合判定経路の保証ではなく、既存識別根拠resolverと保存・復元・表示を隔離検証した範囲。本体適用後は全体回帰・配布再生成が必要。
+各行metadata等の任意入れ子、sourceEcu/source_ecu以外の別名、親子/別行間の異なるECU、既に失われた矛盾、空一覧への拒否理由新設は対象外。全ての適合判定経路の保証ではなく、既存識別根拠resolverと保存・復元・表示を隔離検証した範囲。全体回帰・配布再生成の結果は下記へ記録する。
 
 ## 適用確認
 
-表記差を含む新しい根拠除外条件になるため、開発計画の「診断結果の契約・保存形式に変更が必要なら、その具体的な差分を先に提示する」に従って本体適用確認を待つ。公開・本体・配布は3.13.687を維持する。
+表記差を含む新しい根拠除外条件になるため、開発計画の「診断結果の契約・保存形式に変更が必要なら、その具体的な差分を先に提示する」に従って具体案を提示し、ユーザーの「続けて」を受けて本体へ適用した。
+
+## 本体適用の検証（3.13.688）
+
+20ケース・170項目が合格。旧版ソースの再実行80項目を除き、本体を直接検証して全体OBD回帰へ組み込んだ。旧版fixtureは変更せず、新しい除外条件・重複行の順序・正常な別ECU行・正常ライブ14 V・保存復元後の両形式フラグを確認。実ブラウザーも本体を直接読み込み、合成JSON取込、矛盾行だけの注記、正常行表示、検索/解除、保存復元、390/1280px明暗が合格。ページ例外・外部/車両要求0。成果物: C:/Users/nagatomo/AppData/Local/Temp/ecu-row-alias-production-gH6QgY。390pxを目視確認。
+
+診断画面全体のブラウザー回帰が合格（readiness-review-bfYfCK）。ZIP: C:/Users/nagatomo/AppData/Local/Temp/vehicle-diagnosis-tool-3.13.688.zip、2,702,547 bytes、SHA256 1A322B64C2A8DA71115692AD857E3E18B75EFEFEC5EC6359085DDAB21FCCCCE8。別展開851ファイル / 17,036,951 bytesの整合性合格。主要5資産は本体/別展開/ローカルHTTP200で全文一致。実車適合の証明ではない。
+
+ブリッジ384・オフライン183・Windowsローカル1,369・パッケージ766項目、データ203 JSON / DTC3,878件はエラー0。表示単体の専用32・Readiness26・FF7・Mode06 7・検索6項目も合格。
+
+全体OBD7,447項目はエラー0で終了。専用170項目も全体回帰の入口で実行。DTC定義の集計レポートも正常終了した。実車・VCIへの通信は行っていない。
