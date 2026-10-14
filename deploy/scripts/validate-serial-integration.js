@@ -693,6 +693,61 @@ for (const fragmentResponses of [false, true]) {
   }
 }
 
+// Exercise the real response timeout inside each core readout, including a
+// plausible but unterminated response. Only the timeout duration is shortened.
+for (const partialResponse of [false, true]) {
+  for (const command of ["03", "07", "0A", "0101"]) {
+    const client = createClient(successfulResponses, { fragmentResponses: true, fragmentSize: 1 });
+    await connect(client);
+    const state = client.context.obdDevSession;
+    const ticket = state.settingsObservation.ticket;
+    const send = client.context.sendElmDeveloperCommand;
+    client.context.sendElmDeveloperCommand = (value, timeout, ...rest) =>
+      send(value, value === command ? 20 : timeout, ...rest);
+    let capture;
+    client.port.responses[command] = () => {
+      capture = state.coreRawReadoutCapture;
+      if (partialResponse) client.port.enqueue(command === "0101" ? "7E8 06 41 01 00 07 00 00\r" : "7E8 03 4" + command.at(-1) + " 06 00\r");
+      return Promise.resolve(); // No prompt and no EOF: the real timer must expire.
+    };
+    await client.context.readObdDeveloperCoreScan();
+    check(state.connectionState === "disconnected" && state.lastDisconnectReason === "response_timeout",
+      command + ": missing prompt did not stop with response_timeout");
+    check(state.pendingCommandOperation === null && state.pendingWriteOperation === null,
+      "Timeout retained pending serial operations");
+    check(capture.take() === null && capture.inspect().count === 0 && capture.inspect().formatReview === null,
+      "Timeout retained usable raw capture");
+    check(!state.settingsObservation.owner.inspect(ticket).ok, "Timeout retained settings evidence");
+    check(client.port.calls.writes.at(-1) === command && client.port.calls.writes.filter(value => value === command).length === 1,
+      "Timeout retried or sent a subsequent command");
+    const partial = state.lastSession, partialJson = JSON.stringify(partial);
+    check(!partial?.dtcSnapshot?.codes?.includes("P0600"), "Unterminated response supplied a DTC");
+    if (command !== "03") check(partial?.dtcSnapshot?.codes?.includes("P0133"), "Timeout discarded an acquired DTC");
+    client.context.sendElmDeveloperCommand = send;
+    const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 03 00" }, { fragmentResponses: true, fragmentSize: 1 });
+    client.context.navigator.serial.requestPort = async () => replacement;
+    await connect(client);
+    check(state.textBuffer === successfulResponses["AT@1"] + ">", "Reconnection retained old bytes instead of its final initialization response");
+    const oldWrites = client.port.calls.writes.length;
+    client.port.enqueue("7E8 03 43 04 20\r>");
+    await client.context.readObdDeveloperCoreScan();
+    check(state.lastSession.dtcSnapshot.codes.join(",") === "P0300", "Timeout recovery mixed old or late DTCs");
+    check(capture.take() === null && state.coreRawReadoutCapture.inspect().count === 4,
+      "Timeout recovery revived old capture or lost fresh records");
+    check(client.port.calls.writes.length === oldWrites, "Recovery wrote to expired port");
+    const exported = JSON.stringify(client.context.ObdReadOnly.buildBridgeSessionExportPayload(state.lastSession));
+    const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(exported);
+    check(restored.dtcSnapshot.codes.join(",") === "P0300" && !restored.wouldTransmit && !restored.vehicleCommandEnabled,
+      "Recovery changed saved results or command authority");
+    check(!exported.includes("coreRawReadoutCapture") && !exported.includes("settingsBeforeRead"), "Recovery exported private raw capture");
+    check(JSON.stringify(partial) === partialJson, "Recovery changed the timeout record");
+    await client.context.disconnectObdDeveloperVci();
+    for (const port of [client.port, replacement]) check(port.closed && !port.readerLocked && !port.writerLocked
+      && port.calls.cancel === 1 && port.calls.close === 1 && port.calls.releaseReader === 1 && port.calls.releaseWriter === 1,
+      "Timeout recovery did not release resources exactly once");
+  }
+}
+
 // Explicit scan ownership across protocol inquiry and intervening reads.
 for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]) {
   const client = createClient(successfulResponses);
