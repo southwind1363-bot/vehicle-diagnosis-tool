@@ -6,7 +6,9 @@
 
 承認された2条件を本体へ適用し、専用検査を実ソースに対する回帰検査へ移行して全体OBD検査に組み込んだ。旧既定値の再構成はテスト専用対照とする。差分patchは履歴であり、再適用しない。
 
-欠落値144項目・既存null値143項目と、両ブラウザーの実JSON取込/保存復元が合格。前回のnull検査にあった「欠落値は対象外」という対照期待が停止したため、今回の承認済み仕様に従ってnull/null/unknownの明示期待へ更新し、再実行して合格した。正常な値の検査は維持。関連正規化1,183項目も合格。全体CI・配布・公開確認の結果は続けて記録する。
+欠落値144項目・既存null値143項目と、両ブラウザーの実JSON取込/保存復元が合格。前回のnull検査にあった「欠落値は対象外」という対照期待が停止したため、今回の承認済み仕様に従ってnull/null/unknownの明示期待へ更新し、再実行して合格した。正常な値の検査は維持。関連正規化1,183項目も合格。ローカルのoffline 183資産、data 203 JSON / 3,878 DTC、bridge 384項目もエラー0。通常ブラウザー回帰とWindowsローカル1,369項目も合格した。同一コードSHAの[Web CI run 38638793308](https://github.com/southwind1363-bot/vehicle-diagnosis-tool/actions/runs/38638793308)は全4ジョブ成功。全体OBD 7,447項目・専用欠落値144項目・Linux bridge 365項目、Windows非実行レビュー、Windows配布766項目、Chromiumのオフライン取込/再起動復元/固定モニター検査が合格。[iOS CI run 38638793022](https://github.com/southwind1363-bot/vehicle-diagnosis-tool/actions/runs/38638793022)も成功。Swift単体検査、RAW/NO DATAのWeb取込連携、シミュレータービルドと統合検査、全体OBD 7,447項目・専用欠落値144項目、未署名端末IPAのビルド/検証/保存まで合格。実機接続・署名配布・車両適合確認ではない。
+
+配布ZIPは展開後に851ファイル / 17,037,872 bytesの整合性検査が合格。SHA256: `DB00E329F81A1DF18AD61204EB3EF043C17AA45F0AE7D1DD41A9AF0047D270A7`。公開5資産（index.html / script.js / obd-readonly.js / service-worker.js / offline-assets.json）はHTTP 200で、本体・展開ZIPとLF正規化後に一致した。コードコミット`a2f2fe04fc9596d8d62fe9047c647a8ea03b0766`の本番deployment `dpl_F3NjBZ3sbbUhGQLWfnYVqKfGFXGe`はREADY。
 
 以下は適用前に確認した差分と境界の記録。
 
