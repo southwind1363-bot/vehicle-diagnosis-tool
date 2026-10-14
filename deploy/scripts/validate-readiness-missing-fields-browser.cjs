@@ -1,12 +1,10 @@
-// Isolated missing-field proposal through the real JSON picker; production files unchanged.
+// Production missing-field regression through the real JSON picker.
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
   const root = path.resolve(__dirname, '..');
-  const { applyReadinessMissingFieldsProposal } = await import('./readiness-missing-fields-proposal.js');
-  const proposedSource = applyReadinessMissingFieldsProposal(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8'));
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
   const errors = [], blocked = [];
@@ -24,7 +22,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const relative = path.relative(root, file);
       if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(file)) return route.fulfill({ status: 404, body: '' });
       const contentType = { '.js': 'text/javascript', '.json': 'application/json', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml' }[path.extname(file)] || 'text/plain';
-      await route.fulfill({ contentType, body: file === path.join(root, 'obd-readonly.js') ? proposedSource : fs.readFileSync(file) });
+      await route.fulfill({ contentType, body: fs.readFileSync(file) });
     });
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
@@ -66,6 +64,6 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       }
     }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
-    console.log('Readiness missing-field proposal browser passed: real JSON picker, unknown/normal states, save/restore, existing UI classification, 390/1280 light/dark, no external or vehicle requests.');
+    console.log('Readiness missing-field production browser passed: real JSON picker, unknown/normal states, save/restore, existing UI classification, 390/1280 light/dark, no external or vehicle requests.');
   } finally { await context.close(); await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

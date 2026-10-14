@@ -50,8 +50,8 @@ for (const row of [
   const result = proposed.normalizeBridgeReadinessSnapshot({ ok: true, data: { monitors: [row] } });
   equal(result.monitors[0].status, 'unknown', 'Bridge keeps unknown aliases/values unknown');
 }
-equal(proposed.normalizeReadinessSnapshot({ monitors: [{ id: 'catalyst' }] }),
-  current.normalizeReadinessSnapshot({ monitors: [{ id: 'catalyst' }] }), 'Absent-field defaults are outside this proposal');
+const absent = proposed.normalizeReadinessSnapshot({ monitors: [{ id: 'catalyst' }] }).monitors[0];
+equal([absent.supported, absent.complete, absent.status], [null, null, 'unknown'], 'Missing-field contract added in 3.13.694');
 for (const status of ['complete', 'not_complete', 'not_supported', 'unknown', 'unparsed', '完了', '未完了', '非対応', '不明']) {
   const input = { monitors: [{ id: 'catalyst', supported: null, complete: null, status }] };
   equal(proposed.normalizeReadinessSnapshot(input), current.normalizeReadinessSnapshot(input), 'Explicit/legacy label unchanged');

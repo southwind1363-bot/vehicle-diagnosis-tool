@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-import { applyReadinessMissingFieldsProposal } from './readiness-missing-fields-proposal.js';
+import { restoreReadinessMissingFieldsLegacy } from './readiness-missing-fields-proposal.js';
 
 const source = fs.readFileSync(new URL('../obd-readonly.js', import.meta.url), 'utf8');
 function load(text) {
@@ -10,7 +10,7 @@ function load(text) {
   vm.runInContext(text, context);
   return context.window.ObdReadOnly;
 }
-const old = load(source), proposal = load(applyReadinessMissingFieldsProposal(source));
+const old = load(restoreReadinessMissingFieldsLegacy(source)), proposal = load(source);
 const plain = value => JSON.parse(JSON.stringify(value));
 let checks = 0;
 function equal(a, b, label) { assert.deepEqual(plain(a), plain(b), label); checks++; }
@@ -54,4 +54,4 @@ for (const supported of [null, false, true]) for (const complete of [null, false
 for (const raw of ['41 01 00 07 00 00', '41 01 81 07 65 00', 'NO DATA', '']) {
   equal(proposal.decodeReadinessResponse(raw), old.decodeReadinessResponse(raw), 'Raw decoder unchanged');
 }
-console.log(`Readiness missing-field proposal: ${checks} checks passed; production unchanged.`);
+console.log(`Readiness missing-field production: ${checks} checks passed.`);

@@ -34081,7 +34081,7 @@
       const supported = supportedAlias === undefined
         ? (statusKey === "not_supported" || statusKey === "unsupported"
           ? false
-          : statusKey === "unknown" || statusKey === "unparsed"
+          : statusKey === "unknown" || statusKey === "unparsed" || !statusKey
             ? null
             : true)
         : readOptionalBooleanAlias(supportedAlias);
@@ -34089,7 +34089,7 @@
       const complete = completeAlias === undefined
         ? (["complete", "ready", "ok"].includes(statusKey)
           ? true
-          : statusKey === "unknown" || statusKey === "unparsed"
+          : statusKey === "unknown" || statusKey === "unparsed" || !statusKey
             ? null
             : false)
         : readOptionalBooleanAlias(completeAlias);
