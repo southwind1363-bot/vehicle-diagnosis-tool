@@ -73,7 +73,11 @@ class MockElmPort {
       this.readerLocked = true;
       return {
         read: () => this.read(),
-        cancel: async () => { this.calls.cancel += 1; this.finish(); },
+        cancel: async () => {
+          this.calls.cancel += 1;
+          if (this.cleanupFailure === "cancel") throw new Error("reader_cancel_failed");
+          this.finish();
+        },
         releaseLock: () => {
           this.calls.releaseReader += 1;
           if (this.cleanupFailure === "reader") throw new Error("reader_release_failed");
@@ -86,7 +90,11 @@ class MockElmPort {
       this.writerLocked = true;
       return {
         write: (value) => this.write(value),
-        releaseLock: () => { this.calls.releaseWriter += 1; this.writerLocked = false; }
+        releaseLock: () => {
+          this.calls.releaseWriter += 1;
+          if (this.cleanupFailure === "writer") throw new Error("writer_release_failed");
+          this.writerLocked = false;
+        }
       };
     } };
   }
@@ -263,7 +271,7 @@ for (const eol of ["\r\n", "\r", "\n"]) {
   check(client.port.closed && !client.port.readerLocked && !client.port.writerLocked, "Successful disconnect left a mock resource open or locked");
 }
 
-for (const failure of ["reader", "close"]) {
+for (const failure of ["reader", "writer", "cancel", "close"]) {
   const client = createClient(successfulResponses);
   await connect(client);
   await client.context.readObdDeveloperDtc();
@@ -274,8 +282,9 @@ for (const failure of ["reader", "close"]) {
     `${failure}: cleanup fixture needs a retained readout without a pending write`);
   client.port.cleanupFailure = failure;
   await client.context.disconnectObdDeveloperVci();
-  check(!client.port.closed && client.port.readerLocked === (failure === "reader") && !client.port.writerLocked,
-    `${failure}: mock did not retain the failed-close or unreleased-reader condition`);
+  check(client.port.closed === (failure === "cancel") && client.port.readerLocked === (failure === "reader")
+    && client.port.writerLocked === (failure === "writer"),
+    `${failure}: mock did not retain the expected cleanup failure condition`);
   check(client.context.obdDevSession.connectionState === "disconnecting" && client.context.obdSerialDisconnectOperation?.cleanupFailed,
     `${failure}: failed cleanup incorrectly reported a completed disconnect`);
   await client.context.disconnectObdDeveloperVci();
