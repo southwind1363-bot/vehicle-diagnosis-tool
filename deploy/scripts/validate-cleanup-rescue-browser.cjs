@@ -62,6 +62,37 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     });
     const save = page.locator('[data-obd-session-export]:visible').first();
     assert.equal(await save.isEnabled(), true);
+    // Browser API fault injection, not an actual disk/storage failure.
+    for (const failure of ['object_url', 'anchor_click']) {
+      await page.evaluate(failure => {
+        const create = URL.createObjectURL.bind(URL), revoke = URL.revokeObjectURL.bind(URL);
+        const click = HTMLAnchorElement.prototype.click;
+        window.rescueFault = { created: [], revoked: [], restore() {
+          URL.createObjectURL = create; URL.revokeObjectURL = revoke; HTMLAnchorElement.prototype.click = click;
+        } };
+        URL.createObjectURL = blob => {
+          if (failure === 'object_url') throw Error('synthetic_object_url_failure');
+          const url = create(blob); rescueFault.created.push(url); return url;
+        };
+        URL.revokeObjectURL = url => { rescueFault.revoked.push(url); return revoke(url); };
+        HTMLAnchorElement.prototype.click = function () {
+          if (failure === 'anchor_click' && this.download.startsWith('diagnostic-session-')) throw Error('synthetic_anchor_failure');
+          return click.call(this);
+        };
+      }, failure);
+      await save.click();
+      await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-obd-session-export-status]'))
+        .some(node => node.textContent.includes('JSON保存を開始できませんでした')));
+      await page.waitForFunction(() => rescueFault.created.length === rescueFault.revoked.length);
+      const failed = await page.evaluate(() => ({ snapshot: JSON.stringify(obdDevSession.lastSession),
+        state: obdDevSession.connectionState, failed: obdSerialDisconnectOperation.cleanupFailed,
+        created: rescueFault.created, revoked: rescueFault.revoked,
+        links: document.querySelectorAll('a[download^="diagnostic-session-"]').length }));
+      assert.equal(failed.snapshot, original); assert.equal(failed.state, 'disconnecting'); assert.equal(failed.failed, true);
+      assert.deepEqual(failed.revoked, failed.created); assert.equal(failed.created.length, failure === 'anchor_click' ? 1 : 0);
+      assert.equal(failed.links, 0); assert.equal(downloads, 0); assert.equal(await save.isEnabled(), true);
+      await page.evaluate(() => { rescueFault.restore(); delete window.rescueFault; });
+    }
     const [download] = await Promise.all([page.waitForEvent('download'), save.click()]);
     assert.match(download.suggestedFilename(), /^diagnostic-session-.*\.json$/);
     assert.equal(await download.failure(), null);
@@ -89,6 +120,6 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.deepEqual(restored.codes, ['P0133','P0420']);
     assert.equal(restored.transmit, false); assert.equal(restored.enabled, false);
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
-    console.log('Cleanup rescue browser passed: six blocked states, real button/download, original record and quarantine preserved, downloaded JSON reimport, no external or vehicle requests.');
+    console.log('Cleanup rescue browser passed: six blocked states, two save-start faults with URL/link cleanup and retry, real button/download, original record and quarantine preserved, downloaded JSON reimport, no external or vehicle requests.');
   } finally { await context.close(); await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
