@@ -136,6 +136,12 @@ jobs:
           PLAYWRIGHT_CHANNEL: chromium
           TMPDIR: ${{ runner.temp }}
 
+      - name: Validate quarantined record rescue download
+        run: node scripts/validate-cleanup-rescue-browser.cjs
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/scanner-browser/node_modules/playwright
+          PLAYWRIGHT_CHANNEL: chromium
+
       - name: Preserve synthetic test screenshots and runtime versions
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
