@@ -753,6 +753,63 @@ for (const failure of ["response_timeout", "write_rejection"]) {
   }
 }
 
+// A write timeout returns to the caller while cleanup waits for write settlement.
+// Exercise late resolution and rejection through the complete core-scan path.
+for (const settlement of ["resolve", "reject"]) {
+  for (const command of ["03", "07", "0A", "0101"]) {
+    const client = createClient(successfulResponses);
+    await connect(client);
+    const state = client.context.obdDevSession, ticket = state.settingsObservation.ticket;
+    const send = client.context.sendElmDeveloperCommand;
+    client.context.sendElmDeveloperCommand = (value, timeout, ...rest) => send(value, value === command ? 20 : timeout, ...rest);
+    let settle, capture;
+    client.port.responses[command] = () => new Promise((resolve, reject) => {
+      capture = state.coreRawReadoutCapture;
+      settle = () => settlement === "resolve" ? resolve() : reject(new Error("late_write_rejection"));
+    });
+    await client.context.readObdDeveloperCoreScan();
+    const cleanup = client.context.obdSerialDisconnectOperation;
+    check(state.connectionState === "disconnecting" && cleanup?.writePending === true,
+      "Pending write timeout claimed completed disconnection");
+    check(state.lastDisconnectReason === "serial_write_timeout", "Pending write timeout lost its stop reason");
+    check(client.port.calls.close === 0 && client.port.calls.releaseWriter === 0 && state.pendingWriteOperation !== null,
+      "Pending write transport was closed or unlocked before settlement");
+    check(capture.take() === null && capture.inspect().count === 0 && !state.settingsObservation.owner.inspect(ticket).ok,
+      "Pending write retained usable raw or settings evidence");
+    const writes = client.port.calls.writes.length;
+    await client.context.connectObdDeveloperVci();
+    check(client.port.calls.select === 1 && client.port.calls.writes.length === writes,
+      "Pending write allowed new port selection or another command");
+    check(client.port.calls.writes.at(-1) === command && client.port.calls.writes.filter(value => value === command).length === 1,
+      "Write timeout retried or sent a following readout");
+    const partial = state.lastSession, partialJson = JSON.stringify(partial);
+    if (command !== "03") check(partial?.dtcSnapshot?.codes?.includes("P0133"), "Write timeout discarded an acquired DTC");
+    settle();
+    await cleanup.promise;
+    check(state.connectionState === "disconnected" && state.pendingWriteOperation === null && state.pendingCommandOperation === null,
+      "Settled write left cleanup or operations pending");
+    check(JSON.stringify(partial) === partialJson, "Late write settlement changed the failed record");
+    client.context.sendElmDeveloperCommand = send;
+    const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 03 00" });
+    client.context.navigator.serial.requestPort = async () => replacement;
+    await connect(client);
+    client.port.enqueue("7E8 03 43 04 20\r>");
+    await client.context.readObdDeveloperCoreScan();
+    const exported = JSON.stringify(client.context.ObdReadOnly.buildBridgeSessionExportPayload(state.lastSession));
+    const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(exported);
+    check(restored.dtcSnapshot.codes.join(",") === "P0300" && !restored.wouldTransmit && !restored.vehicleCommandEnabled,
+      "Late write settlement contaminated recovery or granted authority");
+    check(capture.take() === null && state.coreRawReadoutCapture.inspect().count === 4
+      && !exported.includes("coreRawReadoutCapture"), "Recovery revived expired raw records");
+    check(client.port.calls.writes.length === writes && JSON.stringify(partial) === partialJson,
+      "Recovery reused expired port or modified the failed record");
+    await client.context.disconnectObdDeveloperVci();
+    for (const port of [client.port, replacement]) check(port.closed && !port.readerLocked && !port.writerLocked
+      && port.calls.cancel === 1 && port.calls.close === 1 && port.calls.releaseReader === 1 && port.calls.releaseWriter === 1,
+      "Pending write recovery did not release every resource exactly once");
+  }
+}
+
 // Explicit scan ownership across protocol inquiry and intervening reads.
 for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]) {
   const client = createClient(successfulResponses);
