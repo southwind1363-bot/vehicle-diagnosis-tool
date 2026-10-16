@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./validate-can-settings-readiness.js";
 import fs from "node:fs";
 import vm from "node:vm";
 import { createReadOnlySettingsObservation } from "./fixtures/readonly-settings-observation.js";
