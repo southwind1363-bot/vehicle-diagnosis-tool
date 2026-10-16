@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.694";
+const APP_VERSION = "3.13.695";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9027,8 +9027,25 @@ function buildWebSerialDtcResponseOverrides(commandResponses = [], attemptedComm
             const normalizedBytes = Number.isInteger(frameLength) && frameLength >= 0 && bytes.length > frameLength && bytes[0] === frameLength
               ? bytes.slice(1, frameLength + 1)
               : bytes;
+            let dtcBytes = normalizedBytes;
+            const countedSingleFrame = /^[0-7][0-9A-F]{2}$/i.test(String(packet?.ecu || ""))
+              && Number.isInteger(frameLength) && frameLength >= 2 && frameLength <= 7
+              && bytes[0] === frameLength && bytes.length >= frameLength + 1
+              && [0x43, 0x47, 0x4A].includes(normalizedBytes[0]);
+            if (countedSingleFrame) {
+              const count = normalizedBytes[1];
+              const codes = new Set();
+              let valid = normalizedBytes.length === 2 + count * 2;
+              for (let index = 2; valid && index < normalizedBytes.length; index += 2) {
+                const code = (normalizedBytes[index] << 8) | normalizedBytes[index + 1];
+                if (code === 0 || codes.has(code)) valid = false;
+                codes.add(code);
+              }
+              dtcBytes = !valid ? [normalizedBytes[0]] : count === 0
+                ? [normalizedBytes[0], 0, 0] : [normalizedBytes[0], ...normalizedBytes.slice(2)];
+            }
             return window.ObdReadOnly.decodeObdDtcResponse({
-              bytes: normalizedBytes,
+              bytes: dtcBytes,
               source: "web_serial",
               intent: metadata.intent,
               protocol: "ELM327",
@@ -9917,9 +9934,16 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
       ? { onboardMonitorSnapshot: currentOnboardMonitorSnapshot }
       : obdDevSession.lastSession?.onboardMonitorSnapshot ? { onboardMonitorSnapshot: obdDevSession.lastSession.onboardMonitorSnapshot } : {})
   };
+  // Reuse the Web Serial DTC conversion when later reads rebuild the accumulated log.
+  const historicalBuckets = window.ObdReadOnly.classifyObdResponseLines(obdDevSession.lastRawText).responseBuckets || {};
+  const historicalDtcResponses = [["03", "storedDtcResponses"], ["07", "pendingDtcResponses"], ["0A", "permanentDtcResponses"]]
+    .filter(([command, bucket]) => historicalBuckets[bucket]?.length
+      || historicalBuckets.negativeResponses?.some(packet => packet?.negativeResponse?.requestedService === command))
+    .map(([command]) => ({ command, response: obdDevSession.lastRawText }));
+  const historicalDtcOverrides = buildWebSerialDtcResponseOverrides(historicalDtcResponses);
   const resolvedScanSession = window.ObdReadOnly.buildScanSessionFromObdText(
     obdDevSession.lastRawText,
-    { ...scanSessionOptions, ...latestSnapshotOverrides }
+    { ...historicalDtcOverrides, ...scanSessionOptions, ...latestSnapshotOverrides }
   );
   const hasLivePidTimelineSample = hasWebSerialLivePidCoverage(currentLivePidSnapshot)
     && Array.isArray(currentLivePidSnapshot.monitorValues)

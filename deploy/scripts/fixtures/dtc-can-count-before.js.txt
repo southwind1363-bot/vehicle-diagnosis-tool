@@ -1,0 +1,100 @@
+function isWebSerialExpectedEmptyResponse(command, response) {
+  // NO DATA is not evidence of an acquired empty diagnostic result.
+  return false;
+}
+function buildWebSerialDtcResponseOverrides(commandResponses = [], attemptedCommands = []) {
+  const dtcCommandMetadata = {
+    "03": { key: "storedDtcResponse", status: "stored", intent: "read_stored_dtc", bucket: "storedDtcResponses" },
+    "07": { key: "pendingDtcResponse", status: "pending", intent: "read_pending_dtc", bucket: "pendingDtcResponses" },
+    "0A": { key: "permanentDtcResponse", status: "permanent", intent: "read_permanent_dtc", bucket: "permanentDtcResponses" }
+  };
+  const toReadOnlyOverride = (snapshot, metadata) => {
+    const reportedStatuses = Array.isArray(snapshot?.reportedStatuses)
+      ? snapshot.reportedStatuses
+      : snapshot?.dtcReadoutStatus === "reported" ? [metadata.status] : [];
+    return {
+      ...snapshot,
+      source: "web_serial",
+      intent: metadata.intent,
+      protocol: "ELM327",
+      reportedStatuses,
+      retainedRawText: false,
+      retained_raw_text: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  };
+  const attemptedOverrides = (Array.isArray(attemptedCommands) ? attemptedCommands : []).reduce((overrides, value) => {
+    const command = String(value || "").trim().toUpperCase();
+    const metadata = dtcCommandMetadata[command];
+    if (!metadata) return overrides;
+    return {
+      ...overrides,
+      [metadata.key]: toReadOnlyOverride({
+        source: "web_serial",
+        intent: metadata.intent,
+        dtcs: [],
+        reportedStatuses: [],
+        dtcReadoutStatus: "unknown"
+      }, metadata)
+    };
+  }, {});
+  return (Array.isArray(commandResponses) ? commandResponses : []).reduce((overrides, item) => {
+    const command = String(item?.command || "").trim().toUpperCase();
+    const metadata = dtcCommandMetadata[command];
+    const response = String(item?.response || "").trim();
+    if (!metadata || !response) return overrides;
+    return {
+      ...overrides,
+      [metadata.key]: isWebSerialExpectedEmptyResponse(command, response)
+        ? toReadOnlyOverride({
+          source: "web_serial",
+          intent: metadata.intent,
+          dtcs: [],
+          reportedStatuses: [metadata.status],
+          dtcReadoutStatus: "reported"
+        }, metadata)
+        : (() => {
+          const normalizedResponse = response.replace(/\r\n?/g, "\n").split("\n").map((line) => {
+            const compact = line.trim();
+            if (!/^(?:43|47|4A|7F)(?:[0-9A-F]{2})+$/i.test(compact)) return line;
+            return window.ObdReadOnly.parseObdHexBytes(compact.match(/[0-9A-F]{2}/gi).join(" "))
+              .map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+          }).join("\n");
+          const classified = window.ObdReadOnly.classifyObdResponseLines(normalizedResponse);
+          const responseBuckets = classified.responseBuckets || {};
+          const packets = [
+            ...(responseBuckets[metadata.bucket] || []),
+            ...(responseBuckets.negativeResponses || []).filter((packet) => packet?.negativeResponse?.requestedService === command)
+          ];
+          const snapshots = packets.map((packet) => {
+            const bytes = Array.isArray(packet?.bytes) ? packet.bytes : [];
+            const frameLength = Number(packet?.frameLength);
+            const normalizedBytes = Number.isInteger(frameLength) && frameLength >= 0 && bytes.length > frameLength && bytes[0] === frameLength
+              ? bytes.slice(1, frameLength + 1)
+              : bytes;
+            return window.ObdReadOnly.decodeObdDtcResponse({
+              bytes: normalizedBytes,
+              source: "web_serial",
+              intent: metadata.intent,
+              protocol: "ELM327",
+              source_ecu: packet?.ecu || packet?.address || undefined
+            });
+          });
+          const snapshot = snapshots.length
+            ? window.ObdReadOnly.mergeDtcSnapshots(...snapshots)
+            : window.ObdReadOnly.normalizeDtcSnapshot({
+              source: "web_serial",
+              intent: metadata.intent,
+              protocol: "ELM327",
+              dtcs: [],
+              reportedStatuses: [],
+              dtcReadoutStatus: "unparsed"
+            });
+          return toReadOnlyOverride(snapshot, metadata);
+        })()
+    };
+  }, attemptedOverrides);
+}

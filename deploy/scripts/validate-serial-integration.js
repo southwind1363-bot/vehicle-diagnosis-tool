@@ -210,7 +210,7 @@ function createClient(responses, options = {}) {
 const successfulResponses = {
   ATZ: "ELM327 v1.5", ATE0: "ATE0\r\nOK", ATL0: "OK", ATS0: "OK", ATH1: "OK", ATSP0: "OK",
   ATI: "ELM327 v1.5", "AT@1": "OBDII to RS232 Interpreter", ATDP: "AUTO, ISO 15765-4 (CAN 11/500)", ATDPN: "A6",
-  "03": "7E8 05 43 01 33 00 00\r\n7E9 05 43 04 20 00 00", "07": "47 00 00", "0A": "4A 00 00", "0202": "42 02 00 00 00",
+  "03": "7E8 04 43 01 01 33\r\n7E9 04 43 01 04 20", "07": "47 00 00", "0A": "4A 00 00", "0202": "42 02 00 00 00",
   "0101": "41 01 00 07 00 00", "0900": "49 00 14 00 00 00", "0904": "49 04 01 31 32 33", "0906": "49 06 01 12 34 56 78",
   "06": "46 01 01 00 10 00 00 00 20", "0100": "41 00 00 10 00 00", "010C": "41 0C 1A F8"
 };
@@ -235,7 +235,7 @@ async function connect(client) {
 for (const eol of ["\r\n", "\r", "\n"]) {
   const client = createClient({ ...successfulResponses,
     ATE0: `ATE0${eol}OK`,
-    "03": ["7E8 05 43 01 33 00 00", "7E9 05 43 04 20 00 00"].join(eol)
+    "03": ["7E8 04 43 01 01 33", "7E9 04 43 01 04 20"].join(eol)
   }, { fragmentResponses: true });
   await connect(client);
   if (eol === "\r\n") check(client.port.calls.responseChunks.includes("ATE0\r") && client.port.calls.responseChunks.includes("\nOK>"), "Mock readable did not split the echoed ATE0 CRLF response across reader chunks");
@@ -323,7 +323,7 @@ for (const failure of ["reader", "writer", "cancel", "close"]) {
 for (const [command, service, status, label] of [["03", "43", "stored", "保存DTC読取"], ["07", "47", "pending", "保留・永久DTC読取"], ["0A", "4A", "permanent", "保留・永久DTC読取"]]) {
   const eol = command === "03" ? "\r\n" : command === "07" ? "\r" : "\n";
   const client = createClient({ ...successfulResponses,
-    [command]: `7E8 05 ${service} 01 33 00 00${eol}7E9 05 ${service} 04 20 00 00`
+    [command]: `7E8 04 ${service} 01 01 33${eol}7E9 04 ${service} 01 04 20`
   });
   await connect(client);
   await client.context.runObdDeveloperRead(label, [command]);
@@ -342,9 +342,9 @@ for (const [command, service, status, label] of [["03", "43", "stored", "保存D
   const decode = (response) => c.buildWebSerialDtcResponseOverrides([{ command: "03", response }], ["03"]).storedDtcResponse;
   const rows = decode("18DAF110 05 43 01 33 00 00\r18DAF118 05 43 04 20 00 00");
   check(JSON.stringify(rows.dtcs.map((dtc) => [dtc.code, dtc.ecu]).sort()) === JSON.stringify([["P0133", "18DAF110"], ["P0420", "18DAF118"]]), "29-bit response IDs were lost while normalizing DTC overrides");
-  const padded = decode("7E8 03 43 01 33 AA AA AA AA");
+  const padded = decode("7E8 04 43 01 01 33 AA AA AA");
   check(JSON.stringify(padded.codes) === JSON.stringify(["P0133"]), "DTC override decoded bytes beyond the frame length");
-  const empty = decode("7E8 03 43 00 00");
+  const empty = decode("7E8 02 43 00");
   check(empty.codes?.length === 0 || empty.dtcs?.length === 0, "Empty DTC response fabricated a code");
   check(empty.dtcReadoutStatus === "reported" && empty.reportedStatuses.join() === "stored", "Reported empty DTC state was lost");
   const noData = decode("NO DATA");
@@ -476,7 +476,7 @@ for (const [command, service, status, label] of [["03", "43", "stored", "保存D
   check(client.context.obdDevSession.lastSession === saved && JSON.stringify(saved) === savedJson,
     "Cancelled pending write replaced or mutated the previous readout");
 
-  const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 01 00" });
+  const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 04 43 01 01 00" });
   client.context.navigator.serial.requestPort = async () => { replacement.calls.select += 1; return replacement; };
   await connect(client);
   // Old data arriving after a new connection must not enter its response buffer.
@@ -566,7 +566,7 @@ for (const event of ["next_read", "protocol", "initialize", "reset", "disconnect
   for (const stage of ["initialization_failure", "unsupported_protocol", "recovered_protocol"]) {
     const replies = { ...successfulResponses, ATDPN: stage === "unsupported_protocol" ? "A7" : "A6" };
     const freshCode = stage === "unsupported_protocol" ? "P0100" : "P0300";
-    replies["03"] = stage === "unsupported_protocol" ? "7E8 05 43 01 00 00 00" : "7E8 05 43 03 00 00 00";
+    replies["03"] = stage === "unsupported_protocol" ? "7E8 04 43 01 01 00" : "7E8 04 43 01 03 00";
     if (stage === "initialization_failure") replies.ATS0 = "ERROR";
     const port = new MockElmPort(replies, { fragmentResponses: true, fragmentSize: 1 });
     client.context.navigator.serial.requestPort = async () => port;
@@ -630,7 +630,7 @@ for (const interruptedCommand of ["03", "07", "0A", "0101"]) {
   const partial = state.lastSession, partialJson = JSON.stringify(partial);
   if (interruptedCommand !== "03") check(partial?.dtcSnapshot?.codes?.includes("P0133"), "Stream loss discarded an acquired stored DTC");
   const oldWriteCount = client.port.calls.writes.length;
-  const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 03 00" }, { fragmentResponses: true, fragmentSize: 1 });
+  const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 04 43 01 03 00" }, { fragmentResponses: true, fragmentSize: 1 });
   client.context.navigator.serial.requestPort = async () => { replacement.calls.select++; return replacement; };
   await connect(client);
   client.port.enqueue("7E8 03 43 04 20\r>");
@@ -642,7 +642,7 @@ for (const interruptedCommand of ["03", "07", "0A", "0101"]) {
   const records = fresh.take();
   assert.deepEqual(Array.from(records, row => row.command), ["03", "07", "0A", "0101"]); checks++;
   assert.deepEqual(Array.from(records, row => row.settingsBeforeRead.protocol11bitReported), [false, true, true, true]); checks++;
-  check(records[0].transcript === "7E8 03 43 03 00>" && records.every(row => row.profile === null && !row.profileVerified
+  check(records[0].transcript === "7E8 04 43 01 03 00>" && records.every(row => row.profile === null && !row.profileVerified
     && !row.realTransportProofAvailable && !row.executionEnabled), "Fresh raw records mixed sources or granted authority");
   const exported = JSON.stringify(client.context.ObdReadOnly.buildBridgeSessionExportPayload(state.lastSession));
   const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(exported);
@@ -682,7 +682,7 @@ for (const fragmentResponses of [false, true]) {
     const partial = state.lastSession, partialJson = JSON.stringify(partial);
     check(!partial?.dtcSnapshot?.codes?.includes("P0600"), "Oversized response supplied its plausible DTC prefix");
     if (command !== "03") check(partial?.dtcSnapshot?.codes?.includes("P0133"), "Overflow discarded previously acquired DTCs");
-    const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 03 00" });
+    const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 04 43 01 03 00" });
     client.context.navigator.serial.requestPort = async () => replacement;
     await connect(client);
     client.port.enqueue("7E8 03 43 04 20\r>");
@@ -737,7 +737,7 @@ for (const failure of ["response_timeout", "write_rejection"]) {
       check(!partial?.dtcSnapshot?.codes?.includes("P0600"), "Unterminated response supplied a DTC");
       if (command !== "03") check(partial?.dtcSnapshot?.codes?.includes("P0133"), "Interrupted read discarded an acquired DTC");
       client.context.sendElmDeveloperCommand = send;
-      const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 03 00" }, { fragmentResponses: true, fragmentSize: 1 });
+      const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 04 43 01 03 00" }, { fragmentResponses: true, fragmentSize: 1 });
       client.context.navigator.serial.requestPort = async () => replacement;
       await connect(client);
       check(state.textBuffer === successfulResponses["AT@1"] + ">", "Reconnection retained old bytes instead of its final initialization response");
@@ -799,7 +799,7 @@ for (const settlement of ["resolve", "reject"]) {
       "Settled write left cleanup or operations pending");
     check(JSON.stringify(partial) === partialJson, "Late write settlement changed the failed record");
     client.context.sendElmDeveloperCommand = send;
-    const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 03 43 03 00" });
+    const replacement = new MockElmPort({ ...successfulResponses, "03": "7E8 04 43 01 03 00" });
     client.context.navigator.serial.requestPort = async () => replacement;
     await connect(client);
     client.port.enqueue("7E8 03 43 04 20\r>");
@@ -830,7 +830,7 @@ for (const scenario of [
 ]) {
   const { separator } = scenario;
   const commands = ["03", "07", "0A", "0101"];
-  const lines = ["7E803430000AAAAAAAA", "7E803470000AAAAAAAA", "7E8034A0000AAAAAAAA", scenario.readiness];
+  const lines = ["7E8024300AAAAAAAAAA", "7E8024700AAAAAAAAAA", "7E8024A00AAAAAAAAAA", scenario.readiness];
   const responses = Object.fromEntries(commands.map((command, index) => [command, lines[index] + separator]));
   const client = createClient({ ...successfulResponses, ...responses }, { fragmentResponses: true, fragmentSize: 1 });
   await connect(client);
@@ -864,8 +864,9 @@ for (const scenario of [
   const observed = api.evaluateSingleReadoutRawReceipts({ receipts });
   check(observed.readouts[3].observation === scenario.observation, scenario.name + ": incorrect readiness observation");
   for (const row of observed.readouts.slice(0, 3)) {
-    check(row.observation === "indeterminate" && row.blockerIds.includes(separator === "\r" ? "dtc_payload_conflict" : "receipt_result_indeterminate"),
-      "Grammar acceptance incorrectly proved count-bearing DTC semantics");
+    check(separator === "\r" ? row.observation === "source_positive_empty_observed"
+      : row.observation === "indeterminate" && row.blockerIds.includes("receipt_result_indeterminate"),
+      "Count-bearing DTC observation did not preserve CR/LF distinction");
   }
   for (const row of observed.readouts) check(row.evidenceComplete === false
     && row.blockerIds.includes("expected_source_scope_unavailable"), "Synthetic readout became complete evidence");

@@ -68,7 +68,7 @@ for (const missingCommand of ["03", "07", "0A", "0101"]) {
     JSON.stringify(client.context.ObdReadOnly.buildBridgeSessionExportPayload(missing)));
   check(restoredMissing.webSerialReadoutSummary.noDataCount === 1, "Archive lost the no-data observation");
   await client.context.initializeElmDeveloperAdapter();
-  Object.assign(client.port.responses, replies, { "03": "7E8 03 43 01 00", "07": "47 04 00", "0A": "4A 05 00" });
+  Object.assign(client.port.responses, replies, { "03": "7E8 04 43 01 01 00", "07": "47 04 00", "0A": "4A 05 00" });
   await client.context.readObdDeveloperCoreScan();
   const recovered = state.lastSession;
   check(recovered.webSerialReadoutSummary.noDataCount === 0 && recovered.webSerialReadoutSummary.incompleteCount === 0

@@ -11,36 +11,13 @@ const functions = names.map(name => {
   assert.ok(match, name);
   return match[0];
 }).join("\n");
-const target = "            return window.ObdReadOnly.decodeObdDtcResponse({\n              bytes: normalizedBytes,";
-assert.equal(functions.split(target).length, 2);
-// Proposed scope: complete, header-bearing 11-bit single-frame CAN responses only.
-// Leave headerless, 29-bit, multi-frame and the general decoder outside this proposal.
-const replacement = `            let dtcBytes = normalizedBytes;
-            const countedSingleFrame = /^[0-7][0-9A-F]{2}$/i.test(String(packet?.ecu || ""))
-              && Number.isInteger(frameLength) && frameLength >= 2 && frameLength <= 7
-              && bytes[0] === frameLength && bytes.length >= frameLength + 1
-              && [0x43, 0x47, 0x4A].includes(normalizedBytes[0]);
-            if (countedSingleFrame) {
-              const count = normalizedBytes[1];
-              const codes = new Set();
-              let valid = normalizedBytes.length === 2 + count * 2;
-              for (let index = 2; valid && index < normalizedBytes.length; index += 2) {
-                const code = (normalizedBytes[index] << 8) | normalizedBytes[index + 1];
-                if (code === 0 || codes.has(code)) valid = false;
-                codes.add(code);
-              }
-              dtcBytes = !valid ? [normalizedBytes[0]] : count === 0
-                ? [normalizedBytes[0], 0, 0] : [normalizedBytes[0], ...normalizedBytes.slice(2)];
-            }
-            return window.ObdReadOnly.decodeObdDtcResponse({
-              bytes: dtcBytes,`;
 function runtime(text) {
   const context = vm.createContext({ window: {}, navigator: {} });
   vm.runInContext(core, context);
   vm.runInContext(text, context);
   return context;
 }
-const current = runtime(functions), proposed = runtime(functions.replace(target, replacement));
+const current = runtime(fs.readFileSync(new URL("./fixtures/dtc-can-count-before.js.txt", import.meta.url), "utf8")), proposed = runtime(functions);
 let checks = 0;
 const equal = (actual, expected) => { assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected); checks++; };
 const cases = [
@@ -67,7 +44,14 @@ for (const [command, service, key] of [["03", 0x43, "storedDtcResponse"], ["07",
       }
     }
   }
+  const two = decode(proposed, "7E8 " + hex([6, service, 2, 3, 0, 4, 0x20, 0xAA]));
+  equal([two.dtcReadoutStatus, two.codes], ["reported", ["P0300", "P0420"]]);
+  const duplicate = decode(proposed, "7E8 " + hex([6, service, 2, 3, 0, 3, 0, 0xAA]));
+  equal([duplicate.dtcReadoutStatus, duplicate.codes], ["unparsed", []]);
+  const multi = decode(proposed, "7E8 " + hex([4, service, 1, 3, 0, 0xAA, 0xAA, 0xAA])
+    + "\r7E9 " + hex([4, service, 1, 4, 0x20, 0xAA, 0xAA, 0xAA]));
+  equal(multi.dtcs.map(row => [row.code, row.ecu]).sort(), [["P0300", "7E8"], ["P0420", "7E9"]]);
   for (const response of [hex([service, 1, 0x33]), "NO DATA", "7E8 03 7F " + command + " 78 AA AA AA AA"])
     equal(decode(proposed, response), JSON.parse(JSON.stringify(decode(current, response))));
 }
-console.log(`DTC CAN count proposal: ${cases.length * 3 * 2} cases / ${checks} checks passed; production unchanged`);
+console.log(`DTC CAN count proposal: ${cases.length * 3 * 2} cases / ${checks} checks passed; production correction verified`);
