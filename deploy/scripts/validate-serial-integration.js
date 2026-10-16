@@ -820,10 +820,17 @@ for (const settlement of ["resolve", "reject"]) {
 }
 
 // Consume actual production raw aggregation, not a decoder-hook reconstruction.
-// An explicit fixture profile exercises grammar only; it never grants runtime permission.
-for (const separator of ["\r", "\n"]) {
+// An explicit fixture profile exercises grammar and unverified observations only; it never grants runtime permission.
+for (const scenario of [
+  { name: "complete", separator: "\r", readiness: "7E806410100070100AA", observation: "source_positive_reported" },
+  { name: "bare LF", separator: "\n", readiness: "7E806410100070100AA", observation: "indeterminate" },
+  { name: "short readiness", separator: "\r", readiness: "7E8024101AAAAAAAAAA", observation: "indeterminate" },
+  { name: "other PID", separator: "\r", readiness: "7E804410C1AF8AAAAAA", observation: "indeterminate" },
+  { name: "NO DATA", separator: "\r", readiness: "NO DATA", observation: "missing_or_unproven" }
+]) {
+  const { separator } = scenario;
   const commands = ["03", "07", "0A", "0101"];
-  const lines = ["7E803430000AAAAAAAA", "7E803470000AAAAAAAA", "7E8034A0000AAAAAAAA", "7E806410100070100AA"];
+  const lines = ["7E803430000AAAAAAAA", "7E803470000AAAAAAAA", "7E8034A0000AAAAAAAA", scenario.readiness];
   const responses = Object.fromEntries(commands.map((command, index) => [command, lines[index] + separator]));
   const client = createClient({ ...successfulResponses, ...responses }, { fragmentResponses: true, fragmentSize: 1 });
   await connect(client);
@@ -843,11 +850,29 @@ for (const separator of ["\r", "\n"]) {
     assert.throws(() => api.parseElmReadOnlyRawTranscript({ profile: record.profile, command: record.command, transcript: record.transcript, completion: "complete" }), /invalid_elm_read_only_raw_transcript_profile/); checks++;
     const parsed = api.parseElmReadOnlyRawTranscript({ command: record.command, transcript: record.transcript,
       completion: "complete", profile: "iso15765_11bit_normal_h1_caf1_d0_s0_e0" });
-    check(separator === "\r" ? parsed.errors.length === 0 && parsed.frames.length === 1 : parsed.errors.some(error => error.code === "bare_lf"),
-      "Production capture lost the distinction between CR and bare LF");
+    const expectedError = separator === "\n" ? "bare_lf"
+      : scenario.name === "other PID" && record.command === "0101" ? "unexpected_response_service" : null;
+    const expectedFrames = record.command === "0101" && scenario.name === "NO DATA" ? 0 : 1;
+    check(expectedError ? parsed.errors.some(error => error.code === expectedError)
+      : parsed.errors.length === 0 && parsed.frames.length === expectedFrames,
+      scenario.name + ": production capture changed parser outcome");
     check(record.profile === null && record.profileVerified === false && record.executionEnabled === false
       && record.realTransportProofAvailable === false, "Fixture parser promoted record provenance or authority");
   }
+  const receipts = Array.from(records, ({ command, transcript }) => ({ command, transcript,
+    completion: "complete", profile: "iso15765_11bit_normal_h1_caf1_d0_s0_e0" }));
+  const observed = api.evaluateSingleReadoutRawReceipts({ receipts });
+  check(observed.readouts[3].observation === scenario.observation, scenario.name + ": incorrect readiness observation");
+  for (const row of observed.readouts.slice(0, 3)) {
+    check(row.observation === "indeterminate" && row.blockerIds.includes(separator === "\r" ? "dtc_payload_conflict" : "receipt_result_indeterminate"),
+      "Grammar acceptance incorrectly proved count-bearing DTC semantics");
+  }
+  for (const row of observed.readouts) check(row.evidenceComplete === false
+    && row.blockerIds.includes("expected_source_scope_unavailable"), "Synthetic readout became complete evidence");
+  for (const key of ["payloadSemanticsVerified", "realTransportProofAvailable", "sameVehicleVerified",
+    "clearBoundaryVerified", "readoutCoverageComplete", "comparisonAvailable", "clearSucceededInferred",
+    "executionEnabled", "vehicleCommandEnabled", "wouldTransmit", "canExecute"]) check(observed[key] === false, key);
+  check(!JSON.stringify(observed).includes("7E8") && !Object.hasOwn(observed, "receipts"), "Observation exposed raw input");
   check(capture.take() === null && capture.inspect().formatReview === null, "Consumed raw aggregate remained available");
   check(JSON.stringify(state.lastSession) === before && client.port.calls.writes.length === writes,
     "Parser inspection changed diagnostic data or transmitted commands");
