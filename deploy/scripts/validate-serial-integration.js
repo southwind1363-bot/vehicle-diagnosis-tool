@@ -819,6 +819,44 @@ for (const settlement of ["resolve", "reject"]) {
   }
 }
 
+// Consume actual production raw aggregation, not a decoder-hook reconstruction.
+// An explicit fixture profile exercises grammar only; it never grants runtime permission.
+for (const separator of ["\r", "\n"]) {
+  const commands = ["03", "07", "0A", "0101"];
+  const lines = ["7E803430000AAAAAAAA", "7E803470000AAAAAAAA", "7E8034A0000AAAAAAAA", "7E806410100070100AA"];
+  const responses = Object.fromEntries(commands.map((command, index) => [command, lines[index] + separator]));
+  const client = createClient({ ...successfulResponses, ...responses }, { fragmentResponses: true, fragmentSize: 1 });
+  await connect(client);
+  await client.context.readObdDeveloperCoreScan();
+  const state = client.context.obdDevSession, api = client.context.ObdReadOnly;
+  const capture = state.coreRawReadoutCapture;
+  const review = capture.inspect().formatReview;
+  check(capture.inspect().status === "finished" && review.parserAllowed === false && review.profile === null,
+    "Raw acquisition incorrectly authorized parsing");
+  check(review.issues.includes("protocol_unconfirmed"), "Later protocol inquiry repaired the initial read's missing observation");
+  const settings = state.settingsObservation.owner.inspect(state.settingsObservation.ticket).summary;
+  for (const missing of ["can_auto_format", "dlc_display", "can_addressing"]) check(settings.missingSettings.includes(missing), "Unobserved setting was inferred");
+  const before = JSON.stringify(state.lastSession), writes = client.port.calls.writes.length;
+  const records = capture.take();
+  assert.deepEqual(Array.from(records, row => row.transcript), lines.map(line => line + separator + ">")); checks++;
+  for (const record of records) {
+    assert.throws(() => api.parseElmReadOnlyRawTranscript({ profile: record.profile, command: record.command, transcript: record.transcript, completion: "complete" }), /invalid_elm_read_only_raw_transcript_profile/); checks++;
+    const parsed = api.parseElmReadOnlyRawTranscript({ command: record.command, transcript: record.transcript,
+      completion: "complete", profile: "iso15765_11bit_normal_h1_caf1_d0_s0_e0" });
+    check(separator === "\r" ? parsed.errors.length === 0 && parsed.frames.length === 1 : parsed.errors.some(error => error.code === "bare_lf"),
+      "Production capture lost the distinction between CR and bare LF");
+    check(record.profile === null && record.profileVerified === false && record.executionEnabled === false
+      && record.realTransportProofAvailable === false, "Fixture parser promoted record provenance or authority");
+  }
+  check(capture.take() === null && capture.inspect().formatReview === null, "Consumed raw aggregate remained available");
+  check(JSON.stringify(state.lastSession) === before && client.port.calls.writes.length === writes,
+    "Parser inspection changed diagnostic data or transmitted commands");
+  check(!JSON.stringify(api.buildBridgeSessionExportPayload(state.lastSession)).includes("settingsBeforeRead"),
+    "Inspection leaked raw receipt metadata to session export");
+  for (const command of ["ATCAF1", "ATD0", "ATCEA", "04"]) check(!client.context.isAllowedObdDeveloperCommand(command), "Inspection expanded command allowlist");
+  await client.context.disconnectObdDeveloperVci();
+}
+
 // Explicit scan ownership across protocol inquiry and intervening reads.
 for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]) {
   const client = createClient(successfulResponses);
