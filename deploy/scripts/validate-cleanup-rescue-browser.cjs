@@ -32,9 +32,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
     // Decode synthetic count-bearing CAN responses through the production Web Serial path.
     const fixture = await page.evaluate(() => ({ dtcSnapshot: buildWebSerialDtcResponseOverrides([
-      { command: '03', response: '7E8 04 43 01 03 00 AA AA AA\r7E9 04 43 01 04 20 AA AA AA' }
+      { command: '03', response: '18DAF110 04 43 01 03 00 AA AA AA\r7E8 10 08 43 03 01 33 04 20\r7E8 21 03 00 AA AA AA AA AA\r18DAF118 10 08 43 03 01 33 04 20\r18DAF118 21 03 00 AA AA AA AA AA' }
     ], ['03']).storedDtcResponse }));
-    assert.deepEqual(fixture.dtcSnapshot.codes, ['P0300', 'P0420']);
+    assert.deepEqual([...fixture.dtcSnapshot.codes].sort(), ['P0133', 'P0300', 'P0420']);
     async function importFile(payload) {
       const [picker] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('button', { name: '保存した読取結果を開く', exact: true }).click()]);
       await picker.setFiles({ name: 'synthetic-rescue.json', mimeType: 'application/json', buffer: Buffer.from(payload) });
@@ -121,7 +121,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await importFile(savedText);
     const restored = await page.evaluate(() => ({codes: obdDevSession.lastSession.dtcSnapshot.codes,
       transmit: obdDevSession.lastSession.wouldTransmit, enabled: obdDevSession.lastSession.vehicleCommandEnabled}));
-    assert.deepEqual(restored.codes, ['P0300','P0420']);
+    assert.deepEqual([...restored.codes].sort(), ['P0133','P0300','P0420']);
     assert.equal(restored.transmit, false); assert.equal(restored.enabled, false);
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('Cleanup rescue browser passed: six blocked states, two save-start faults with URL/link cleanup and retry, real button/download, original record and quarantine preserved, downloaded JSON reimport, no external or vehicle requests.');

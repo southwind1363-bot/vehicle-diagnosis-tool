@@ -340,7 +340,7 @@ for (const [command, service, status, label] of [["03", "43", "stored", "保存D
 {
   const { context: c } = createClient(successfulResponses);
   const decode = (response) => c.buildWebSerialDtcResponseOverrides([{ command: "03", response }], ["03"]).storedDtcResponse;
-  const rows = decode("18DAF110 05 43 01 33 00 00\r18DAF118 05 43 04 20 00 00");
+  const rows = decode("18DAF110 04 43 01 01 33 AA AA AA\r18DAF118 04 43 01 04 20 AA AA AA");
   check(JSON.stringify(rows.dtcs.map((dtc) => [dtc.code, dtc.ecu]).sort()) === JSON.stringify([["P0133", "18DAF110"], ["P0420", "18DAF118"]]), "29-bit response IDs were lost while normalizing DTC overrides");
   const padded = decode("7E8 04 43 01 01 33 AA AA AA");
   check(JSON.stringify(padded.codes) === JSON.stringify(["P0133"]), "DTC override decoded bytes beyond the frame length");
@@ -349,7 +349,7 @@ for (const [command, service, status, label] of [["03", "43", "stored", "保存D
   check(empty.dtcReadoutStatus === "reported" && empty.reportedStatuses.join() === "stored", "Reported empty DTC state was lost");
   const noData = decode("NO DATA");
   check(noData.dtcs.length === 0 && noData.dtcReadoutStatus === "unparsed" && noData.reportedStatuses.length === 0, "Mode 03 NO DATA was incorrectly treated as a reported zero-code result");
-  for (const raw of ["7E8 10 0B 43 01 33 04 20 00", "7E8 03 47 01 33", "BUS ERROR\rNO DATA"]) {
+  for (const raw of ["18DAF110 05 43 01 33 00 00", "18DAF118 05 43 04 20 00 00", "7E8 10 0B 43 01 33 04 20 00", "7E8 03 47 01 33", "BUS ERROR\rNO DATA"]) {
     const unknown = decode(raw);
     check(unknown.dtcs.length === 0 && unknown.dtcReadoutStatus === "unparsed", "Incomplete, wrong-service or error response was decoded as stored DTC evidence");
   }

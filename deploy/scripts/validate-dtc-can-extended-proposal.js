@@ -1,5 +1,4 @@
-import { proposeExtendedCanDtc } from "./fixtures/dtc-can-extended-proposal.js";
-// Development-only proposal; no production file mutation or transport.
+// Regression comparing fixed 3.13.695 functions with production; no transport.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -10,12 +9,12 @@ const functions = ["isWebSerialExpectedEmptyResponse", "buildWebSerialDtcRespons
   assert.ok(match, name);
   return match[0];
 }).join("\n");
-const candidate = proposeExtendedCanDtc(functions);
+const previous = fs.readFileSync(new URL("./fixtures/dtc-can-extended-before.js.txt", import.meta.url), "utf8");
 function load(text) {
   const c = vm.createContext({ window: {}, navigator: {} });
   vm.runInContext(core, c); vm.runInContext(text, c); return c;
 }
-const current = load(functions), proposal = load(candidate);
+const current = load(previous), proposal = load(functions);
 let checks = 0, cases = 0;
 const plain = value => JSON.parse(JSON.stringify(value));
 const eq = (a, b) => { assert.deepEqual(plain(a), b); checks++; };
@@ -62,4 +61,4 @@ for (const [command, service, key] of [["03", 0x43, "storedDtcResponse"], ["07",
     eq(decode(proposal, raw), plain(decode(current, raw)));
 }
 eq(fs.readFileSync(new URL("../script.js", import.meta.url), "utf8").replace(/\r\n/g, "\n"), app);
-console.log(`Extended CAN DTC proposal: ${cases} cases / ${checks} checks passed; production unchanged`);
+console.log(`Extended CAN DTC production regression: ${cases} cases / ${checks} checks passed; production unchanged`);

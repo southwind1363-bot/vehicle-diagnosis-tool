@@ -1,15 +1,14 @@
-// Development-only candidate with a synthetic port; no production mutation.
+// Production regression with a synthetic port; no production mutation.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import { proposeExtendedCanDtc } from "./fixtures/dtc-can-extended-proposal.js";
 const url = new URL("./validate-serial-integration.js", import.meta.url);
 const source = fs.readFileSync(url, "utf8").replace(/\r\n/g, "\n");
 const marker = "\n{\n  const { context } = createClient(successfulResponses);";
 assert.ok(source.includes(marker));
 const appUrl = new URL("../script.js", import.meta.url);
 const original = fs.readFileSync(appUrl, "utf8");
-const candidate = proposeExtendedCanDtc(original.replace(/\r\n/g, "\n"));
+const candidate = original;
 const prefix = source.slice(0, source.indexOf(marker)).replace(/^import .*;\n/gm, "")
   .replace(/const scriptSource = [^\n]+;/, () => "const scriptSource = " + JSON.stringify(candidate) + ";")
   .replaceAll("import.meta.url", JSON.stringify(url.href));
@@ -43,7 +42,7 @@ for (const [ecu, multi] of [["18DAF110", false], ["7E8", true], ["18DAF110", tru
   await client.context.disconnectObdDeveloperVci();
   check(client.port.closed && !client.port.readerLocked && !client.port.writerLocked, "Port resource leaked");
 }
-console.log("Extended CAN candidate integration: 3 routes / " + checks + " checks passed");
+console.log("Extended CAN production integration: 3 routes / " + checks + " checks passed");
 `;
 await vm.runInNewContext("(async () => {\n" + prefix + "\n" + connect + "\n" + body + "\n})()",
   { assert, fs, vm, URL, TextEncoder, TextDecoder, setTimeout, clearTimeout, performance, Date, console });

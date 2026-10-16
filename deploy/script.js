@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.695";
+const APP_VERSION = "3.13.696";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9028,14 +9028,18 @@ function buildWebSerialDtcResponseOverrides(commandResponses = [], attemptedComm
               ? bytes.slice(1, frameLength + 1)
               : bytes;
             let dtcBytes = normalizedBytes;
-            const countedSingleFrame = /^[0-7][0-9A-F]{2}$/i.test(String(packet?.ecu || ""))
-              && Number.isInteger(frameLength) && frameLength >= 2 && frameLength <= 7
-              && bytes[0] === frameLength && bytes.length >= frameLength + 1
+            const canId = /^(?:[0-7][0-9A-F]{2}|[01][0-9A-F]{7})$/i.test(String(packet?.ecu || ""));
+            const singleFrame = Number.isInteger(frameLength) && frameLength >= 2 && frameLength <= 7
+              && bytes[0] === frameLength && bytes.length >= frameLength + 1 && packet?.isoTp !== true;
+            const assembledFrames = packet?.isoTp === true && packet?.incomplete !== true
+              && packet?.sequenceError !== true && packet.frameCount >= 2
+              && packet.expectedLength === normalizedBytes.length;
+            const countedCan = canId && (singleFrame || packet?.isoTp === true)
               && [0x43, 0x47, 0x4A].includes(normalizedBytes[0]);
-            if (countedSingleFrame) {
+            if (countedCan) {
               const count = normalizedBytes[1];
               const codes = new Set();
-              let valid = normalizedBytes.length === 2 + count * 2;
+              let valid = (singleFrame || assembledFrames) && normalizedBytes.length === 2 + count * 2;
               for (let index = 2; valid && index < normalizedBytes.length; index += 2) {
                 const code = (normalizedBytes[index] << 8) | normalizedBytes[index + 1];
                 if (code === 0 || codes.has(code)) valid = false;
