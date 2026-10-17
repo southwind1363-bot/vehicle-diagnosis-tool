@@ -1,3 +1,4 @@
+import "./validate-parser-connection.js";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { buildCanSettingsReadinessReport } from "./report-can-settings-readiness.js";
