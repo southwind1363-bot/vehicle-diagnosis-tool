@@ -1,0 +1,102 @@
+function createWebSerialReadoutCapture(commands) {
+  const expected = commands.filter(command => ["03", "07", "0A", "0101"].includes(command));
+  const context = readWebSerialCaptureContext();
+  let records = [], phase = expected.length && expected.length <= 4 ? "collecting" : "invalidated";
+  let reason = phase === "invalidated" ? "unsupported_commands" : null;
+  const discard = cause => { if (phase !== "invalidated") reason = cause; records = []; phase = "invalidated"; };
+  const invalidate = () => { if (valid()) discard("discarded"); };
+  const valid = () => {
+    const latest = readWebSerialCaptureContext();
+    if (phase === "invalidated") return false;
+    if (!context.settingsTicket || !latest.settingsTicket || context.settingsTicket !== latest.settingsTicket) { discard("settings_unavailable"); return false; }
+    if (context.connected !== true || latest.connected !== true || context.unlocked !== true || latest.unlocked !== true
+      || Object.keys(context).some(key => context[key] !== latest[key])) { discard("context_changed"); return false; }
+    return true;
+  };
+  // Lexical comparison only. Never select a parser profile from the appearance of bytes.
+  const reviewFormat = () => {
+    if (phase !== "finished" || expected.join(",") !== "03,07,0A,0101") return null;
+    const settings = obdDevSession.settingsObservation;
+    const observed = settings?.owner.inspect(context.settingsTicket);
+    const summary = observed?.ok ? observed.summary : null;
+    const issues = new Set();
+    if (!summary) issues.add("settings_unavailable");
+    const readoutConditions = [];
+    let compactLineCount = 0, spacedLineCount = 0, protocolObservedBeforeReadCount = 0;
+    for (const record of records) {
+      const before = record.settingsBeforeRead;
+      readoutConditions.push(Object.freeze({ command: record.command,
+        initializationComplete: before?.initializationComplete ?? null,
+        echoOffAcknowledged: before?.echoOffAcknowledged ?? null,
+        spacesOffAcknowledged: before?.spacesOffAcknowledged ?? null,
+        canAutoFormatAcknowledged: before?.canAutoFormatAcknowledged ?? null,
+        dlcOffAcknowledged: before?.dlcOffAcknowledged ?? null,
+        canExtendedAddressOffAcknowledged: before?.canExtendedAddressOffAcknowledged ?? null,
+        protocol11bitReported: before?.protocol11bitReported ?? null }));
+      if (!before) issues.add("settings_before_read_unavailable");
+      else {
+        if (!before.initializationComplete) issues.add("initialization_before_read_incomplete");
+        if (!before.canAutoFormatAcknowledged || !before.dlcOffAcknowledged || !before.canExtendedAddressOffAcknowledged) issues.add("can_settings_unconfirmed");
+        if (!before.protocol11bitReported) issues.add("protocol_unconfirmed");
+        else protocolObservedBeforeReadCount++;
+      }
+      const text = record.transcript;
+      // Same bounded CR/CRLF and terminal-prompt contract as the existing limited parser.
+      const lines = text.replace(/\r\n/g, "\r").split("\r");
+      if (/[^\x20-\x7e\r]/.test(text.replace(/\r\n/g, "\r")) || lines.length > 256
+        || lines.at(-1) !== ">" || text.indexOf(">") !== text.length - 1) {
+        issues.add("framing_mismatch"); continue;
+      }
+      let frameShapeObserved = false;
+      for (const line of lines.slice(0, -1)) {
+        if (line === "" || ["SEARCHING...", "BUS INIT: OK", "NO DATA"].includes(line)) continue;
+        if (line === record.command) {
+          issues.add(before?.echoOffAcknowledged ? "echo_conflict" : "unsupported_line"); continue;
+        }
+        const compact = /^[0-9A-F]{19}$/.test(line);
+        const spaced = /^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/.test(line);
+        if ((!compact && !spaced) || parseInt(line.slice(0, 3), 16) > 0x7ff) { issues.add("unsupported_line"); continue; }
+        frameShapeObserved = true;
+        if (compact) compactLineCount++;
+        else { spacedLineCount++; if (before?.spacesOffAcknowledged) issues.add("spacing_conflict"); }
+      }
+      if (!frameShapeObserved) issues.add("no_frame_evidence");
+    }
+    return Object.freeze({ readoutConditions: Object.freeze(readoutConditions), issues: Object.freeze([...issues]), compactLineCount, spacedLineCount, protocolObservedBeforeReadCount,
+      profile: null, profileVerified: false, parserAllowed: false, executionEnabled: false });
+  };
+  return Object.freeze({
+    append(record) {
+      if (!valid() || phase !== "collecting") return false;
+      if (records.length >= expected.length || !record || record.command !== expected[records.length] || typeof record.transcript !== "string"
+        || record.transcript.length === 0 || record.transcript.length > 12000 || record.profile !== null
+        || record.profileVerified !== false || record.realTransportProofAvailable !== false || record.executionEnabled !== false
+        || !Number.isFinite(record.startedAt) || record.startedAt < 0 || !Number.isFinite(record.completedAt)
+        || record.completedAt < record.startedAt || (records.length && record.startedAt < records[records.length - 1].completedAt)) {
+        discard("invalid_record"); return false;
+      }
+      const before = record.settingsBeforeRead;
+      const fields = ["initializationComplete", "echoOffAcknowledged", "spacesOffAcknowledged", "protocol11bitReported", "canAutoFormatAcknowledged", "dlcOffAcknowledged", "canExtendedAddressOffAcknowledged"];
+      const settingsBeforeRead = before && fields.every(key => typeof before[key] === "boolean")
+        ? Object.freeze(Object.fromEntries(fields.map(key => [key, before[key]]))) : null;
+      records.push(Object.freeze({ command: record.command, transcript: record.transcript, settingsBeforeRead,
+        startedAt: record.startedAt, completedAt: record.completedAt, profile: null, profileVerified: false,
+        realTransportProofAvailable: false, executionEnabled: false }));
+      return true;
+    },
+    finish() {
+      if (!valid() || phase !== "collecting" || records.length !== expected.length) { discard("incomplete"); return false; }
+      phase = "finished"; return true;
+    },
+    inspect() {
+      valid();
+      return Object.freeze({ status: phase, count: records.length, reason, formatReview: reviewFormat(), profile: null, executionEnabled: false });
+    },
+    take() {
+      if (!valid() || phase !== "finished") return null;
+      const result = Object.freeze([...records]);
+      discard("consumed"); return result;
+    },
+    invalidate
+  });
+}

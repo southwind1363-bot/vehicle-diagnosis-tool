@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.698";
+const APP_VERSION = "3.13.699";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6204,10 +6204,18 @@ function renderObdCoreRawReadoutStatus() {
   // Item conditions already explain these issues; keep all other format failures visible.
   const itemIssues = ["settings_before_read_unavailable", "initialization_before_read_incomplete", "protocol_unconfirmed", "can_settings_unconfirmed"];
   const formatIssues = review?.issues.filter(code => !conditions || !itemIssues.includes(code));
-  const formatMessage = review ? "形式照合:\n" + (formatIssues.length
-    ? formatIssues.map(code => "・" + (formatReasons[code] || "照合条件が未確認です")).join("\n")
-    : "限定した文字形の不一致は見つかりませんでした。ただし通信設定の証明ではありません。") : "";
   const readoutNames = { "03": "保存DTC", "07": "保留DTC", "0A": "永久DTC", "0101": "レディネス" };
+  const perReadout = Array.isArray(review?.readoutIssues) && review.readoutIssues.length === 4
+    && review.readoutIssues.every((row, index) => row.command === ["03", "07", "0A", "0101"][index] && Array.isArray(row.issues))
+    ? review.readoutIssues : null;
+  const groupedCodes = new Set(perReadout?.flatMap(row => row.issues) || []);
+  const globalIssues = formatIssues?.filter(code => !groupedCodes.has(code));
+  const formatLines = perReadout ? perReadout.map(row => "・" + readoutNames[row.command] + "：" + (row.issues.length
+    ? row.issues.map(code => formatReasons[code] || "照合条件が未確認です").join(" / ") : "限定した文字形の不一致なし")) : [];
+  const formatMessage = review ? "形式照合:\n" + (perReadout
+    ? [...formatLines, ...globalIssues.map(code => "・" + (formatReasons[code] || "照合条件が未確認です")), "通信設定の証明ではありません。"].join("\n")
+    : formatIssues.length ? formatIssues.map(code => "・" + (formatReasons[code] || "照合条件が未確認です")).join("\n")
+      : "限定した文字形の不一致は見つかりませんでした。ただし通信設定の証明ではありません。") : "";
   const conditionNames = { initializationComplete: "初期化応答", echoOffAcknowledged: "エコー無効応答",
     spacesOffAcknowledged: "空白無効応答", canAutoFormatAcknowledged: "CAN整形応答",
     dlcOffAcknowledged: "DLC表示無効応答", canExtendedAddressOffAcknowledged: "拡張アドレス無効応答", protocol11bitReported: "対応する通信番号" };
@@ -10026,7 +10034,7 @@ function createWebSerialReadoutCapture(commands) {
     const summary = observed?.ok ? observed.summary : null;
     const issues = new Set();
     if (!summary) issues.add("settings_unavailable");
-    const readoutConditions = [];
+    const readoutConditions = [], readoutIssues = [];
     let compactLineCount = 0, spacedLineCount = 0, protocolObservedBeforeReadCount = 0;
     for (const record of records) {
       const before = record.settingsBeforeRead;
@@ -10045,29 +10053,33 @@ function createWebSerialReadoutCapture(commands) {
         if (!before.protocol11bitReported) issues.add("protocol_unconfirmed");
         else protocolObservedBeforeReadCount++;
       }
+      const itemReasons = new Set();
+      const addFormatIssue = code => { issues.add(code); itemReasons.add(code); };
+      const finishItem = () => readoutIssues.push(Object.freeze({ command: record.command, issues: Object.freeze([...itemReasons]) }));
       const text = record.transcript;
       // Same bounded CR/CRLF and terminal-prompt contract as the existing limited parser.
       const lines = text.replace(/\r\n/g, "\r").split("\r");
       if (/[^\x20-\x7e\r]/.test(text.replace(/\r\n/g, "\r")) || lines.length > 256
         || lines.at(-1) !== ">" || text.indexOf(">") !== text.length - 1) {
-        issues.add("framing_mismatch"); continue;
+        addFormatIssue("framing_mismatch"); finishItem(); continue;
       }
       let frameShapeObserved = false;
       for (const line of lines.slice(0, -1)) {
         if (line === "" || ["SEARCHING...", "BUS INIT: OK", "NO DATA"].includes(line)) continue;
         if (line === record.command) {
-          issues.add(before?.echoOffAcknowledged ? "echo_conflict" : "unsupported_line"); continue;
+          addFormatIssue(before?.echoOffAcknowledged ? "echo_conflict" : "unsupported_line"); continue;
         }
         const compact = /^[0-9A-F]{19}$/.test(line);
         const spaced = /^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/.test(line);
-        if ((!compact && !spaced) || parseInt(line.slice(0, 3), 16) > 0x7ff) { issues.add("unsupported_line"); continue; }
+        if ((!compact && !spaced) || parseInt(line.slice(0, 3), 16) > 0x7ff) { addFormatIssue("unsupported_line"); continue; }
         frameShapeObserved = true;
         if (compact) compactLineCount++;
-        else { spacedLineCount++; if (before?.spacesOffAcknowledged) issues.add("spacing_conflict"); }
+        else { spacedLineCount++; if (before?.spacesOffAcknowledged) addFormatIssue("spacing_conflict"); }
       }
-      if (!frameShapeObserved) issues.add("no_frame_evidence");
+      if (!frameShapeObserved) addFormatIssue("no_frame_evidence");
+      finishItem();
     }
-    return Object.freeze({ readoutConditions: Object.freeze(readoutConditions), issues: Object.freeze([...issues]), compactLineCount, spacedLineCount, protocolObservedBeforeReadCount,
+    return Object.freeze({ readoutIssues: Object.freeze(readoutIssues), readoutConditions: Object.freeze(readoutConditions), issues: Object.freeze([...issues]), compactLineCount, spacedLineCount, protocolObservedBeforeReadCount,
       profile: null, profileVerified: false, parserAllowed: false, executionEnabled: false });
   };
   return Object.freeze({

@@ -118,6 +118,27 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
     }
     assert.equal(await page.evaluate(() => obdDevSession.coreRawReadoutCapture.inspect().formatReview.protocolObservedBeforeReadCount), 3);
     await page.evaluate(() => {
+      const commands = ['03','07','0A','0101'];
+      const texts = ['7E8024300AAAAAAAAAA\n>', '7E8 02 47 00 AA AA AA AA AA\r>', '7E8024A00AAAAAAAAAA\r>', 'NO DATA\r>'];
+      const fields = ['initializationComplete','echoOffAcknowledged','spacesOffAcknowledged','protocol11bitReported','canAutoFormatAcknowledged','dlcOffAcknowledged','canExtendedAddressOffAcknowledged'];
+      const owner = createWebSerialReadoutCapture(commands);
+      obdDevSession.coreRawReadoutCapture = owner;
+      commands.forEach((command,index) => owner.append({command,transcript:texts[index],settingsBeforeRead:Object.fromEntries(fields.map(field=>[field,true])),startedAt:index,completedAt:index,profile:null,profileVerified:false,realTransportProofAvailable:false,executionEnabled:false}));
+      owner.finish(); renderObdDeveloperGate(); renderObdDeveloperGate();
+    });
+    for (const width of [390,1280]) {
+      await page.setViewportSize({width,height:900});
+      const text = await rawPanel.innerText();
+      assert.match(text,/保存DTC：改行・終端または文字の形式/);
+      assert.match(text,/保留DTC：空白無効の応答記録に対して空白区切り/);
+      assert.match(text,/永久DTC：限定した文字形の不一致なし/);
+      assert.match(text,/レディネス：ヘッダーとデータの文字形を確認できない/);
+      assert.doesNotMatch(text,/7E8|AAAAAAAA/);
+      assert.equal(await rawPanel.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
+      assert.equal(await page.evaluate(()=>obdDevSession.coreRawReadoutCapture.inspect().count),4);
+    }
+
+    await page.evaluate(() => {
       const settings = obdDevSession.settingsObservation;
       settings.owner.invalidate(); renderObdDeveloperGate();
     });
