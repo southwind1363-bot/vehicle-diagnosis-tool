@@ -1,3 +1,4 @@
+import { createParserConnectionPreview } from "./fixtures/parser-connection-preview.js";
 import fs from "node:fs";
 import vm from "node:vm";
 import { pathToFileURL } from "node:url";
@@ -36,19 +37,22 @@ export function buildParserConnectionReport() {
         startedAt: index, completedAt: index, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false })) throw Error("parser_audit_capture_rejected");
     });
     if (!owner.finish()) throw Error("parser_audit_capture_incomplete");
+    const preview = createParserConnectionPreview(owner, runtime.window.ObdReadOnly, commands.map((command, index) => ({ command, transcript: transcripts[index] })));
     if (test.expire) current.settingsTicket = {};
     const snapshot = owner.inspect();
     // Explicit fixture declaration is only for comparing existing parser behavior, never a production grant.
     const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({
       profile: "iso15765_11bit_normal_h1_caf1_d0_s0_e0", command: "03", transcript: transcripts[0], completion: "complete" });
     const review = snapshot.formatReview;
-    const row = { id: test.id, captureStatus: snapshot.status, captureReason: snapshot.reason,
+    const row = { preview: preview.inspect(), id: test.id, captureStatus: snapshot.status, captureReason: snapshot.reason,
       lexicalIssues: review ? Array.from(review.issues) : null,
       allPreReadConditionsObserved: review ? review.readoutConditions.every(condition => Object.entries(condition).every(([key, value]) => key === "command" || value === true)) : false,
       productionProfile: review?.profile ?? null, productionParserAllowed: review?.parserAllowed === true,
       declaredFixtureParserStatus: parsed.status, declaredFixtureParserErrors: Array.from(parsed.errors, error => error.code),
       payloadSemanticsVerified: parsed.payloadSemanticsVerified, executionEnabled: snapshot.executionEnabled };
     owner.invalidate();
+    row.previewAfterInvalidation = preview.inspect();
+    preview.dispose();
     return row;
   });
   return { sourceVersion: source.match(/const APP_VERSION = "([^"]+)";/)?.[1] || null,

@@ -1,3 +1,4 @@
+import "./validate-parser-connection-preview.js";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { buildParserConnectionReport } from "./report-parser-connection.js";
