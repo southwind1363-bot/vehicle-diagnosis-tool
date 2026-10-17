@@ -29,6 +29,7 @@ export function buildParserConnectionReport() {
     { id: "incomplete_snapshot", before: {} },
     { id: "generation_changed", expire: true }
   ];
+  let connectionImpact;
   const scenarios = cases.map(test => {
     const owner = context.createWebSerialReadoutCapture(commands);
     const transcripts = lines.map((line, index) => index === 0 && test.first ? test.first : line + "\r>");
@@ -50,6 +51,23 @@ export function buildParserConnectionReport() {
       productionProfile: review?.profile ?? null, productionParserAllowed: review?.parserAllowed === true,
       declaredFixtureParserStatus: parsed.status, declaredFixtureParserErrors: Array.from(parsed.errors, error => error.code),
       payloadSemanticsVerified: parsed.payloadSemanticsVerified, executionEnabled: snapshot.executionEnabled };
+    if (test.id === 'declared_compact_fixture') {
+      const inspections = [owner.inspect(), owner.inspect(), owner.inspect()];
+      const taken = owner.take();
+      const afterTake = owner.inspect();
+      const secondTake = owner.take();
+      const probe = runtime.window.ObdReadOnly.buildBridgeSessionExportPayload({
+        coreRawReadoutCapture: 'PRIVATE_CAPTURE_SENTINEL', settingsBeforeRead: 'PRIVATE_SETTINGS_SENTINEL' });
+      connectionImpact = {
+        repeatedInspection: inspections.map(value => ({ status: value.status, count: value.count })),
+        firstTakeCount: taken?.length ?? 0,
+        afterTake: { status: afterTake.status, count: afterTake.count, reason: afterTake.reason },
+        secondTakeAvailable: secondTake !== null,
+        viewAfterTake: preview.inspect().state,
+        injectedTopLevelPrivateFieldsRetained: /PRIVATE_CAPTURE_SENTINEL|PRIVATE_SETTINGS_SENTINEL/.test(JSON.stringify(probe)),
+        scope: 'synthetic_owner_and_top_level_export_probe_only'
+      };
+    }
     owner.invalidate();
     row.previewAfterInvalidation = preview.inspect();
     preview.dispose();
@@ -57,7 +75,7 @@ export function buildParserConnectionReport() {
   });
   return { sourceVersion: source.match(/const APP_VERSION = "([^"]+)";/)?.[1] || null,
     provenance: "synthetic_source_audit", vehicleTestPerformed: false, transportUsed: false,
-    parserComparisonEvidence: "explicit_fixture_profile_only", scenarios };
+    parserComparisonEvidence: "explicit_fixture_profile_only", connectionImpact, scenarios };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
   console.log(JSON.stringify(buildParserConnectionReport(), null, 2));

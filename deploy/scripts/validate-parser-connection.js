@@ -13,6 +13,13 @@ equal(report.provenance, "synthetic_source_audit");
 equal([report.vehicleTestPerformed, report.transportUsed], [false, false]);
 equal(report.parserComparisonEvidence, "explicit_fixture_profile_only");
 equal(report.scenarios.length, 11);
+equal(report.connectionImpact.repeatedInspection, Array.from({length:3},()=>({status:'finished',count:4})));
+equal(report.connectionImpact.firstTakeCount,4);
+equal(report.connectionImpact.afterTake,{status:'invalidated',count:0,reason:'consumed'});
+equal(report.connectionImpact.secondTakeAvailable,false);
+equal(report.connectionImpact.viewAfterTake,'unavailable');
+equal(report.connectionImpact.injectedTopLevelPrivateFieldsRetained,false);
+equal(report.connectionImpact.scope,'synthetic_owner_and_top_level_export_probe_only');
 const rows = Object.fromEntries(report.scenarios.map(row => [row.id, row]));
 for (const row of report.scenarios) equal([row.productionProfile, row.productionParserAllowed, row.payloadSemanticsVerified, row.executionEnabled], [null, false, false, false]);
 for (const [id, error] of [["unexpected_service", "unexpected_response_service"], ["invalid_pci", "unsupported_pci"]]) {
