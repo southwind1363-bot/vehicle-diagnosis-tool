@@ -1,3 +1,4 @@
+import "./validate-parser-acquisition-integration.js";
 import "./validate-parser-connection-review.js";
 import "./validate-parser-connection-preview.js";
 import assert from "node:assert/strict";

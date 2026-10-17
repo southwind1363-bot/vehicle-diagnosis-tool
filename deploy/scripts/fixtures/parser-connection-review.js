@@ -4,27 +4,39 @@ import { createParserConnectionPreview } from './parser-connection-preview.js';
 // Trusted synthetic factories/events only. No production connection or transport subscription.
 export function createParserConnectionReview(createFixture, subscribeInvalidation, waitForPresentation) {
   if (typeof createFixture !== 'function' || typeof subscribeInvalidation !== 'function') throw new TypeError('fixture_lifecycle_required');
-  let disposed = false;
+  if (waitForPresentation !== undefined && typeof waitForPresentation !== 'function') throw new TypeError('invalid_preview_scheduler');
+  let disposed = false, acquisition = null;
+  const pendingAcquisitions = new Set();
   const review = createSimulatedReviewController(() => {
     const fixture = createFixture();
     let preview;
-    try { preview = createParserConnectionPreview(fixture.owner, fixture.api, fixture.records); }
-    catch (error) { fixture.owner.invalidate(); throw error; }
+    acquisition = null;
+    if (fixture.ready !== undefined) {
+      const pending = Promise.resolve(fixture.ready);
+      pendingAcquisitions.add(pending);
+      acquisition = pending.finally(() => pendingAcquisitions.delete(pending));
+      acquisition.catch(() => {}); // A synchronous invalidation may skip the presentation await.
+    }
     return Object.freeze({
       inspect() {
+        preview ||= createParserConnectionPreview(fixture.owner, fixture.api, fixture.records);
         const result = preview.inspect();
         return { ok: result.state === 'ready', text: result.state === 'ready' ? result.text : null,
           reason: result.state === 'ready' ? null : 'receipt_context_changed' };
       },
-      dispose() { preview.dispose(); fixture.owner.invalidate(); }
+      dispose() { preview?.dispose(); fixture.owner.invalidate(); }
     });
-  }, waitForPresentation);
+  }, async () => {
+    const pending = acquisition;
+    if (pending) await pending;
+    if (waitForPresentation) await waitForPresentation();
+  });
   const unsubscribe = subscribeInvalidation(() => { if (!disposed) review.invalidate(); });
   if (typeof unsubscribe !== 'function') { review.invalidate(); throw new TypeError('fixture_unsubscribe_required'); }
   return Object.freeze({
     inspect: () => review.inspect(),
     subscribe: listener => review.subscribe(listener),
-    read: () => disposed ? Promise.resolve(false) : review.read(),
+    read: () => disposed || pendingAcquisitions.size > 0 ? Promise.resolve(false) : review.read(),
     dispose() {
       if (disposed) return;
       disposed = true;
