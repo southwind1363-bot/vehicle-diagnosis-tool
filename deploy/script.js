@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.699";
+const APP_VERSION = "3.13.700";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3430,7 +3430,7 @@ function buildDiagnosis(input) {
   const obd = selectApplicableDtcDefinition(dtcDefinitions, input.vehicleProfile);
   const flow = findById(dataStore.symptomFlows, input.symptomId);
   const interview = buildInterviewAnalysis(input.interview);
-  const modernGenericMatches = getModernGenericMatches(input.obdCode);
+  const modernGenericMatches = getModernGenericMatches(input.obdCode).filter((item) => item.code === input.obdCode);
   const workflowMatches = getDiagnosticWorkflowMatches(input, flow);
   const modernReferences = buildModernReferences(input, obd, flow, workflowMatches);
   const safetyTags = collectUnique([
@@ -3470,7 +3470,8 @@ function buildDiagnosis(input) {
     }
   );
 
-  return {
+  return applyFocusedDiagnosis({
+    focusedDiagnosis: buildFocusedDiagnosis(input, flow, workflowMatches),
     confidence: getConfidence(obd, flow, interview),
     safety: buildSafetyMessage(safetyTags),
     facts: buildFacts(input, obd, flow, interview, dtcApplicability, dtcApplicabilityScopeSummary, sourceSpecificDtcContext),
@@ -3493,7 +3494,7 @@ function buildDiagnosis(input) {
     customer: buildCustomerExplanation(flow, interview),
     sources: buildSources(obd, flow, workflowMatches, sourceSpecificDtcContext),
     confidenceItems: buildConfidenceItems(obd, flow, interview)
-  };
+  });
 }
 
 function getInterviewInput() {
@@ -4560,17 +4561,12 @@ function getModernGenericMatches(code) {
 
 function getDiagnosticWorkflowMatches(input, flow) {
   const context = buildReferenceContext(input, flow);
+  // A shared symptom or vehicle name must never import another DTC's procedure.
+  // Broad family patterns remain reference material, not a specific diagnosis.
+  if (!context.code) return [];
   return (dataStore.diagnosticWorkflows || [])
-    .map((item) => {
-      if (item.id === "workflow-obd-readout-baseline" && (input.obdCode || input.symptomId)) {
-        return { ...item, _matchInfo: { score: 1, reasons: ["OBD2読取時の基本手順"] } };
-      }
-      if (item.id?.startsWith("family-flow-") && !hasCodeHit(item.dtc_codes, context.code)) {
-        return { ...item, _matchInfo: { score: 0, reasons: [] } };
-      }
-      return { ...item, _matchInfo: scoreReferenceItem(item, context) };
-    })
-    .filter((item) => item._matchInfo.score > 0)
+    .filter((item) => (item.dtc_codes || []).includes(context.code))
+    .map((item) => ({ ...item, _matchInfo: scoreReferenceItem(item, context) }))
     .sort((a, b) => b._matchInfo.score - a._matchInfo.score);
 }
 
@@ -16919,6 +16915,10 @@ function setResultView(view) {
 }
 
 function renderDiagnosisFlow(result) {
+  if (result.focusedDiagnosis) {
+    renderFocusedDiagnosis(result);
+    return;
+  }
   flowChart.innerHTML = "";
   const checks = usableFlowItems(result.checkOrder, result.quickView.priorityChecks, 4);
   const measurements = usableFlowItems(result.liveDataGuidance, result.measurements, 4);
@@ -17058,7 +17058,10 @@ function createBranchPath(title, items, tone, fallback) {
 
 async function sendToExternalGpt() {
   const input = getInput();
-  const localResult = buildDiagnosis(input);
+  const currentResult = flowChart.focusedDiagnosisResult;
+  const localResult = currentResult?.focusedDiagnosis?.inputFingerprint === JSON.stringify(input)
+    ? currentResult
+    : buildDiagnosis(input);
   renderDiagnosis(localResult);
   aiButton.disabled = true;
   aiStatus.textContent = "相談文を作成しています。";
@@ -17185,7 +17188,11 @@ function buildExternalGptConsultation(input, localResult) {
     listForPrompt(localResult.safetyItems),
     "",
     "【相談したいこと】",
-    "原因を断定せず、確認順序・測定ポイント・早とちり注意を整理してください。"
+    localResult.focusedDiagnosis ? buildFocusedDiagnosisWorksheet(localResult.focusedDiagnosis) : "診断手順書は未作成です。",
+    "この車両・DTC・症状に絞った診断手順書を作成してください。無関係な系統の網羅的点検リストにしないでください。",
+    "各手順は、確認する理由、測定対象、方法・条件、車両に適合する基準値と単位・出典、実測結果ごとの次の手順を示してください。最初に行う確認を一つ明確にしてください。",
+    "未取得の車種別基準値は推測で埋めず、必要な型式・年式・エンジン情報や整備資料を示してください。未測定を正常と扱わず、コードだけで部品交換を断定しないでください。",
+    "確認済み結果から原因候補を絞り、可能性が高まった根拠と残る未確認事項を示してください。関連系統を追加する場合は、その検査が必要になった結果と理由を明記してください。"
   ];
 
   return lines.join("\n");
@@ -18600,4 +18607,196 @@ function makeFlow(id, symptomName, faultSystem, measurements, safetyTags) {
     confidence: "低",
     sources: ["登録データ: symptom-flows.json"]
   };
+}
+function buildFocusedDiagnosis(input, flow, matches) {
+  const primary = matches.filter((item) => item.id.startsWith("workflow-"));
+  const candidates = primary.length ? primary : matches.filter((item) => !item.id.startsWith("family-flow-"));
+  const routes = candidates.map((item) => ({ id: item.id, title: item.title, workflow: item }));
+  if (!input.obdCode && flow) routes.push({ id: flow.id, title: flow.symptomName, symptom: flow });
+  const plan = { code: input.obdCode, vehicle: input.vehicle, vehicleProfile: input.vehicleProfile, symptom: flow?.symptomName || "", inputFingerprint: JSON.stringify(input), routes, selected: routes.length === 1 ? routes[0].id : null, history: [], nodeId: "start", observation: {} };
+  plan.reason = input.obdCode
+    ? `${input.obdCode} に完全一致する登録手順だけを候補にしています。症状が共通する別コードの手順は追加しません。`
+    : "選択した症状を起点にします。症状だけでは故障部品を確定できません。";
+  return plan;
+}
+
+function getFocusedDiagnosisGraph(plan) {
+  const route = plan.routes.find((item) => item.id === plan.selected);
+  const stop = (text) => ({ title: "この時点で絞り込みを保留", text, measurements: [], options: [] });
+  const manual = stop("この結果に対応する次の分岐は未登録です。車種・年式・エンジン型式と、この確認結果に対応するメーカー診断表が必要です。他系統の検査を一括では追加しません。");
+  const unknown = stop("未測定・再現せず・判定できない結果は正常として進めません。直前の確認項目の発生条件、測定値、メーカー基準を揃えてください。");
+  if (!route) return { start: stop(plan.routes.length ? "今回の診断対象を一つ選んでください。候補をすべて検査する指示ではありません。" : "この入力に対応する具体的な診断手順は未登録です。コードの全文・車種・年式・エンジン型式、または主症状を指定してください。汎用検査で穴埋めしません。") };
+  if (route.id === "workflow-catalyst-p0420-p0430") return {
+    start: { title: "触媒判定を乱す関連異常があるか", text: "消去前の同時DTCと発生履歴を確認します。失火・燃料補正・前後センサーの異常が残っていると触媒効率の判定に影響するため、該当する異常がある場合だけ先にその診断へ進みます。", measurements: ["同時DTC・失火や燃料補正異常の記録"], options: [["関連異常が残っている", "related"], ["記録を確認し、関連異常は認めない", "exhaust"]] },
+    related: { title: "見つかった関連異常を先に診断", text: "実際に確認した関連DTCを入力し直して、そのコードの診断へ進んでください。触媒交換の判定は保留します。異常のない系統を追加検査する指示ではありません。", measurements: [], options: [] },
+    exhaust: { title: "該当バンクの排気漏れを確認", text: "排気漏れはセンサーの読みに影響します。該当バンクの触媒・前後センサー周辺について、メーカー指定の漏れ点検を行います。高温部を冷まし、換気を確保してください。", measurements: ["該当バンクの排気漏れの有無・箇所"], options: [["排気漏れを確認", "leakRepair"], ["指定方法で確認し、漏れは認めない", "sensor"]] },
+    leakRepair: { title: "漏れ箇所の修理・再評価へ", text: "確認した漏れ箇所のメーカー修理手順へ進みます。修理後に指定の触媒モニター条件で再評価してから触媒の良否を判断します。", measurements: [], options: [] },
+    sensor: { title: "前後センサーの応答を指定条件で比較", text: "該当バンクの前後O2／A/Fセンサーを、車両指定の条件・基準で評価します。センサー方式により評価方法が異なるため、波形が似ているだけでは触媒不良と断定しません。", measurements: ["該当バンク前後センサーの応答・測定条件・メーカー基準"], options: [["センサー応答に基準外を確認", "sensorFault"], ["センサー応答は基準内", "catalyst"]] },
+    sensorFault: { title: "基準外になったセンサー系統へ", text: "基準外を確認したセンサーの回路・応答診断へ進みます。センサー交換とも触媒交換とも、この結果だけでは断定しません。", measurements: [], options: [] },
+    catalyst: { title: "触媒そのものの効率判定へ", text: "ここまでの結果を添えて、メーカー指定の触媒効率試験・判定条件へ進みます。該当車両の整備情報や対策情報も照合し、基準外が確認されるまで交換は確定しません。", measurements: ["車種別触媒効率試験の判定値・条件・基準の出典"], options: [["指定試験で触媒効率の基準外を確認", "likely"], ["指定試験では基準内／異常を再現できない", "unknown"]] },
+    likely: { title: "選択結果では触媒劣化の可能性が高い", text: "根拠は、関連異常を認めず、排気漏れを認めず、センサー応答は基準内で、触媒効率試験は基準外という選択結果です。各結果を車両に適合する基準と実測記録で裏付けてから、メーカーの交換判断へ進みます。記録がない項目は未確認です。", measurements: [], options: [] }, manual, unknown
+  };
+  if (route.id === "workflow-lean-p0171-p0174") return {
+    start: { title: "燃料補正の変化で入口を分ける", text: "メーカー指定の測定条件を確認し、暖機後のアイドルと約2500rpm無負荷で短期・長期燃料トリムを比較します。数値と測定条件を記録してください。", measurements: ["該当バンクの短期・長期燃料トリム（アイドル／約2500rpm）"], options: [["アイドルで補正が大きく、回転上昇で改善", "leak"], ["その傾向は見られない", "manual"]] },
+    leak: { title: "吸気漏れに対象を絞る", text: "吸気ダクト・PCV・負圧ホースの漏れを、メーカー指定の方法で確認します。必要な場合だけスモークテストを行います。", measurements: ["吸気漏れの有無と確認箇所"], options: [["漏れ箇所が見つかった", "found"], ["指定方法で確認し、漏れは認めない", "manual"]] },
+    found: { title: "見つかった漏れ箇所を整備判断へ", text: "確認した漏れ箇所を記録し、その箇所のメーカー修理手順へ進みます。修理後は同じ条件で燃料補正と症状を再確認します。O2センサー交換の根拠にはしません。", measurements: [], options: [] }, manual, unknown
+  };
+  if (route.id === "workflow-misfire-p0300-p0304") return {
+    start: { title: "失火している範囲を確認", text: "失火カウンタとフリーズフレームから、気筒と発生条件を確認します。コード名だけで点火部品の故障とは判断しません。", measurements: ["気筒別失火情報と発生時の回転数・負荷・冷間／暖機条件"], options: [["一つの気筒に限定できた", "ignition"], ["複数気筒・ランダムに発生", "manual"]] },
+    ignition: { title: "単気筒の点火系を比較", text: "この車両でメーカーが認める点火部品の比較試験手順を確認します。入替試験を行う場合は、対象部品と移動先を区別して記録し、失火がその部品に追従するか確認します。作業可否が不明なら保留してください。", measurements: ["比較対象部品・移動先・試験後の失火気筒"], options: [["失火が比較した部品に追従した", "follows"], ["失火は元の気筒に残った", "manual"]] },
+    follows: { title: "追従した部品と接続状態に絞る", text: "比較した部品または接続状態が原因候補です。対象箇所のメーカー点検手順で確認します。全気筒の部品交換や、他系統の一括検査には進みません。", measurements: [], options: [] }, manual, unknown
+  };
+  if (route.id === "engine-no-start") return {
+    start: { title: "まずスターターの回り方を区別", text: "始動操作時にクランキングするか、回転が重いかを記録します。燃料・点火・圧縮を同時に検査する前に、始動状態を分けます。", measurements: ["クランキングの有無・回転が重いか"], options: [["回らない／回転が重い", "power"], ["通常どおり回るが始動しない", "manual"]] },
+    power: { title: "始動時の電源を確認", text: "12Vバッテリー電圧・端子状態と、始動時の電圧降下をメーカー基準と比較します。", measurements: ["12V電圧・始動時電圧降下・端子状態"], options: [["基準外または端子不良を確認", "powerFinding"], ["指定条件で基準内", "manual"]] },
+    powerFinding: { title: "始動電源の異常箇所へ絞る", text: "測定で異常を確認した電源・接続箇所について、始動回路図に沿って原因を確認します。バッテリー交換とは断定しません。", measurements: [], options: [] }, manual, unknown
+  };
+  const first = route.workflow?.trial_steps?.[0] || route.symptom?.symptomSummary;
+  return { start: { title: "登録手順の入口（結果別分岐は未登録）", text: first || "車種別の診断開始条件を確認してください。", measurements: [], options: [["確認結果を得た：車種別手順へ", "manual"]] }, manual, unknown };
+}
+
+function applyFocusedDiagnosis(result) {
+  const plan = result.focusedDiagnosis;
+  if (!plan) return result;
+  const route = plan.routes.find((item) => item.id === plan.selected);
+  const node = getFocusedDiagnosisGraph(plan)[plan.nodeId];
+  const scope = route ? `${route.title}：登録済み一般手順・車種適合未確認` : "診断経路をまだ確定していません";
+  result.confidence = "原因未確定・車種適合未確認";
+  result.summary = [plan.reason, scope, `${node.title}：${node.text}`];
+  result.checkOrder = [node.text];
+  result.measurements = node.measurements.length ? node.measurements : ["この段階では追加測定を指定しません。"];
+  result.liveDataGuidance = [...result.measurements];
+  result.branches = node.options.length ? node.options.map(([label]) => label) : ["ここから先の自動分岐はありません。"];
+  result.partsChecks = ["故障コードだけでは部品交換を決めません。今回得た結果と該当箇所のメーカー基準で判断してください。"];
+  result.guesses = ["現在の確認結果が得られるまで、原因部品は未確定です。"];
+  result.customer = ["コードまたは症状に合う確認から始め、結果に応じて対象を絞ります。現在の案内は車種適合を確認した整備書の代わりにはなりません。"];
+  result.nextMeasurementCandidatePlan = buildNextMeasurementCandidatePlan([], node.measurements, [], {});
+  result.quickView = { ...result.quickView, priorityChecks: [node.text], nextLook: "診断フローで今回の確認結果を選択してください。未測定は正常扱いしません。", measurements: result.measurements.join(" / "), mistake: "コード名で部品交換を決めず、選んでいない系統の検査は追加しません。" };
+  return result;
+}
+
+function renderFocusedDiagnosis(result) {
+  const plan = result.focusedDiagnosis;
+  flowChart.focusedDiagnosisResult = result;
+  const graph = getFocusedDiagnosisGraph(plan);
+  const node = graph[plan.nodeId];
+  flowChart.innerHTML = "";
+  flowChart.setAttribute("aria-live", "polite");
+  const add = (title, text, tone = "check") => {
+    const card = createFlowNode({ step: "診断", title, text, tone });
+    flowChart.appendChild(card);
+    return card.querySelector(".flow-node-content");
+  };
+  const button = (parent, label, action) => {
+    const control = document.createElement("button");
+    control.type = "button";
+    control.className = "secondary-button";
+    control.textContent = label;
+    control.addEventListener("click", () => {
+      if (plan.inputFingerprint !== JSON.stringify(getInput())) {
+        control.textContent = "診断条件が変わりました。記録を保存し、診断をやり直してください。";
+        return;
+      }
+      action();
+      renderDiagnosis(applyFocusedDiagnosis(result));
+      flowChart.querySelector("h4[tabindex]")?.focus();
+    });
+    parent.appendChild(control);
+  };
+  const header = add("今回の診断対象", plan.reason, "start");
+  const vehicleLabel = document.createElement("p");
+  vehicleLabel.textContent = `対象車両：${plan.vehicle || "未入力（車種別基準は未設定）"}`;
+  header.appendChild(vehicleLabel);
+  const route = plan.routes.find((item) => item.id === plan.selected);
+  if (route) {
+    const label = document.createElement("p");
+    label.textContent = `${route.title}（登録済み一般手順・車種適合未確認）`;
+    header.appendChild(label);
+    const source = document.createElement("p");
+    source.textContent = route.id === "workflow-catalyst-p0420-p0430"
+      ? "根拠：Walker Exhaustの一般診断資料を参考に分岐を構成。車種別の判定基準はメーカー整備書で確認。"
+      : `根拠：${route.workflow?.source || "登録済み症状フロー"}。コード定義資料は車種別整備手順の証明ではありません。`;
+    header.appendChild(source);
+    if (route.id === "workflow-catalyst-p0420-p0430") {
+      const link = document.createElement("a");
+      link.href = "https://www.walkerexhaust.com/support/tech-tips/diagnosing-catalytic-converter-issues.html";
+      link.textContent = "触媒診断の参考資料（Walker Exhaust）";
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      header.appendChild(link);
+    }
+  }
+  if (!plan.selected) plan.routes.forEach((item) => button(header, item.title, () => { plan.selected = item.id; plan.nodeId = "start"; plan.history = []; plan.observation = {}; }));
+  if (plan.history.length) add("選択した結果（今回の画面内のみ）", plan.history.map((entry) => entry.label).join(" → "), "start");
+  const content = add(node.title, node.text);
+  content.querySelector("h4").tabIndex = -1;
+  if (plan.selected) {
+    for (const [key, labelText, placeholder] of [
+      ["reference", "この車両の基準値・単位・出典", "型式／エンジン、測定条件、基準値と単位、整備書名・版・ページ。未取得なら空欄。"],
+      ["actual", "実測値・単位・測定条件", "回転数・暖機状態などの条件と実測値。未測定なら空欄。"]
+    ]) {
+      const label = document.createElement("label");
+      label.textContent = labelText;
+      const field = document.createElement("textarea");
+      field.rows = 2;
+      field.maxLength = 3000;
+      field.placeholder = placeholder;
+      field.value = plan.observation[key] || "";
+      field.addEventListener("input", () => { plan.observation[key] = field.value; });
+      label.appendChild(field);
+      content.appendChild(label);
+    }
+  }
+  node.options.forEach(([label, target]) => button(content, label, () => {
+    plan.history.push({ nodeId: plan.nodeId, label, observation: { ...plan.observation } });
+    plan.nodeId = target;
+    plan.observation = {};
+  }));
+  if (node.options.length) button(content, "未測定・再現せず・判断できない", () => { plan.history.push({ nodeId: plan.nodeId, label: "未測定／判定保留", observation: { ...plan.observation } }); plan.nodeId = "unknown"; plan.observation = {}; });
+  if (plan.history.length) button(content, "一つ前の確認に戻る", () => { const previous = plan.history.pop(); plan.nodeId = previous.nodeId; plan.observation = previous.observation || {}; });
+  if (plan.selected) button(content, "経路・結果を選び直す", () => { plan.selected = plan.routes.length === 1 ? plan.routes[0].id : null; plan.history = []; plan.nodeId = "start"; plan.observation = {}; });
+  const worksheet = add("車両別の診断手順書", "入力した基準・実測値と、選んだ経路をテキストで保存できます。基準の適合性と測定の実施はアプリでは検証していません。車両変更・再診断で入力はリセットされるため、必要な記録は先に保存してください。", "start");
+  const exportButton = document.createElement("button");
+  exportButton.type = "button";
+  exportButton.className = "secondary-button";
+  exportButton.textContent = "診断手順書の下書きを保存";
+  const status = document.createElement("p");
+  status.setAttribute("role", "status");
+  exportButton.addEventListener("click", () => downloadFocusedDiagnosisWorksheet(plan, status));
+  worksheet.append(exportButton, status);
+  add("適用条件と安全", result.quickView.safety + " 自動測定・故障消去・車両操作は行いません。結果選択や入力値はユーザー記録であり、実測の証明ではありません。", "safety");
+}
+
+function buildFocusedDiagnosisWorksheet(plan) {
+  const graph = getFocusedDiagnosisGraph(plan);
+  const route = plan.routes.find((item) => item.id === plan.selected);
+  const lines = ["車両別診断手順書・下書き", "車種適合・基準値・実測の実施は未検証。部品交換の確定指示ではありません。", `対象車両：${plan.vehicle || "未入力"}`, `選択車両情報：${JSON.stringify(plan.vehicleProfile || {})}`, `DTC：${plan.code || "未入力"}`, `症状：${plan.symptom || "未入力"}`, `経路：${route?.title || "未選択"}`, ""];
+  const entries = [...plan.history, { nodeId: plan.nodeId, label: "未回答／現在の到達点", observation: plan.observation }];
+  entries.forEach((entry, index) => {
+    const node = graph[entry.nodeId];
+    lines.push(`${index + 1}. ${node.title}`, node.text, `確認対象：${node.measurements.join("、") || "この段階で追加指定なし"}`, `基準値・単位・出典（ユーザー入力）：${entry.observation?.reference || "未取得"}`, `実測値・単位・条件（ユーザー入力）：${entry.observation?.actual || "未測定／未記録"}`, `結果（ユーザー選択）：${entry.label}`, "");
+  });
+  lines.push("次の選択肢：", ...graph[plan.nodeId].options.map(([label, target]) => `${label} → ${graph[target].title}`));
+  if (route?.id === "workflow-catalyst-p0420-p0430") lines.push("一般診断の参考：https://www.walkerexhaust.com/support/tech-tips/diagnosing-catalytic-converter-issues.html");
+  else lines.push(`登録手順の出典：${route?.workflow?.source || "登録済み症状フロー／個別手順未登録"}`);
+  return lines.join("\n");
+}
+
+function downloadFocusedDiagnosisWorksheet(plan, status) {
+  let objectUrl = null;
+  let link = null;
+  try {
+    objectUrl = URL.createObjectURL(new Blob(["\uFEFF", buildFocusedDiagnosisWorksheet(plan)], { type: "text/plain;charset=utf-8" }));
+    link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = `診断手順書_下書き_${plan.code || "症状"}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    status.textContent = "保存を開始しました。完了はブラウザーのダウンロード一覧で確認してください。";
+  } catch (_) {
+    status.textContent = "保存を開始できませんでした。画面の入力は保持しています。";
+  } finally {
+    link?.remove();
+    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
 }
