@@ -63,7 +63,9 @@ for (const event of ["disconnect", "reinitialize", "pagehide", "owner_invalidate
     if (event === "pagehide") c.pagehide();
     if (event === "owner_invalidate") c.settings.owner.invalidate();
     check(!model.record(ticket, "ATD0", "complete", "OK").ok && model.inspect(ticket).summary === null, "real lifecycle event rejects late synthetic preparation OK");
-    check(wire.writes.every(value => !commands.includes(value.trim())), "proposed setting commands were never sent");
+    const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", ...commands];
+    assert.deepEqual(wire.writes, (event === "reinitialize" ? [...initialization, ...initialization] : initialization)
+      .map(command => command + "\r")); checks++;
   } finally { model?.invalidate(); await wire.close(); }
 }
-console.log(`Settings preparation session: ${checks} checks passed; preparation responses are synthetic, proposed commands are never sent`);
+console.log(`Settings preparation session: ${checks} checks passed; only production initialization sends settings, synthetic preparation adds no commands`);

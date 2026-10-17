@@ -15,7 +15,7 @@ export function buildCanSettingsReadinessReport() {
   const scenarios = [];
   for (const protocol of [null, "A6", "A8", "A7", "A9", "A0"]) {
     const owner = context.createReadOnlySettingsObservation(), ticket = owner.begin();
-    for (const command of ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"]) {
+    for (const command of ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"]) {
       if (!owner.recordInitialization(ticket, command, command === "ATZ" ? "Synthetic banner" : "OK").ok)
         throw new Error("settings_audit_initialization_changed");
     }

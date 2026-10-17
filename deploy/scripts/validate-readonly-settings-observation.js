@@ -5,7 +5,7 @@ import vm from "node:vm";
 import { createReadOnlySettingsObservation } from "./fixtures/readonly-settings-observation.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
-const steps = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
+const steps = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"];
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks++; };
 function initialize(model, ticket) {
@@ -18,7 +18,7 @@ for (const protocol of ["6", "8", "A6", "A8", "0", "A0", "7", "A9", "A", "B", "C
   const summary = model.inspect(ticket).summary;
   check(summary.protocol11bitReported === ["6", "8", "A6", "A8"].includes(protocol), "exact supported protocol report");
   check(summary.profile === null && !summary.profileVerified && !summary.canExecute && !summary.wouldTransmit, "incomplete settings never provide profile/authority");
-  check(["can_auto_format", "dlc_display", "can_addressing"].every(key => summary.missingSettings.includes(key)), "missing settings cannot use reset defaults");
+  check(["can_auto_format", "dlc_display", "can_addressing"].every(key => !summary.missingSettings.includes(key)), "explicit acknowledgements recorded without profile authority");
   check(Object.isFrozen(summary) && Object.isFrozen(summary.acknowledgedCommands) && Object.isFrozen(summary.missingSettings), "frozen summary");
   check(!JSON.stringify(summary).includes("Synthetic"), "raw banner not retained");
 }

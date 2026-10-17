@@ -208,7 +208,7 @@ function createClient(responses, options = {}) {
 }
 
 const successfulResponses = {
-  ATZ: "ELM327 v1.5", ATE0: "ATE0\r\nOK", ATL0: "OK", ATS0: "OK", ATH1: "OK", ATSP0: "OK",
+  ATZ: "ELM327 v1.5", ATE0: "ATE0\r\nOK", ATL0: "OK", ATS0: "OK", ATH1: "OK", ATSP0: "OK", ATCAF1: "OK", ATD0: "OK", ATCEA: "OK",
   ATI: "ELM327 v1.5", "AT@1": "OBDII to RS232 Interpreter", ATDP: "AUTO, ISO 15765-4 (CAN 11/500)", ATDPN: "A6",
   "03": "7E8 04 43 01 01 33\r\n7E9 04 43 01 04 20", "07": "47 00 00", "0A": "4A 00 00", "0202": "42 02 00 00 00",
   "0101": "41 01 00 07 00 00", "0900": "49 00 14 00 00 00", "0904": "49 04 01 31 32 33", "0906": "49 06 01 12 34 56 78",
@@ -262,7 +262,7 @@ for (const eol of ["\r\n", "\r", "\n"]) {
   check(session?.livePidSnapshot?.monitorValues?.some((value) => value.id === "engine_speed" && value.value === 1726 && value.unit === "rpm"), "Supported live RPM was not decoded exactly");
   check(!client.port.calls.writes.some((command) => /^(?:04|14|ATPC)$/i.test(command)), "A forbidden state-changing command reached the mock writer");
   check(client.port.calls.writes.includes("010C") && !client.port.calls.writes.includes("0105"), "Live scan did not restrict requests to the discovered PID set");
-  check(JSON.stringify(client.port.calls.writes) === JSON.stringify(["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "03", "ATDP", "ATDPN", "07", "0A", "0202", "0101", "0900", "0904", "0906", "06", "0100", "010C"]), "Core scan did not consume the exact read-only Web Serial command sequence");
+  check(JSON.stringify(client.port.calls.writes) === JSON.stringify(["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA", "ATI", "AT@1", "03", "ATDP", "ATDPN", "07", "0A", "0202", "0101", "0900", "0904", "0906", "06", "0100", "010C"]), "Core scan did not consume the exact read-only Web Serial command sequence");
   check(session?.readinessSnapshot?.readinessReadoutStatus === "reported" && session?.onboardMonitorSnapshot?.onboardMonitorReadoutStatus === "reported", "Readiness or Mode06 response was not retained");
   check(session?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && session?.ecuInfoSnapshot?.ecuInfoReadoutStatus === "reported", `Freeze-frame or ECU-info response was not retained (${session?.freezeFrameSnapshot?.freezeFrameReadoutStatus}/${session?.ecuInfoSnapshot?.ecuInfoReadoutStatus})`);
   await client.context.disconnectObdDeveloperVci();
@@ -595,7 +595,7 @@ for (const event of ["next_read", "protocol", "initialize", "reset", "disconnect
       check(state.settingsObservation.owner.inspect(ticket).summary.protocolNumberReported === replies.ATDPN, "New adapter report was replaced by old protocol");
       assert.deepEqual(Array.from(state.lastSession.dtcSnapshot.codes), [freshCode], "New connection retained old DTCs or lost its own response"); checks++;
       check(!JSON.stringify(state.lastSession).includes("settingsBeforeRead") && !Object.hasOwn(state.lastSession, "coreRawReadoutCapture"), "Private reconnect observations leaked into saved diagnostics");
-      assert.deepEqual(port.calls.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "03", "ATDP", "ATDPN", "07", "0A", "0202", "0101", "0900", "0904", "0906", "06", "0100", "010C"]); checks++;
+      assert.deepEqual(port.calls.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA", "ATI", "AT@1", "03", "ATDP", "ATDPN", "07", "0A", "0202", "0101", "0900", "0904", "0906", "06", "0100", "010C"]); checks++;
       captures.push(capture); tickets.push(ticket);
       await client.context.disconnectObdDeveloperVci();
       check(capture.inspect().formatReview === null, "Disconnected raw review survived its connection");
@@ -650,7 +650,7 @@ for (const interruptedCommand of ["03", "07", "0A", "0101"]) {
     && !exported.includes("coreRawReadoutCapture"), "Recovered export mixed private capture or old DTCs");
   check(JSON.stringify(partial) === partialJson, "Recovery mutated the interrupted diagnostic record");
   check(client.port.calls.writes.length === oldWriteCount && replacement.calls.select === 1, "Recovery reused the old port or reselected automatically");
-  assert.deepEqual(replacement.calls.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "03", "ATDP", "ATDPN", "07", "0A", "0202", "0101", "0900", "0904", "0906", "06", "0100", "010C"]); checks++;
+  assert.deepEqual(replacement.calls.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA", "ATI", "AT@1", "03", "ATDP", "ATDPN", "07", "0A", "0202", "0101", "0900", "0904", "0906", "06", "0100", "010C"]); checks++;
   await client.context.disconnectObdDeveloperVci();
   check(replacement.closed && !replacement.readerLocked && !replacement.writerLocked, "Recovered transport retained locks");
   for (const port of [client.port, replacement]) check(port.calls.cancel === 1 && port.calls.close === 1
@@ -842,7 +842,7 @@ for (const scenario of [
     "Raw acquisition incorrectly authorized parsing");
   check(review.issues.includes("protocol_unconfirmed"), "Later protocol inquiry repaired the initial read's missing observation");
   const settings = state.settingsObservation.owner.inspect(state.settingsObservation.ticket).summary;
-  for (const missing of ["can_auto_format", "dlc_display", "can_addressing"]) check(settings.missingSettings.includes(missing), "Unobserved setting was inferred");
+  for (const missing of ["can_auto_format", "dlc_display", "can_addressing"]) check(!settings.missingSettings.includes(missing), "Acknowledged setting was lost");
   const before = JSON.stringify(state.lastSession), writes = client.port.calls.writes.length;
   const records = capture.take();
   assert.deepEqual(Array.from(records, row => row.transcript), lines.map(line => line + separator + ">")); checks++;
@@ -879,7 +879,7 @@ for (const scenario of [
     "Parser inspection changed diagnostic data or transmitted commands");
   check(!JSON.stringify(api.buildBridgeSessionExportPayload(state.lastSession)).includes("settingsBeforeRead"),
     "Inspection leaked raw receipt metadata to session export");
-  for (const command of ["ATCAF1", "ATD0", "ATCEA", "04"]) check(!client.context.isAllowedObdDeveloperCommand(command), "Inspection expanded command allowlist");
+  for (const command of ["ATCAF0", "ATD1", "ATCEA01", "04"]) check(!client.context.isAllowedObdDeveloperCommand(command), "Inspection expanded command allowlist");
   await client.context.disconnectObdDeveloperVci();
 }
 
@@ -996,7 +996,7 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
   ];
   for (const protocol of ["A6", "A7", null]) {
     const ticket = settings.begin(); current.settingsTicket = ticket;
-    for (const command of ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"]) settings.recordInitialization(ticket, command, command === "ATZ" ? "fixture" : "OK");
+    for (const command of ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"]) settings.recordInitialization(ticket, command, command === "ATZ" ? "fixture" : "OK");
     if (protocol) settings.recordProtocol(ticket, protocol);
     const settingsBeforeRead = { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true,
       protocol11bitReported: protocol === "A6" };

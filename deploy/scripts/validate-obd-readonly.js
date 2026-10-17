@@ -70,6 +70,7 @@ import "./validate-ecu-info-display.js";
 // Load it after static sibling validators so their synchronous setup cannot consume that deadline.
 await import("./validate-operation-journal.js");
 // Run synthetic timed reads after static-import CPU work has settled.
+await import("./validate-can-settings-initialization.js");
 await import("./validate-dtc-can-extended-integration.js");
 await import("./validate-web-serial-no-data-proposal.js");
 await import("./validate-remaining-no-data-proposal.js");

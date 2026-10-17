@@ -45,7 +45,7 @@ for (const size of [1, 7, 32768]) {
       if (owner) assert.equal(owner.take(operation).record, null, "No retained raw record after wrapper exit");
       assert.equal(state.pendingCommandOperation, null);
       assert.equal(state.lastSession, previous);
-      assert.deepEqual(wire.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0",
+      assert.deepEqual(wire.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA",
         ...(mode === "write_failed" ? [] : ["03"])].map(command => command + "\r"));
       cases++;
     } finally { await wire.close(); }

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.696";
+const APP_VERSION = "3.13.697";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -769,7 +769,7 @@ const WEB_SERIAL_DEFAULT_LIVE_PID_COMMANDS = Object.freeze(["010C", "0105", "010
 const WEB_SERIAL_DEFAULT_FREEZE_FRAME_PID_COMMANDS = Object.freeze(["020C", "0205", "020F", "020D", "020E", "0204", "0203", "020A", "020B", "0223", "0259", "0210", "0211", "0206", "0207", "021F", "0242"]);
 const WEB_SERIAL_QUICK_LIVE_PID_COMMANDS = Object.freeze(["010C", "0105", "010D", "0142"]);
 const WEB_SERIAL_READ_ONLY_COMMANDS = Object.freeze([
-  "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "ATDP", "ATDPN",
+  "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA", "ATI", "AT@1", "ATDP", "ATDPN",
   "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0200", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",
   "010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "0123", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "0159", "015B", "015C",
   "020C", "0205", "020F", "020D", "020E", "0204", "0203", "020A", "020B", "0223", "0259", "0210", "0211", "0206", "0207", "021F", "0242"
@@ -6160,7 +6160,9 @@ function renderObdSettingsObservation() {
       : "初期化応答と通信番号を記録済み。";
   const protocol = typeof summary.protocolNumberReported === "string" && /^(?:A?[0-9A-C])$/.test(summary.protocolNumberReported)
     ? ` アダプター報告の通信番号: ${summary.protocolNumberReported}。` : "";
-  status.textContent = `${stage}${protocol} 生応答の設定確認は未完了です（CAN自動整形・DLC表示・アドレス方式が未確認）。実機動作の保証ではありません。`;
+  const canSettings = [["ATCAF1", "CAN自動整形"], ["ATD0", "DLC表示無効"], ["ATCEA", "拡張アドレス無効"]]
+    .map(([command, label]) => `${label}: ${summary.acknowledgedCommands.includes(command) ? "応答記録あり" : "未観測"}`).join("・");
+  status.textContent = `${stage}${protocol} ${canSettings}。応答形式の認定・原文解析への接続は未完了です。実機動作の保証ではありません。`;
   panel.hidden = false;
 }
 
@@ -6215,7 +6217,7 @@ function renderObdCoreRawReadoutStatus() {
     groups.get(detail).push(readoutNames[row.command] || "対象項目");
   }
   const conditionMessage = conditions ? "取得前条件:\n" + [...groups].map(([detail, names]) => "・" + names.join("・") + "：" + detail).join("\n") : "";
-  const unconfirmedMessage = review ? "共通の未確認条件: CAN整形・DLC表示・アドレス方式。模擬設定の成功で未確認項目を補うことはできません。" : "";
+  const unconfirmedMessage = review ? "取得前条件への追加観測は未接続: CAN整形・DLC表示・アドレス方式。現在の設定応答を過去の原文へ遡って適用しません。" : "";
   status.textContent = [message, conditionMessage, formatMessage, unconfirmedMessage,
     "対象は保存・保留・永久DTCとレディネスです。集約原文は表示・保存しません。応答形式が未確認のため、集約原文の解析は未接続です。4件取得は診断成功・故障なし・実車適合を意味しません。"].filter(Boolean).join("\n\n");
   panel.hidden = false;
@@ -7760,7 +7762,7 @@ async function disconnectObdDeveloperVci(options = {}) {
 
 // Passive observations of normalized command responses. No settings writes or persistence.
 function createReadOnlySettingsObservation() {
-  const steps = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
+  const steps = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"];
   let current = null;
   const result = (ok, reason = null) => Object.freeze({ ok, reason });
   const matches = ticket => current !== null && current.ticket === ticket;
@@ -7804,7 +7806,8 @@ function createReadOnlySettingsObservation() {
       if (!matches(ticket)) return Object.freeze({ ok: false, reason: "unknown_or_expired_settings_attempt", summary: null });
       if (current.phase === "rejected") return Object.freeze({ ok: false, reason: current.reason, summary: null });
       const protocol11bitReported = ["6", "8", "A6", "A8"].includes(current.protocol);
-      const missing = ["can_auto_format", "dlc_display", "can_addressing"];
+      const missing = [["ATCAF1", "can_auto_format"], ["ATD0", "dlc_display"], ["ATCEA", "can_addressing"]]
+        .filter(([command]) => !current.acknowledged.includes(command)).map(([, setting]) => setting);
       if (current.count !== steps.length) missing.unshift("initialization_incomplete");
       if (!protocol11bitReported) missing.push(current.protocol === null ? "protocol_not_observed" : "supported_11bit_protocol_not_reported");
       const summary = Object.freeze({ phase: current.phase, provenance: "unverified_input",
@@ -7915,7 +7918,10 @@ async function initializeElmDeveloperAdapter() {
     { command: "ATL0", step: "disable_linefeeds" },
     { command: "ATS0", step: "disable_spaces" },
     { command: "ATH1", step: "enable_headers" },
-    { command: "ATSP0", step: "automatic_protocol" }
+    { command: "ATSP0", step: "automatic_protocol" },
+    { command: "ATCAF1", step: "enable_can_auto_format" },
+    { command: "ATD0", step: "disable_dlc_display" },
+    { command: "ATCEA", step: "disable_can_extended_address" }
   ];
   const responses = [];
   let completedStepCount = 0;
@@ -7925,7 +7931,10 @@ async function initializeElmDeveloperAdapter() {
     try {
       response = await sendElmDeveloperCommand(command, timeoutMs);
       throwIfObdSerialOperationCancelled(revision);
-      settings?.owner.recordInitialization(settingsTicket, command, response);
+      const canSetting = ["ATCAF1", "ATD0", "ATCEA"].includes(command);
+      if (canSetting && response !== "OK") throw new Error(`elm_adapter_initialization_failed:${command}:invalid_acknowledgement`);
+      const observation = settings?.owner.recordInitialization(settingsTicket, command, response);
+      if (canSetting && settings && !observation?.ok) throw new Error(`elm_adapter_initialization_failed:${command}:settings_context_changed`);
       if (typeof renderObdSettingsObservation === "function") renderObdSettingsObservation();
     } catch (error) {
       if (settings && settings.ticket === settingsTicket) { settings.owner.invalidate(); settings.ticket = null; }
@@ -9634,7 +9643,10 @@ const WEB_SERIAL_ADAPTER_INITIALIZATION_STEPS = Object.freeze({
   disable_linefeeds: "改行停止",
   disable_spaces: "空白停止",
   enable_headers: "応答ヘッダー有効化",
-  automatic_protocol: "プロトコル自動判定"
+  automatic_protocol: "プロトコル自動判定",
+  enable_can_auto_format: "CAN自動整形",
+  disable_dlc_display: "DLC表示無効",
+  disable_can_extended_address: "拡張アドレス無効"
 });
 
 function buildWebSerialAdapterInitializationSummary(options = {}) {

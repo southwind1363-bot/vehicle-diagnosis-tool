@@ -35,7 +35,7 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
       Object.assign(obdDevSession, { port: {}, reader: {}, writer: {}, readLoopActive: true, connectionState: 'ready' });
       const settings = obdDevSession.settingsObservation;
       settings.ticket = settings.owner.begin().ticket;
-      for (const command of ['ATZ', 'ATE0', 'ATL0', 'ATS0', 'ATH1', 'ATSP0']) settings.owner.recordInitialization(settings.ticket, command, command === 'ATZ' ? 'ELM327 fixture' : 'OK');
+      for (const command of ['ATZ', 'ATE0', 'ATL0', 'ATS0', 'ATH1', 'ATSP0', 'ATCAF1', 'ATD0', 'ATCEA']) settings.owner.recordInitialization(settings.ticket, command, command === 'ATZ' ? 'ELM327 fixture' : 'OK');
       renderObdSettingsObservation();
     });
     assert.equal(await panel.isVisible(), true);
@@ -49,7 +49,9 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ colorScheme: width === 390 ? "light" : "dark" });
       assert.match(await panel.innerText(), /通信番号: A6/);
-      assert.match(await panel.innerText(), /CAN自動整形・DLC表示・アドレス方式が未確認/);
+      assert.match(await panel.innerText(), /CAN自動整形: 応答記録あり/);
+      assert.match(await panel.innerText(), /DLC表示無効: 応答記録あり/);
+      assert.match(await panel.innerText(), /拡張アドレス無効: 応答記録あり/);
       await panel.scrollIntoViewIfNeeded();
       assert.equal(await panel.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
       await panel.screenshot({ path: path.join(output, `settings-observation-${width}.png`) });
@@ -107,7 +109,7 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
     assert.match(await rawPanel.innerText(), /保留DTC・永久DTC・レディネス：初期化・エコー無効・空白無効・通信番号の応答記録あり/);
     assert.equal((await rawPanel.innerText()).match(/応答記録あり/g).length, 1);
     assert.equal(await page.locator('#obdCoreRawReadoutStatus').evaluate(el => getComputedStyle(el).whiteSpace), 'pre-line');
-    assert.match(await rawPanel.innerText(), /模擬設定の成功で未確認項目を補うことはできません/);
+    assert.match(await rawPanel.innerText(), /現在の設定応答を過去の原文へ遡って適用しません/);
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ colorScheme: width === 390 ? "light" : "dark" });

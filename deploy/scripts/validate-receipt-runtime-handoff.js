@@ -8,7 +8,7 @@ const runtime = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), runtime);
 const api = runtime.window.ObdReadOnly;
 const commands = ["03", "07", "0A", "0101"];
-const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
+const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"];
 const base = ["7E8 02 43 00 AA AA AA AA AA\r>", "7E8 02 47 00 AA AA AA AA AA\r>",
   "7E8 02 4A 00 AA AA AA AA AA\r>", "7E8 06 41 01 00 07 01 00 AA\r\n>"];
 let checks = 0;

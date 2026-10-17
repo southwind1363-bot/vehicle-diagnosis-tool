@@ -127,7 +127,7 @@ for (const size of [1, 7, 32768]) {
       }
       assert.equal(state.lastSession, previous);
       assert.equal(state.pendingCommandOperation, null);
-      assert.deepEqual(wire.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "03"].map(command => command + "\r"));
+      assert.deepEqual(wire.writes, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA", "03"].map(command => command + "\r"));
       cases++;
     } finally { await wire.close(); }
   }

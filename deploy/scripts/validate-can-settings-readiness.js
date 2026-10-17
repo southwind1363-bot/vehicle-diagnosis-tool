@@ -10,16 +10,16 @@ equal(report.provenance, "synthetic_source_audit");
 equal(report.vehicleTestPerformed, false);
 equal(report.clearCommandAllowed, false);
 equal(report.commands, [
-  { setting: "can_auto_format", command: "ATCAF1", allowedByProduction: false },
-  { setting: "dlc_display", command: "ATD0", allowedByProduction: false },
-  { setting: "can_addressing", command: "ATCEA", allowedByProduction: false }
+  { setting: "can_auto_format", command: "ATCAF1", allowedByProduction: true },
+  { setting: "dlc_display", command: "ATD0", allowedByProduction: true },
+  { setting: "can_addressing", command: "ATCEA", allowedByProduction: true }
 ]);
 equal(report.scenarios.map(row => row.protocolReport), [null, "A6", "A8", "A7", "A9", "A0"]);
 for (const row of report.scenarios) {
   const supported = ["A6", "A8"].includes(row.protocolReport);
   equal(row.supported11bitReported, supported);
   equal(row.phase, row.protocolReport === null ? "awaiting_protocol" : "observed");
-  equal(row.missingSettings, ["can_auto_format", "dlc_display", "can_addressing",
+  equal(row.missingSettings, [
     ...(!supported ? [row.protocolReport === null ? "protocol_not_observed" : "supported_11bit_protocol_not_reported"] : [])]);
   equal([row.profile, row.profileVerified, row.executionEnabled, row.realTransportProofAvailable], [null, false, false, false]);
 }

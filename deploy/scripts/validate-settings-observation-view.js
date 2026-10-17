@@ -25,9 +25,9 @@ for (const size of [1, 7, 32768]) {
     v.panel.open = true;
     await c.context.captureObdDeveloperProtocolAfterStoredDtc();
     check(v.panel.open && v.status.textContent.includes("通信番号: A6"), "protocol refresh preserves expanded details");
-    check(v.status.textContent.includes("CAN自動整形・DLC表示・アドレス方式が未確認") && v.status.textContent.includes("保証ではありません"), "known limitations stay visible");
+    check(v.status.textContent.includes("CAN自動整形: 応答記録あり") && v.status.textContent.includes("保証ではありません"), "known limitations stay visible");
     check(!v.status.textContent.includes("ELM327") && !v.status.textContent.includes("OK"), "raw responses are not displayed");
-    assert.deepEqual(wire.writes, ["ATZ\r", "ATE0\r", "ATL0\r", "ATS0\r", "ATH1\r", "ATSP0\r", "ATDP\r", "ATDPN\r"]); checks++;
+    assert.deepEqual(wire.writes, ["ATZ\r", "ATE0\r", "ATL0\r", "ATS0\r", "ATH1\r", "ATSP0\r", "ATCAF1\r", "ATD0\r", "ATCEA\r", "ATDP\r", "ATDPN\r"]); checks++;
     c.pagehide(); cleared(v, "pagehide");
   } finally { await wire.close(); }
 }

@@ -44,9 +44,10 @@ for (let index = 0; index < 3; index++) {
   check(!model.record(ticket, "ATCAF1", "complete", "OK").ok, "completed preparation cannot restart");
   model.invalidate(); check(model.inspect(ticket).summary === null, "explicit invalidation");
 }
-// Enforce that this development model has not enabled the proposed commands in normal transport.
+// Production enables only the three approved settings; the model still grants no authority.
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const context = vm.createContext({});
 vm.runInContext(source.match(/const WEB_SERIAL_READ_ONLY_COMMANDS = [\s\S]*?\);/)[0] + "\nglobalThis.allowed = WEB_SERIAL_READ_ONLY_COMMANDS", context);
-for (const command of [...commands, "04"]) check(!context.allowed.includes(command), "normal transport remains blocked");
+for (const command of commands) check(context.allowed.includes(command), "approved setting missing from production");
+for (const command of ["ATCAF0", "ATD1", "ATCEA01", "04"]) check(!context.allowed.includes(command), "unapproved transport command enabled");
 console.log(`Read-only settings preparation: ${checks} checks passed; no sender, no profile or execution authorization`);

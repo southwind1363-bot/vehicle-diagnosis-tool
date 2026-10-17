@@ -501,18 +501,18 @@ for (const name of ["initializeElmDeveloperAdapter", "identifyObdDeveloperVci", 
   c.buildWebSerialAdapterIdentity = (responses) => ({ commands: responses.map((row) => row.command) });
   c.mergeWebSerialAdapterIdentity = (_old, next) => next;
   c.sendElmDeveloperCommand = async (command) => {
-    check(c.obdDevSession.connectionState === (command.startsWith("ATD") ? "reading" : "initializing"), `${command}: setup/protocol read state not held`);
+    check(c.obdDevSession.connectionState === (["ATDP", "ATDPN"].includes(command) ? "reading" : "initializing"), `${command}: setup/protocol read state not held`);
     commands.push(command);
     return "OK";
   };
   await c.connectObdDeveloperVci();
-  check(commands.join(",") === "ATZ,ATE0,ATL0,ATS0,ATH1,ATSP0,ATI,AT@1", "Setup must finish before non-retained adapter identification");
+  check(commands.join(",") === "ATZ,ATE0,ATL0,ATS0,ATH1,ATSP0,ATCAF1,ATD0,ATCEA,ATI,AT@1", "Setup must finish before non-retained adapter identification");
   check(c.obdDevSession.adapterInitializationSummary.status === "completed" && !c.obdDevSession.initializing && c.obdDevSession.connectionState === "ready", "Successful initialization must release the setup gate");
   c.runObdDeveloperRead = async (_label, requests) => { commands.push(...requests); return true; };
   c.hasWebSerialDtcStatusReport = () => true;
   c.hasWebSerialDtcCoverage = () => true;
   check(await c.readObdDeveloperDtc(), "Normal DTC sequence must still complete");
-  check(commands.slice(8).join(",") === "03,ATDP,ATDPN,07,0A", "Protocol capture must follow reported Mode 03 before pending/permanent DTC");
+  check(commands.slice(11).join(",") === "03,ATDP,ATDPN,07,0A", "Protocol capture must follow reported Mode 03 before pending/permanent DTC");
   check(!c.obdDevSession.readInProgress && c.obdDevSession.connectionState === "ready", "Protocol capture must restore the read gate");
   commands.length = 0;
   c.hasWebSerialDtcStatusReport = () => false;

@@ -10,7 +10,7 @@ const check = (value, message) => { assert.ok(value, message); checks++; };
   const summary = c.settings.owner.inspect(c.settings.ticket).summary;
   check(summary.protocolNumberReported === "A6" && summary.profile === null && !summary.profileVerified, "actual protocol observation stays incomplete");
   check(summary.provenance === "unverified_input" && !JSON.stringify(summary).includes("ELM327"), "no simulated provenance or raw identity retained");
-  assert.deepEqual(c.sent, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATDP", "ATDPN"]); checks++;
+  assert.deepEqual(c.sent, ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA", "ATDP", "ATDPN"]); checks++;
   const old = c.settings.ticket;
   await c.context.captureObdDeveloperProtocolAfterStoredDtc();
   check(c.settings.ticket === null && !c.settings.owner.inspect(old).ok, "repeated protocol query drops previous evidence");
@@ -72,7 +72,7 @@ for (const size of [1, 7, 32768]) {
     const summary = c.settings.owner.inspect(c.settings.ticket).summary;
     check(summary?.phase === "observed" && summary.protocolNumberReported === "A6", "byte stream reaches settings observation");
     check(summary.spacesOffAcknowledged && summary.profile === null && !summary.profileVerified, "byte integration does not infer missing settings");
-    assert.deepEqual(wire.writes, ["ATZ\r", "ATE0\r", "ATL0\r", "ATS0\r", "ATH1\r", "ATSP0\r", "ATDP\r", "ATDPN\r"]); checks++;
+    assert.deepEqual(wire.writes, ["ATZ\r", "ATE0\r", "ATL0\r", "ATS0\r", "ATH1\r", "ATSP0\r", "ATCAF1\r", "ATD0\r", "ATCEA\r", "ATDP\r", "ATDPN\r"]); checks++;
     check(sessionIdle(c), "real send chain releases command/write ownership");
     c.pagehide(); check(c.settings.ticket === null, "byte-backed observation expires on pagehide");
   } finally { await wire.close(); }

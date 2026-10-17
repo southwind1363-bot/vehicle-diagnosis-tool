@@ -14,7 +14,7 @@ vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), 
 const api = host.window.ObdReadOnly;
 const profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
 const commands = ["03", "07", "0A", "0101"];
-const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
+const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"];
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 const context = () => ({ port: {}, reader: {}, writer: {}, settingsTicket: {}, revision: 1, connected: true, unlocked: true });
 for (const failure of [null, "reader", "clock_start", "clock_end"]) {

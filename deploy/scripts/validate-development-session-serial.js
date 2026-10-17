@@ -8,7 +8,7 @@ import { createReadOnlyDevelopmentSession } from "./fixtures/readonly-developmen
 const runtime = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), runtime);
 const commands = ["03", "07", "0A", "0101"];
-const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
+const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"];
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 let cases = 0;
 const lifecycleEvents = ["pagehide", "reset", "reinitialize", "disconnect"];
@@ -101,7 +101,7 @@ for (const finish of ["complete", "cancel", "dispose", "timeout", ...lifecycleEv
       assert.equal((await owner.prepareSettings()).ok, false);
       assert.deepEqual(wire.writes, finishedWrites, "No settings commands sent even on explicit preparation");
       assert.equal(settingsCalls, finish === "dispose" ? 0 : 1);
-      for (const command of ["ATCAF1", "ATD0", "ATCEA", "04"]) {
+      for (const command of ["ATCAF0", "ATD1", "ATCEA01", "04"]) {
         assert.equal(c.context.isAllowedObdDeveloperCommand(command), false);
       }
       if (lifecycleEvents.includes(finish)) {
@@ -178,7 +178,7 @@ for (const changeGeneration of [false, true]) {
     assert.equal((await owner.readPrepared()).reason, 'settings_preparation_required');
     for (const append of callbacks) assert.equal(append('late>'), false);
     assert.deepEqual(wire.writes, [...writesBefore, ...commands.slice(0, changeGeneration ? 1 : 4).map(command => command + '\r')]);
-    for (const command of ['ATCAF1', 'ATD0', 'ATCEA', '04']) assert.equal(c.context.isAllowedObdDeveloperCommand(command), false);
+    for (const command of ['ATCAF0', 'ATD1', 'ATCEA01', '04']) assert.equal(c.context.isAllowedObdDeveloperCommand(command), false);
     cases++;
   } finally { owner?.dispose(); freshCapture?.invalidate(); await wire.close(); }
 }

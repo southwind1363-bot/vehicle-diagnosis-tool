@@ -5,7 +5,7 @@ let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks++; };
 const context = () => ({ port: {}, reader: {}, writer: {}, revision: 1, connected: true, unlocked: true });
 const fill = (session, ticket) => {
-  for (const command of ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"]) {
+  for (const command of ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"]) {
     check(session.recordInitialization(ticket, command, command === "ATZ" ? "synthetic" : "OK").ok, command);
   }
   check(session.recordProtocol(ticket, "A6").ok, "protocol report");

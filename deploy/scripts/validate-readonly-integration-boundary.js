@@ -11,7 +11,7 @@ vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), 
 const commands = ["03", "07", "0A", "0101"];
 const profile = "iso15765_11bit_normal_h1_caf1_d0_s0_e0";
 const lines = ["7E8024300AAAAAAAAAA", "7E8024700AAAAAAAAAA", "7E8024A00AAAAAAAAAA", "7E806410100070100AA"];
-const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
+const initialization = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"];
 const observed = [];
 for (const separator of ["\r", "\n"]) {
   const c = client();
@@ -58,7 +58,7 @@ for (const separator of ["\r", "\n"]) {
     assert.equal(result.summary.executionEnabled, false);
     assert.equal(state.lastSession, retained);
     assert.deepEqual(wire.writes, [...initialization, ...commands].map(command => command + "\r"));
-    for (const command of ["ATCAF1", "ATD0", "ATCEA", "04"]) {
+    for (const command of ["ATCAF0", "ATD1", "ATCEA01", "04"]) {
       assert.equal(c.context.isAllowedObdDeveloperCommand(command), false);
     }
     observed.push({ raw, normalized, status: result.summary.rawTranscriptValidation.status });
