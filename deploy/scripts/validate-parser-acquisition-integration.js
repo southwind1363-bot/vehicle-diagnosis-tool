@@ -8,9 +8,9 @@ vm.runInContext(fs.readFileSync(new URL('../obd-readonly.js',import.meta.url),'u
 const commands=['03','07','0A','0101'];
 const lines=['7E8024300AAAAAAAAAA','7E8024700AAAAAAAAAA','7E8024A00AAAAAAAAAA','7E806410100070100AA'];
 let checks=0;const equal=(a,b)=>{assert.deepEqual(a,b);checks++;};
-for(const scenario of ['normal','disconnect','settings_changed']) {
+for(const scenario of ['normal','disconnect','settings_changed','before_display_settings','before_display_pagehide','before_display_exception']) {
   const c=client(), wire=attachWire(c,2,Object.fromEntries(commands.map((command,index)=>[command,lines[index]+'\r>'])));
-  let review, notify, interrupted=false, premature, completed=0, secondReadBytes=0;
+  let review, notify, interrupted=false, premature, completed=0, secondReadBytes=0, presentationInterrupted=false;
   try {
     await c.context.initializeElmDeveloperAdapter();
     const state=c.context.obdDevSession;
@@ -20,7 +20,7 @@ for(const scenario of ['normal','disconnect','settings_changed']) {
     state.decoder.decode=(...args)=>{
       const chunk=decode(...args);
       if(wire.writes.at(-1)==='07\r') secondReadBytes+=chunk.length;
-      if(scenario!=='normal' && !interrupted && secondReadBytes>=4) {
+      if(['disconnect','settings_changed'].includes(scenario) && !interrupted && secondReadBytes>=4) {
         interrupted=true;
         if(scenario==='disconnect') state.readLoopActive=false;
         else state.settingsObservation.owner.invalidate();
@@ -41,19 +41,29 @@ for(const scenario of ['normal','disconnect','settings_changed']) {
         owner.finish();
       })();
       return {owner,records,ready,api:runtime.window.ObdReadOnly};
-    },callback=>{notify=callback;return()=>{notify=()=>{};};});
+    },callback=>{notify=callback;return()=>{notify=()=>{};};},()=>{
+      if(presentationInterrupted || !scenario.startsWith('before_display_')) return;
+      presentationInterrupted=true;
+      equal(completed,4);
+      equal(review.inspect().status,'reading');
+      equal(review.inspect().text,null);
+      if(scenario==='before_display_settings') state.settingsObservation.owner.invalidate();
+      if(scenario==='before_display_pagehide') {c.pagehide();review.dispose();}
+      if(scenario==='before_display_exception') throw Error('PRIVATE_PRESENTATION_ERROR');
+    });
     const events=[];review.subscribe(snapshot=>events.push(snapshot.status));
     const result=await review.read();
     equal(state.lastSession,saved);
-    equal(wire.writes.filter(command=>commands.some(item=>command===item+'\r')),scenario==='normal'?commands.map(command=>command+'\r'):['03\r','07\r']);
+    equal(wire.writes.filter(command=>commands.some(item=>command===item+'\r')),(scenario==='normal'||scenario.startsWith('before_display_'))?commands.map(command=>command+'\r'):['03\r','07\r']);
     if(scenario==='normal') {equal(result,true);equal(completed,4);assert.match(review.inspect().text,/保存DTC：対応する応答/);checks++;notify();equal(review.inspect().text,null);}
+    else if(scenario.startsWith('before_display_')) {equal(result,false);equal(completed,4);equal(review.inspect().text,null);equal(events.includes('ready'),false);equal(review.inspect().status,scenario==='before_display_pagehide'?'invalidated':'unavailable');}
     else {equal(await premature,false);equal(result,false);equal(completed,1);equal(review.inspect().status,'invalidated');equal(review.inspect().text,null);equal(events,['reading','invalidated']);}
     equal(review.inspect().executionEnabled,false);
-    if(scenario==='settings_changed') {
+    if(['settings_changed','before_display_settings','before_display_exception'].includes(scenario)) {
       await c.context.initializeElmDeveloperAdapter();
       state.settingsObservation.owner.recordProtocol(state.settingsObservation.ticket,'A6');
       equal(await review.read(),true);
-      equal(completed,5);
+      equal(completed,scenario==='settings_changed'?5:8);
       equal(wire.writes.slice(-4),commands.map(command=>command+'\r'));
       assert.match(review.inspect().text,/レディネス：対応する応答/);checks++;
       equal(state.lastSession,saved);

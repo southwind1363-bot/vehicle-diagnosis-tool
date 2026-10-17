@@ -28,4 +28,13 @@ for(const failure of [false,true]) {
   equal(review.inspect().executionEnabled,false);equal(review.inspect().wouldTransmit,false);
   unsubscribe();
 }
+{
+  let invalidated=0;
+  const review=createParserConnectionReview(()=>({owner:{invalidate(){invalidated++;}},get ready(){throw Error('PRIVATE_READY_ERROR');}}),()=>()=>{});
+  equal(await review.read(),false);
+  equal(review.inspect().status,'unavailable');
+  equal(review.inspect().text,null);
+  equal(invalidated,1);
+  review.dispose();equal(invalidated,1);
+}
 console.log(`Parser preview lifecycle: ${checks} checks passed; synthetic invalidation, late completion, reread and disposal only`);

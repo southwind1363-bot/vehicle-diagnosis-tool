@@ -11,8 +11,11 @@ export function createParserConnectionReview(createFixture, subscribeInvalidatio
     const fixture = createFixture();
     let preview;
     acquisition = null;
-    if (fixture.ready !== undefined) {
-      const pending = Promise.resolve(fixture.ready);
+    let ready;
+    try { ready = fixture.ready; }
+    catch (error) { fixture.owner.invalidate(); throw error; }
+    if (ready !== undefined) {
+      const pending = Promise.resolve(ready);
       pendingAcquisitions.add(pending);
       acquisition = pending.finally(() => pendingAcquisitions.delete(pending));
       acquisition.catch(() => {}); // A synchronous invalidation may skip the presentation await.
