@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.700";
+const APP_VERSION = "3.13.701";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -18612,6 +18612,9 @@ function buildFocusedDiagnosis(input, flow, matches) {
   const primary = matches.filter((item) => item.id.startsWith("workflow-"));
   const candidates = primary.length ? primary : matches.filter((item) => !item.id.startsWith("family-flow-"));
   const routes = candidates.map((item) => ({ id: item.id, title: item.title, workflow: item }));
+  if (/\bZVW30\b/i.test(input.vehicle || "") && ["P0A94", "P324E"].includes(input.obdCode)) {
+    routes.splice(0, routes.length, { id: "zvw30-inverter-preparation", title: "ZVW30 インバーター診断の準備（実作業手順は未完成）", workflow: { source: "トヨタ ZVW30回収資料（安全条件のみ）／米国T-SB-0003-21 Rev1（国内適用未確認）" } });
+  }
   if (!input.obdCode && flow) routes.push({ id: flow.id, title: flow.symptomName, symptom: flow });
   const plan = { code: input.obdCode, vehicle: input.vehicle, vehicleProfile: input.vehicleProfile, symptom: flow?.symptomName || "", inputFingerprint: JSON.stringify(input), routes, selected: routes.length === 1 ? routes[0].id : null, history: [], nodeId: "start", observation: {} };
   plan.reason = input.obdCode
@@ -18626,6 +18629,13 @@ function getFocusedDiagnosisGraph(plan) {
   const manual = stop("この結果に対応する次の分岐は未登録です。車種・年式・エンジン型式と、この確認結果に対応するメーカー診断表が必要です。他系統の検査を一括では追加しません。");
   const unknown = stop("未測定・再現せず・判定できない結果は正常として進めません。直前の確認項目の発生条件、測定値、メーカー基準を揃えてください。");
   if (!route) return { start: stop(plan.routes.length ? "今回の診断対象を一つ選んでください。候補をすべて検査する指示ではありません。" : "この入力に対応する具体的な診断手順は未登録です。コードの全文・車種・年式・エンジン型式、または主症状を指定してください。汎用検査で穴埋めしません。") };
+  if (route.id === "zvw30-inverter-preparation") return {
+    start: { title: "詳細コードと保存記録を整理", text: "入力コードのINF、検出ECU、現在／履歴、フリーズフレームを記録します。P0A94とP324Eの両方が実際に記録されていれば双方を残します。片方の入力から他方の発生を推定しません。", measurements: ["INF・同時DTC・保存済み発生記録"], procedure: { phase: "遮断前の記録確認", tool: "メーカー固有の詳細コードに対応する診断機", condition: "コード消去前。記録確認のための強制駆動・再現走行はしない", point: "ハイブリッド制御のDTC詳細・保存済みフリーズフレーム", standard: "数値による良否判定ではなく診断経路の選択情報", stop: "INF未取得なら部品判定を保留" }, options: [["記録を整理した：必要資料を確認", "applicability"]] },
+    applicability: { title: "車両と診断経路を照合", text: "車台番号・製造時期・インバーター識別情報と、国内修理書のDTC＋INF経路を照合します。米国資料の部品修理を国内の供給範囲へ転用しません。一式供給であることと本体故障の証明は別です。", measurements: ["該当修理書の版・ページ・INF・対象部品番号"], procedure: { phase: "資料準備", condition: "車種適合はアプリでは未検証", standard: "車両・INFが一致する国内診断経路", stop: "一致する資料がなければ実作業の案内を保留" }, options: [["必要な測定情報の様式を見る", "monitor"]] },
+    monitor: { title: "遮断前のデータモニター項目を準備", text: "選んだINFの経路に必要な項目だけを登録します。モニター名・単位・IG／READY等の取得条件・比較基準・結果別の行き先を一組にします。この例の具体的な項目名と基準値は未登録です。", measurements: [], procedure: { phase: "通電状態で取得する情報の準備", tool: "該当モニターに対応する診断機", condition: "車両指定の取得条件は未登録。READY移行の指示ではありません", point: "未登録", standard: "未登録（汎用電圧で代用しない）", stop: "指定項目・条件・基準が揃うまで測定指示を出さない" }, options: [["高電圧点検前の安全条件を確認", "isolation"]] },
+    isolation: { title: "高電圧作業前の安全条件（資料確認）", text: "ZVW30のトヨタ回収資料には、絶縁手袋、電源停止とサービスプラグ取り外し後10分以上の待機、露出高電圧端子に触れる前の0 V確認があります。これはインバーター診断の全手順ではありません。時間経過だけで安全と判定せず、0 V確認もHVバッテリー内部を含む全車両の無電圧を意味しません。", measurements: [], procedure: { phase: "遮断・無電圧確認の準備／実作業不可", tool: "適合する測定器・リード・保護具と測定器の機能確認方法：詳細未登録", condition: "停止・再投入防止・プラグ取り外し・放電待機・指定点での確認を該当修理書で確定", point: "インバーターの指定測定点とアクセス手順：未登録", standard: "安全確認の0 Vと故障診断の良否基準を混同しない", stop: "測定点・測定器の健全性・0 V確認が不明、または電圧が残る場合は接触・切離作業へ進めない", source: "https://global.toyota/pages/global_toyota/sustainability/esg/challenge2050/Challenge5/proper-disposal/hv_detachable_prius30.pdf" }, options: [["本体判定に必要な情報を確認（作業承認ではない）", "evidence"]] },
+    evidence: { title: "本体故障の判定は保留：測定手順が未登録", text: "必要な外部回路検査の結果と本体側の判定、または該当メーカー経路の交換指示を根拠として記録する設計です。この例には端子・モニター項目・基準値が未登録のため、交換確定への分岐はありません。一式供給は部品情報で確認し、修理範囲として別に記録します。", measurements: [], procedure: { phase: "診断根拠の準備", tool: "指定回路に適合するデジタルテスター等（未確定）", point: "端子対・コネクター接続／切離状態・測定モード：未登録", standard: "メーカー基準・独自参考値・今回の実測値を区別", stop: "未確認を正常扱いしない。抵抗測定を通電回路へ適用しない。復旧・再通電も該当手順が必要", source: "https://static.nhtsa.gov/odi/tsbs/2023/MC-10235230-9999.pdf" }, options: [] }, unknown
+  };
   if (route.id === "workflow-catalyst-p0420-p0430") return {
     start: { title: "触媒判定を乱す関連異常があるか", text: "消去前の同時DTCと発生履歴を確認します。失火・燃料補正・前後センサーの異常が残っていると触媒効率の判定に影響するため、該当する異常がある場合だけ先にその診断へ進みます。", measurements: ["同時DTC・失火や燃料補正異常の記録"], options: [["関連異常が残っている", "related"], ["記録を確認し、関連異常は認めない", "exhaust"]] },
     related: { title: "見つかった関連異常を先に診断", text: "実際に確認した関連DTCを入力し直して、そのコードの診断へ進んでください。触媒交換の判定は保留します。異常のない系統を追加検査する指示ではありません。", measurements: [], options: [] },
@@ -18729,6 +18739,8 @@ function renderFocusedDiagnosis(result) {
   if (!plan.selected) plan.routes.forEach((item) => button(header, item.title, () => { plan.selected = item.id; plan.nodeId = "start"; plan.history = []; plan.observation = {}; }));
   if (plan.history.length) add("選択した結果（今回の画面内のみ）", plan.history.map((entry) => entry.label).join(" → "), "start");
   const content = add(node.title, node.text);
+  const details = getFocusedProcedureDetails(node);
+  if (details.length) add("測定条件・安全・判定根拠", details.join("\n"), "safety");
   content.querySelector("h4").tabIndex = -1;
   if (plan.selected) {
     for (const [key, labelText, placeholder] of [
@@ -18775,11 +18787,17 @@ function buildFocusedDiagnosisWorksheet(plan) {
   entries.forEach((entry, index) => {
     const node = graph[entry.nodeId];
     lines.push(`${index + 1}. ${node.title}`, node.text, `確認対象：${node.measurements.join("、") || "この段階で追加指定なし"}`, `基準値・単位・出典（ユーザー入力）：${entry.observation?.reference || "未取得"}`, `実測値・単位・条件（ユーザー入力）：${entry.observation?.actual || "未測定／未記録"}`, `結果（ユーザー選択）：${entry.label}`, "");
+    lines.push(...getFocusedProcedureDetails(node), "");
   });
   lines.push("次の選択肢：", ...graph[plan.nodeId].options.map(([label, target]) => `${label} → ${graph[target].title}`));
   if (route?.id === "workflow-catalyst-p0420-p0430") lines.push("一般診断の参考：https://www.walkerexhaust.com/support/tech-tips/diagnosing-catalytic-converter-issues.html");
   else lines.push(`登録手順の出典：${route?.workflow?.source || "登録済み症状フロー／個別手順未登録"}`);
   return lines.join("\n");
+}
+
+function getFocusedProcedureDetails(node) {
+  const labels = { phase: "工程", tool: "必要工具", condition: "前提・測定条件", point: "確認箇所・モニター", standard: "判定基準", stop: "中止・保留条件", source: "出典・適用確認用資料" };
+  return Object.entries(labels).filter(([key]) => node.procedure?.[key]).map(([key, label]) => `${label}：${node.procedure[key]}`);
 }
 
 function downloadFocusedDiagnosisWorksheet(plan, status) {
