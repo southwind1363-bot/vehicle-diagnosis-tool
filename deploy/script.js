@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.697";
+const APP_VERSION = "3.13.698";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6192,6 +6192,7 @@ function renderObdCoreRawReadoutStatus() {
     settings_before_read_unavailable: "読取開始時の設定観測がありません",
     initialization_before_read_incomplete: "読取開始時の初期化応答が不足しています",
     protocol_unconfirmed: "読取開始時の対応する通信番号が未確認です",
+    can_settings_unconfirmed: "読取開始時のCAN設定応答が不足しています",
     echo_conflict: "エコー無効の応答記録に対してコマンドのエコーがあります",
     spacing_conflict: "空白無効の応答記録に対して空白区切りの行があります",
     framing_mismatch: "改行・終端または文字の形式が限定解析器の条件に合いません",
@@ -6201,23 +6202,24 @@ function renderObdCoreRawReadoutStatus() {
   const review = snapshot?.formatReview;
   const conditions = Array.isArray(review?.readoutConditions) && review.readoutConditions.length === 4 ? review.readoutConditions : null;
   // Item conditions already explain these issues; keep all other format failures visible.
-  const itemIssues = ["settings_before_read_unavailable", "initialization_before_read_incomplete", "protocol_unconfirmed"];
+  const itemIssues = ["settings_before_read_unavailable", "initialization_before_read_incomplete", "protocol_unconfirmed", "can_settings_unconfirmed"];
   const formatIssues = review?.issues.filter(code => !conditions || !itemIssues.includes(code));
   const formatMessage = review ? "形式照合:\n" + (formatIssues.length
     ? formatIssues.map(code => "・" + (formatReasons[code] || "照合条件が未確認です")).join("\n")
     : "限定した文字形の不一致は見つかりませんでした。ただし通信設定の証明ではありません。") : "";
   const readoutNames = { "03": "保存DTC", "07": "保留DTC", "0A": "永久DTC", "0101": "レディネス" };
   const conditionNames = { initializationComplete: "初期化応答", echoOffAcknowledged: "エコー無効応答",
-    spacesOffAcknowledged: "空白無効応答", protocol11bitReported: "対応する通信番号" };
+    spacesOffAcknowledged: "空白無効応答", canAutoFormatAcknowledged: "CAN整形応答",
+    dlcOffAcknowledged: "DLC表示無効応答", canExtendedAddressOffAcknowledged: "拡張アドレス無効応答", protocol11bitReported: "対応する通信番号" };
   const groups = new Map();
   for (const row of conditions || []) {
     const missing = Object.entries(conditionNames).filter(([key]) => row[key] !== true).map(([, label]) => label);
-    const detail = missing.length ? missing.join("・") + "が未確認" : "初期化・エコー無効・空白無効・通信番号の応答記録あり";
+    const detail = missing.length ? missing.join("・") + "が未確認" : "初期化・エコー無効・空白無効・CAN整形・DLC表示無効・拡張アドレス無効・通信番号の応答記録あり";
     if (!groups.has(detail)) groups.set(detail, []);
     groups.get(detail).push(readoutNames[row.command] || "対象項目");
   }
   const conditionMessage = conditions ? "取得前条件:\n" + [...groups].map(([detail, names]) => "・" + names.join("・") + "：" + detail).join("\n") : "";
-  const unconfirmedMessage = review ? "取得前条件への追加観測は未接続: CAN整形・DLC表示・アドレス方式。現在の設定応答を過去の原文へ遡って適用しません。" : "";
+  const unconfirmedMessage = review ? "設定応答は読取開始時点の記録です。応答記録だけでは実際の通信設定を証明できません。現在の設定応答を過去の原文へ遡って適用しません。" : "";
   status.textContent = [message, conditionMessage, formatMessage, unconfirmedMessage,
     "対象は保存・保留・永久DTCとレディネスです。集約原文は表示・保存しません。応答形式が未確認のため、集約原文の解析は未接続です。4件取得は診断成功・故障なし・実車適合を意味しません。"].filter(Boolean).join("\n\n");
   panel.hidden = false;
@@ -10032,10 +10034,14 @@ function createWebSerialReadoutCapture(commands) {
         initializationComplete: before?.initializationComplete ?? null,
         echoOffAcknowledged: before?.echoOffAcknowledged ?? null,
         spacesOffAcknowledged: before?.spacesOffAcknowledged ?? null,
+        canAutoFormatAcknowledged: before?.canAutoFormatAcknowledged ?? null,
+        dlcOffAcknowledged: before?.dlcOffAcknowledged ?? null,
+        canExtendedAddressOffAcknowledged: before?.canExtendedAddressOffAcknowledged ?? null,
         protocol11bitReported: before?.protocol11bitReported ?? null }));
       if (!before) issues.add("settings_before_read_unavailable");
       else {
         if (!before.initializationComplete) issues.add("initialization_before_read_incomplete");
+        if (!before.canAutoFormatAcknowledged || !before.dlcOffAcknowledged || !before.canExtendedAddressOffAcknowledged) issues.add("can_settings_unconfirmed");
         if (!before.protocol11bitReported) issues.add("protocol_unconfirmed");
         else protocolObservedBeforeReadCount++;
       }
@@ -10075,7 +10081,7 @@ function createWebSerialReadoutCapture(commands) {
         discard("invalid_record"); return false;
       }
       const before = record.settingsBeforeRead;
-      const fields = ["initializationComplete", "echoOffAcknowledged", "spacesOffAcknowledged", "protocol11bitReported"];
+      const fields = ["initializationComplete", "echoOffAcknowledged", "spacesOffAcknowledged", "protocol11bitReported", "canAutoFormatAcknowledged", "dlcOffAcknowledged", "canExtendedAddressOffAcknowledged"];
       const settingsBeforeRead = before && fields.every(key => typeof before[key] === "boolean")
         ? Object.freeze(Object.fromEntries(fields.map(key => [key, before[key]]))) : null;
       records.push(Object.freeze({ command: record.command, transcript: record.transcript, settingsBeforeRead,
@@ -10211,6 +10217,9 @@ async function readElmDeveloperCommandRecord(command, timeoutMs = 3000) {
       initializationComplete: summary.phase === "awaiting_protocol" || summary.phase === "observed",
       echoOffAcknowledged: summary.acknowledgedCommands.includes("ATE0"),
       spacesOffAcknowledged: summary.spacesOffAcknowledged === true,
+      canAutoFormatAcknowledged: summary.acknowledgedCommands.includes("ATCAF1"),
+      dlcOffAcknowledged: summary.acknowledgedCommands.includes("ATD0"),
+      canExtendedAddressOffAcknowledged: summary.acknowledgedCommands.includes("ATCEA"),
       protocol11bitReported: summary.protocol11bitReported === true
     });
   } catch { /* Missing passive observations must not change ordinary diagnostic reads. */ }

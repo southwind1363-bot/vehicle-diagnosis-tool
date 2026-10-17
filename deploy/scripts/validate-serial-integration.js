@@ -250,6 +250,7 @@ for (const eol of ["\r\n", "\r", "\n"]) {
   check(JSON.stringify(rawRecords.map(row => row.settingsBeforeRead?.protocol11bitReported)) === JSON.stringify([false, true, true, true]),
     "Later protocol observation must not be backfilled into the first stored-DTC read");
   check(rawRecords.every(row => Object.isFrozen(row.settingsBeforeRead) && row.settingsBeforeRead.initializationComplete), "Pre-read observations must be immutable");
+  check(rawRecords.every(row => ['canAutoFormatAcknowledged', 'dlcOffAcknowledged', 'canExtendedAddressOffAcknowledged'].every(key => row.settingsBeforeRead[key] === true)), "Actual initialized read path must preserve all three CAN ACKs");
   check(!JSON.stringify(session).includes("settingsBeforeRead"), "Private pre-read observations must not enter saved diagnostics");
   check(JSON.stringify(rawRecords.map(row => row.command)) === JSON.stringify(["03", "07", "0A", "0101"]), "Core raw records lost command order");
   check(rawRecords.every(row => row.profile === null && !row.profileVerified && !row.executionEnabled && !row.realTransportProofAvailable), "Aggregation must not infer profile or vehicle authority");
@@ -955,7 +956,7 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
     check(owner.inspect().reason === expected, "Cleanup must preserve the first rejection reason");
     check(!JSON.stringify(owner.inspect()).includes("PRIVATE_RAW_SENTINEL"), "Inspect exposed raw text");
   }
-  const condition = (command, protocol = true) => ({ command, initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, protocol11bitReported: protocol });
+  const condition = (command, protocol = true) => ({ command, initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, canAutoFormatAcknowledged: true, dlcOffAcknowledged: true, canExtendedAddressOffAcknowledged: true, protocol11bitReported: protocol });
   const conditions = commands.map(command => condition(command, command !== '03'));
   const review = { issues: ['protocol_unconfirmed', 'echo_conflict', 'unexpected_future_reason'], readoutConditions: conditions };
   context.obdDevSession.coreRawReadoutCapture = { inspect: () => ({ status: 'finished', count: 4, formatReview: review }) };
@@ -998,7 +999,7 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
     const ticket = settings.begin(); current.settingsTicket = ticket;
     for (const command of ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATCAF1", "ATD0", "ATCEA"]) settings.recordInitialization(ticket, command, command === "ATZ" ? "fixture" : "OK");
     if (protocol) settings.recordProtocol(ticket, protocol);
-    const settingsBeforeRead = { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true,
+    const settingsBeforeRead = { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, canAutoFormatAcknowledged: true, dlcOffAcknowledged: true, canExtendedAddressOffAcknowledged: true,
       protocol11bitReported: protocol === "A6" };
     for (const [text, expectedIssue] of cases) {
       const owner = context.createWebSerialReadoutCapture(commands);
@@ -1011,6 +1012,7 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
       check(Object.isFrozen(review.readoutConditions) && review.readoutConditions.length === 4
         && review.readoutConditions.every((row, index) => Object.isFrozen(row) && row.command === commands[index]
           && row.initializationComplete === true && row.echoOffAcknowledged === true && row.spacesOffAcknowledged === true
+          && row.canAutoFormatAcknowledged && row.dlcOffAcknowledged && row.canExtendedAddressOffAcknowledged
           && row.protocol11bitReported === (protocol === "A6")), "Per-readout conditions must preserve order and immutable pre-read observations");
       if (expectedIssue) check(review.issues.includes(expectedIssue), expectedIssue + ": missing lexical discrepancy");
       else check(review.compactLineCount === 4 && review.spacedLineCount === 0 && (protocol !== "A6" || !review.issues.length), "Compact shape should remain an observation only");
@@ -1019,16 +1021,36 @@ for (const interference of ["settings", "manual_read", "copied_owner", "cancel"]
       check(owner.take().length === 4 && owner.inspect().formatReview === null, "Review must neither consume raw records nor outlive consumption");
     }
   }
-  for (const before of [null, {}, { initializationComplete: false, echoOffAcknowledged: false, spacesOffAcknowledged: false, protocol11bitReported: false }]) {
+  for (const before of [null, {}, { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, protocol11bitReported: true }, { initializationComplete: false, echoOffAcknowledged: false, spacesOffAcknowledged: false, canAutoFormatAcknowledged: false, dlcOffAcknowledged: false, canExtendedAddressOffAcknowledged: false, protocol11bitReported: false }]) {
     const owner = context.createWebSerialReadoutCapture(commands);
     for (const command of commands) owner.append({ command, transcript: compact, settingsBeforeRead: before,
       startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
     owner.finish();
     const missing = owner.inspect().formatReview;
-    check(missing.readoutConditions.every(row => ["initializationComplete", "echoOffAcknowledged", "spacesOffAcknowledged", "protocol11bitReported"]
+    check(missing.readoutConditions.every(row => ["initializationComplete", "echoOffAcknowledged", "spacesOffAcknowledged", "protocol11bitReported", "canAutoFormatAcknowledged", "dlcOffAcknowledged", "canExtendedAddressOffAcknowledged"]
       .every(key => row[key] === (before?.initializationComplete === false ? false : null))), "Missing observations stay unknown; failed observations stay false");
+    check(missing.issues.includes("can_settings_unconfirmed") === (before?.initializationComplete === false), "Missing CAN ACKs must remain explicitly unconfirmed");
     check(missing.protocolObservedBeforeReadCount === 0 && !missing.parserAllowed, "Current settings cannot repair missing/partial pre-read evidence");
     check(missing.issues.includes(before?.initializationComplete === false ? "initialization_before_read_incomplete" : "settings_before_read_unavailable"), "Missing pre-read evidence must be disclosed");
+  }
+}
+
+
+{
+  // Changes while the command is awaiting its response cannot repair its starting conditions.
+  const flags = ['canAutoFormatAcknowledged', 'dlcOffAcknowledged', 'canExtendedAddressOffAcknowledged'];
+  for (let acknowledged = 0; acknowledged <= 3; acknowledged++) {
+    let commands = ['ATE0', 'ATS0', ...['ATCAF1', 'ATD0', 'ATCEA'].slice(0, acknowledged)];
+    const context = vm.createContext({ performance, readWebSerialCaptureContext: () => ({}),
+      obdDevSession: { settingsObservation: { ticket: {}, owner: { inspect: () => ({ ok: true,
+        summary: { phase: 'observed', acknowledgedCommands: commands, spacesOffAcknowledged: true, protocol11bitReported: true } }) } } },
+      createSerialCommandCapture: () => ({ take: () => ({ ok: true, record: { command: '03' } }), invalidate() {} }),
+      sendElmDeveloperCommand: async () => { commands = ['ATE0', 'ATS0', 'ATCAF1', 'ATD0', 'ATCEA']; return 'OK'; }
+    });
+    load(context, ['readElmDeveloperCommandRecord']);
+    const result = await context.readElmDeveloperCommandRecord('03');
+    check(Object.isFrozen(result.record.settingsBeforeRead), 'Starting CAN observations must be frozen');
+    for (let index = 0; index < flags.length; index++) check(result.record.settingsBeforeRead[flags[index]] === (index < acknowledged), 'Later ACK must not repair ' + flags[index]);
   }
 }
 

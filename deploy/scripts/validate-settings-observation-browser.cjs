@@ -89,7 +89,7 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
         const owner = createWebSerialReadoutCapture(['03', '07', '0A', '0101']);
         obdDevSession.coreRawReadoutCapture = owner;
         for (const command of ['03', '07', '0A', '0101']) owner.append({ command, transcript: text,
-          settingsBeforeRead: { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, protocol11bitReported: true },
+          settingsBeforeRead: { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, canAutoFormatAcknowledged: true, dlcOffAcknowledged: true, canExtendedAddressOffAcknowledged: true, protocol11bitReported: true },
           startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
         owner.finish(); renderObdDeveloperGate();
       }, transcript);
@@ -100,13 +100,13 @@ module.exports = async function validateSettingsObservationBrowser(browser, root
       const owner = createWebSerialReadoutCapture(['03', '07', '0A', '0101']);
       obdDevSession.coreRawReadoutCapture = owner;
       for (const command of ['03', '07', '0A', '0101']) owner.append({ command, transcript: '7E8024300AAAAAAAAAA\r>',
-        settingsBeforeRead: { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, protocol11bitReported: command !== '03' },
+        settingsBeforeRead: { initializationComplete: true, echoOffAcknowledged: true, spacesOffAcknowledged: true, canAutoFormatAcknowledged: true, dlcOffAcknowledged: true, canExtendedAddressOffAcknowledged: true, protocol11bitReported: command !== '03' },
         startedAt: 1, completedAt: 1, profile: null, profileVerified: false, realTransportProofAvailable: false, executionEnabled: false });
       owner.finish(); renderObdDeveloperGate();
     });
     assert.doesNotMatch(await rawPanel.innerText(), /読取開始時の対応する通信番号が未確認/, "Per-item explanation replaces the duplicate protocol warning");
     assert.match(await rawPanel.innerText(), /保存DTC：対応する通信番号が未確認/);
-    assert.match(await rawPanel.innerText(), /保留DTC・永久DTC・レディネス：初期化・エコー無効・空白無効・通信番号の応答記録あり/);
+    assert.match(await rawPanel.innerText(), /保留DTC・永久DTC・レディネス：初期化・エコー無効・空白無効・CAN整形・DLC表示無効・拡張アドレス無効・通信番号の応答記録あり/);
     assert.equal((await rawPanel.innerText()).match(/応答記録あり/g).length, 1);
     assert.equal(await page.locator('#obdCoreRawReadoutStatus').evaluate(el => getComputedStyle(el).whiteSpace), 'pre-line');
     assert.match(await rawPanel.innerText(), /現在の設定応答を過去の原文へ遡って適用しません/);
