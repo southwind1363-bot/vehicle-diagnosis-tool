@@ -1,0 +1,29 @@
+{
+  "id": "prius-2010-p324e-788-reference",
+  "reviewedAt": "2026-10-29",
+  "sourceType": "manufacturer_repair_information_republication",
+  "sourceHost": "Operation CHARM",
+  "sourceVehicleLabel": "2010 Toyota Prius L4-1.8L (2ZR-FXE) Hybrid",
+  "dtc": "P324E",
+  "inf": "788",
+  "purpose": "Reference content and source audit; not automatic vehicle applicability or repair authorization",
+  "domesticApplicabilityVerified": false,
+  "currentManufacturerRevisionVerified": false,
+  "vehicleTested": false,
+  "automaticReplacementDecision": false,
+  "source": "https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P324E/",
+  "visuallyReviewedTables": {
+    "dtcBranch": "https://charm.li/images/IMP33Q313/asian881/80762793/",
+    "openCircuit": "https://charm.li/images/IMP33Q313/asian881/80785877/",
+    "shortCircuit": "https://charm.li/images/IMP33Q313/asian881/80788401/",
+    "terminalDrawing": "https://charm.li/images/IMP33Q313/asian881/80763861/",
+    "wiringDiagram": "https://charm.li/images/IMP33Q313/asian881/80743340/"
+  },
+  "scopeNotes": [
+    "Reference route is P324E-788 alone; listed U0110-159/160/656/657 co-occurrences route to their own diagnostic chart.",
+    "Do not infer INF788 from parent code or apply the single-code replacement conclusion to P0A94 co-occurrence.",
+    "A59 +B and +B2 share a supply in the diagram; continuity between these is not an inter-circuit short.",
+    "Values describe isolated harness checks with the specified power-off and disconnect conditions, not resistance measured on the inverter electronics.",
+    "No source image has been copied into the product. References identify the reviewed evidence."
+  ]
+}

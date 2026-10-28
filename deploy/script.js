@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.701";
+const APP_VERSION = "3.13.702";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -18631,7 +18631,9 @@ function getFocusedDiagnosisGraph(plan) {
   if (!route) return { start: stop(plan.routes.length ? "今回の診断対象を一つ選んでください。候補をすべて検査する指示ではありません。" : "この入力に対応する具体的な診断手順は未登録です。コードの全文・車種・年式・エンジン型式、または主症状を指定してください。汎用検査で穴埋めしません。") };
   if (route.id === "zvw30-inverter-preparation") return {
     start: { title: "詳細コードと保存記録を整理", text: "入力コードのINF、検出ECU、現在／履歴、フリーズフレームを記録します。P0A94とP324Eの両方が実際に記録されていれば双方を残します。片方の入力から他方の発生を推定しません。", measurements: ["INF・同時DTC・保存済み発生記録"], procedure: { phase: "遮断前の記録確認", tool: "メーカー固有の詳細コードに対応する診断機", condition: "コード消去前。記録確認のための強制駆動・再現走行はしない", point: "ハイブリッド制御のDTC詳細・保存済みフリーズフレーム", standard: "数値による良否判定ではなく診断経路の選択情報", stop: "INF未取得なら部品判定を保留" }, options: [["記録を整理した：必要資料を確認", "applicability"]] },
-    applicability: { title: "車両と診断経路を照合", text: "車台番号・製造時期・インバーター識別情報と、国内修理書のDTC＋INF経路を照合します。米国資料の部品修理を国内の供給範囲へ転用しません。一式供給であることと本体故障の証明は別です。", measurements: ["該当修理書の版・ページ・INF・対象部品番号"], procedure: { phase: "資料準備", condition: "車種適合はアプリでは未検証", standard: "車両・INFが一致する国内診断経路", stop: "一致する資料がなければ実作業の案内を保留" }, options: [["必要な測定情報の様式を見る", "monitor"]] },
+    applicability: { title: "車両と診断経路を照合", text: "車台番号・製造時期・インバーター識別情報と、国内修理書のDTC＋INF経路を照合します。米国資料の部品修理を国内の供給範囲へ転用しません。一式供給であることと本体故障の証明は別です。", measurements: ["該当修理書の版・ページ・INF・対象部品番号"], procedure: { phase: "資料準備", condition: "車種適合はアプリでは未検証", standard: "車両・INFが一致する国内診断経路", stop: "一致する資料がなければ実作業の案内を保留" }, options: [["必要な測定情報の様式を見る", "monitor"], ["P324E-788の数値付き参考手順を見る", "p324eScope"]] },
+    p324eScope: { title: "P324E-788：参考資料の適用範囲", text: "2010年式プリウスの海外向け修理情報の再掲を参照した参考例です。国内DAA-ZVW30への適合・改訂状況は未検証。資料ではP324E-788単独と、U0110-159／160／656／657併発を区別し、後者は該当DTCの診断へ戻します。P0A94併発時にこの単独経路の交換結論を流用しません。", measurements: [], procedure: { phase: "参考手順の閲覧（実車適合の確認ではない）", condition: "親コードP324EだけではINF788を推定しない", stop: "年式・仕様・端子図・INF・同時DTCが一致しない場合、この数値を実車の合否基準にしない", source: "https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P324E/" }, options: [["参考の配線検査と判定を読む", "p324eWiring"]] },
+    p324eWiring: { title: "P324E-788：接続・配線と本体を切り分ける参考例", text: "資料の経路はコネクター接続確認→電源・アース配線の断線／短絡検査です。接続不良はその箇所を修正、配線が基準外なら配線・コネクターを修理する分岐です。接続と指定の配線検査がすべて適合した場合に本体交換の経路となります。抵抗値だけで内部故障を直接測定する検査ではありません。", measurements: [], procedure: { phase: "遮断後の低電圧ハーネス抵抗検査の参考値／国内適合未確認", tool: "抵抗測定に適合するデジタルテスター。絶縁抵抗計による検査ではない", condition: "有資格者による該当車両の安全処置と指定点の0 V確認が前提。電源OFF、サービスプラグ未装着、A59をインバーターから切離し、IGCTリレーを取り外したハーネス側。通電状態では抵抗を測らない", point: "断線：A59-10（+B）とIGCTリレーのソケット5、A59-9（+B2）と同5、A59-28（GND1）と車体アース、A59-27（GND2）と車体アース。短絡：+B／+B2と車体アース・他回路端子。+Bと+B2は図上で共通の電源線につながるため、その相互導通を短絡と誤判定しない", standard: "資料記載：上記4つの断線検査はそれぞれ1 Ω未満。短絡検査は10 kΩ以上。境界を含むかに注意（1 Ωは適合せず、10 kΩは適合）。端子向きは元資料のハーネス正面図で照合", stop: "測定点や無電圧が不明なら切離・測定しない。国内配線図との一致が未確認のまま適用しない。未測定の項目を正常としない。全条件の照合なしに交換確定しない", source: "数値出典：2010 Prius P324E-788修理情報の再掲（Operation CHARM）、2026-10-29に本文・断線表・短絡表・端子図を確認。メーカー国内正本との照合は未実施" }, options: [] },
     monitor: { title: "遮断前のデータモニター項目を準備", text: "選んだINFの経路に必要な項目だけを登録します。モニター名・単位・IG／READY等の取得条件・比較基準・結果別の行き先を一組にします。この例の具体的な項目名と基準値は未登録です。", measurements: [], procedure: { phase: "通電状態で取得する情報の準備", tool: "該当モニターに対応する診断機", condition: "車両指定の取得条件は未登録。READY移行の指示ではありません", point: "未登録", standard: "未登録（汎用電圧で代用しない）", stop: "指定項目・条件・基準が揃うまで測定指示を出さない" }, options: [["高電圧点検前の安全条件を確認", "isolation"]] },
     isolation: { title: "高電圧作業前の安全条件（資料確認）", text: "ZVW30のトヨタ回収資料には、絶縁手袋、電源停止とサービスプラグ取り外し後10分以上の待機、露出高電圧端子に触れる前の0 V確認があります。これはインバーター診断の全手順ではありません。時間経過だけで安全と判定せず、0 V確認もHVバッテリー内部を含む全車両の無電圧を意味しません。", measurements: [], procedure: { phase: "遮断・無電圧確認の準備／実作業不可", tool: "適合する測定器・リード・保護具と測定器の機能確認方法：詳細未登録", condition: "停止・再投入防止・プラグ取り外し・放電待機・指定点での確認を該当修理書で確定", point: "インバーターの指定測定点とアクセス手順：未登録", standard: "安全確認の0 Vと故障診断の良否基準を混同しない", stop: "測定点・測定器の健全性・0 V確認が不明、または電圧が残る場合は接触・切離作業へ進めない", source: "https://global.toyota/pages/global_toyota/sustainability/esg/challenge2050/Challenge5/proper-disposal/hv_detachable_prius30.pdf" }, options: [["本体判定に必要な情報を確認（作業承認ではない）", "evidence"]] },
     evidence: { title: "本体故障の判定は保留：測定手順が未登録", text: "必要な外部回路検査の結果と本体側の判定、または該当メーカー経路の交換指示を根拠として記録する設計です。この例には端子・モニター項目・基準値が未登録のため、交換確定への分岐はありません。一式供給は部品情報で確認し、修理範囲として別に記録します。", measurements: [], procedure: { phase: "診断根拠の準備", tool: "指定回路に適合するデジタルテスター等（未確定）", point: "端子対・コネクター接続／切離状態・測定モード：未登録", standard: "メーカー基準・独自参考値・今回の実測値を区別", stop: "未確認を正常扱いしない。抵抗測定を通電回路へ適用しない。復旧・再通電も該当手順が必要", source: "https://static.nhtsa.gov/odi/tsbs/2023/MC-10235230-9999.pdf" }, options: [] }, unknown
@@ -18740,7 +18742,10 @@ function renderFocusedDiagnosis(result) {
   if (plan.history.length) add("選択した結果（今回の画面内のみ）", plan.history.map((entry) => entry.label).join(" → "), "start");
   const content = add(node.title, node.text);
   const details = getFocusedProcedureDetails(node);
-  if (details.length) add("測定条件・安全・判定根拠", details.join("\n"), "safety");
+  if (details.length) {
+    const detailCard = add("測定条件・安全・判定根拠", details[0], "safety");
+    details.slice(1).forEach((text) => { const paragraph = document.createElement("p"); paragraph.textContent = text; detailCard.appendChild(paragraph); });
+  }
   content.querySelector("h4").tabIndex = -1;
   if (plan.selected) {
     for (const [key, labelText, placeholder] of [
