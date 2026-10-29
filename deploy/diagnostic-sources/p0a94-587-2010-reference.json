@@ -13,10 +13,12 @@
   "source": "https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P0A94/P0A94-587/",
   "visuallyReviewedTables": {
     "freezeFrameRange": "https://charm.li/images/IMP33Q313/asian881/66014302/",
-    "freezeFrameBlockSum": "https://charm.li/images/IMP33Q313/asian881/66016518/"
+    "freezeFrameBlockSum": "https://charm.li/images/IMP33Q313/asian881/66016518/",
+    "dtcRouting": "https://charm.li/images/IMP33Q313/asian881/65999488/",
+    "liveComparison": "https://charm.li/images/IMP33Q313/asian881/66009519/"
   },
   "scopeNotes": [
-    "Only original steps 6 and 7 are explained. Earlier DTC routing, reproduction and live-data prerequisites are not implemented.",
+    "Reference coverage: step 1 routing checklist without automatic priority, step 5 monitor names and acquisition context without replacement thresholds, and step 6/7 saved-data comparisons. Reproduction and full vehicle-specific workflow remain unimplemented.",
     "Do not infer INF587 from the parent code or claim applicability to the reported P324E co-occurrence.",
     "Range endpoints 160 and 285 V are included; block-sum difference endpoints -40 and +25 V are excluded.",
     "Both range flags equal means continue comparison, not normal vehicle or two faulty parts. Missing values are unknown, not zero.",
@@ -27,7 +29,23 @@
     "notes": [
       "Step 1 table visually reviewed. It distinguishes P0A1F-129, P0A94-442 and P0A94-585 co-occurrences. Do not construct a combined-code priority without resolving overlapping matches.",
       "The step 1 B text hyperlink points to P0AFC while the image names P0A1F-129. This inconsistency needs primary-manual review before implementing that transition.",
-      "Step 5 live comparison image did not load successfully; no live thresholds transcribed or inferred."
-    ]
+      "Step 5 image now visually reviewed. Under an absolute-difference reading, row B is contained in row C but destinations differ. Signed-difference semantics or a corrected source are not verified; do not implement numeric replacement routing."
+    ],
+    "liveComparisonConflict": {
+      "interpretation": "absolute voltage difference; not confirmed source semantics",
+      "syntheticExample": {
+        "VB": 230,
+        "VL": 190,
+        "VH": 232,
+        "unit": "V",
+        "isVehicleReadout": false
+      },
+      "rowB": "abs(VB-VH) < 5 and abs(VL-VH) > 35",
+      "rowC": "abs(VH-VL) > 5 and abs(VB-VH) < 15",
+      "bothMatchExample": true,
+      "resolution": "Unresolved. No corrected threshold inferred from physics or another model/year."
+    },
+    "liveBlockSumImage": "https://charm.li/images/IMP33Q313/asian881/66019313/",
+    "liveBlockSumStatus": "Image unavailable (502); do not copy saved-data limits into live testing without confirming this table."
   }
 }
