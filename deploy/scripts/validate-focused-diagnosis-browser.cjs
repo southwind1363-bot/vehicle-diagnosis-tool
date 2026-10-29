@@ -27,7 +27,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   }
   const flow = page.locator('#flowChart');
   await page.locator('#vehicleManual').fill('DAA-ZVW30 平成22年 2ZR-3JM');
-  await diagnose('P0A94');
+  await diagnose('P324E');
   assert.match(await flow.innerText(), /詳細コードと保存記録/);
   await flow.getByRole('button', {name:'記録を整理した：必要資料を確認',exact:true}).click();
   await flow.getByRole('button', {name:'P324E-788の数値付き参考手順を見る',exact:true}).click();
@@ -47,6 +47,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   await flow.getByRole('button', {name:'一つ前の確認に戻る',exact:true}).click();
   await flow.getByRole('button', {name:'一つ前の確認に戻る',exact:true}).click();
   assert.doesNotMatch(await flow.innerText(), /上記4つの断線検査/);
+  assert.equal(await flow.getByRole('button',{name:'P0A94-587の保存データ比較を見る',exact:true}).count(),0);
+  await diagnose('P0A94');
+  await flow.getByRole('button',{name:'記録を整理した：必要資料を確認',exact:true}).click();
+  assert.equal(await flow.getByRole('button',{name:'P324E-788の数値付き参考手順を見る',exact:true}).count(),0);
   await flow.getByRole('button', {name:'P0A94-587の保存データ比較を見る',exact:true}).click();
   assert.match(await flow.innerText(), /親コードP0A94からINF587を推定しません/);
   assert.match(await flow.innerText(), /P324E併発/);
@@ -106,6 +110,34 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   assert.match(hvReport, /hv_detachable_prius30.pdf/);
   await diagnose('P324E');
   assert.match(await flow.innerText(), /詳細コードと保存記録/);
+
+  for (const [code, ff, wiring, detailed] of [
+    ['P0A94-587',1,0,'P0A94:587'], ['p0a94:587',1,0,'P0A94:587'],
+    ['P0A94-172',0,0,'P0A94:172'], ['P0A94-0587',0,0,'P0A94:0587'],
+    ['P0A94-788',0,0,'P0A94:788'], ['P324E-788',0,1,'P324E:788'],
+    ['P324E-587',0,0,'P324E:587']
+  ]) {
+    await diagnose(code);
+    assert.match(await flow.innerText(),new RegExp(detailed));
+    if(!ff && !wiring) assert.match(await flow.innerText(),/この詳細コードの具体的な手順は未登録/);
+    await flow.getByRole('button',{name:'記録を整理した：必要資料を確認',exact:true}).click();
+    assert.equal(await flow.getByRole('button',{name:'P0A94-587の保存データ比較を見る',exact:true}).count(),ff,code);
+    assert.equal(await flow.getByRole('button',{name:'P324E-788の数値付き参考手順を見る',exact:true}).count(),wiring,code);
+    const report = await page.evaluate(()=>buildFocusedDiagnosisWorksheet(flowChart.focusedDiagnosisResult.focusedDiagnosis));
+    assert(report.includes('DTC：'+detailed),code);
+  }
+  await diagnose('P0A94-587');
+  const [infDownload] = await Promise.all([page.waitForEvent('download'),flow.getByRole('button',{name:'診断手順書の下書きを保存',exact:true}).click()]);
+  assert.match(infDownload.suggestedFilename(),/P0A94-587/);
+  assert.match(fs.readFileSync(await infDownload.path(),'utf8'),/DTC：P0A94:587/);
+  await page.locator('#obdCode').fill('P0A94-172');
+  await flow.getByRole('button',{name:'記録を整理した：必要資料を確認',exact:true}).click();
+  assert.match(await flow.innerText(),/診断条件が変わりました/);
+  await diagnose('P0A94');
+  assert.match(await flow.innerText(),/INFは未入力です/);
+  const parentPlan = await page.evaluate(()=>flowChart.focusedDiagnosisResult.focusedDiagnosis);
+  assert.equal(parentPlan.subcode,null);
+
   await page.locator('#vehicleManual').fill('ZVW50');
   await diagnose('P0A94');
   assert.doesNotMatch(await flow.innerText(), /ZVW30 インバーター診断の準備/);

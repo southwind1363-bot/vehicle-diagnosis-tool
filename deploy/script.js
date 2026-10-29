@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.704";
+const APP_VERSION = "3.13.705";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -18608,6 +18608,13 @@ function makeFlow(id, symptomName, faultSystem, measurements, safetyTags) {
     sources: ["登録データ: symptom-flows.json"]
   };
 }
+function getZvw30ReferenceOptions(plan) {
+  const options = [["必要な測定情報の様式を見る", "monitor"]];
+  if (plan.code === "P324E" && (!plan.subcode || plan.subcode === "788")) options.push(["P324E-788の数値付き参考手順を見る", "p324eScope"]);
+  if (plan.code === "P0A94" && (!plan.subcode || plan.subcode === "587")) options.push(["P0A94-587の保存データ比較を見る", "p0a94Scope"]);
+  return options;
+}
+
 function buildFocusedDiagnosis(input, flow, matches) {
   const primary = matches.filter((item) => item.id.startsWith("workflow-"));
   const candidates = primary.length ? primary : matches.filter((item) => !item.id.startsWith("family-flow-"));
@@ -18616,10 +18623,18 @@ function buildFocusedDiagnosis(input, flow, matches) {
     routes.splice(0, routes.length, { id: "zvw30-inverter-preparation", title: "ZVW30 インバーター診断の準備（実作業手順は未完成）", workflow: { source: "トヨタ ZVW30回収資料（安全条件のみ）／米国T-SB-0003-21 Rev1（国内適用未確認）" } });
   }
   if (!input.obdCode && flow) routes.push({ id: flow.id, title: flow.symptomName, symptom: flow });
-  const plan = { code: input.obdCode, vehicle: input.vehicle, vehicleProfile: input.vehicleProfile, symptom: flow?.symptomName || "", inputFingerprint: JSON.stringify(input), routes, selected: routes.length === 1 ? routes[0].id : null, history: [], nodeId: "start", observation: {} };
+  const plan = { code: input.obdCode, subcode: input.obdSubcode || null, vehicle: input.vehicle, vehicleProfile: input.vehicleProfile, symptom: flow?.symptomName || "", inputFingerprint: JSON.stringify(input), routes, selected: routes.length === 1 ? routes[0].id : null, history: [], nodeId: "start", observation: {} };
   plan.reason = input.obdCode
     ? `${input.obdCode} に完全一致する登録手順だけを候補にしています。症状が共通する別コードの手順は追加しません。`
     : "選択した症状を起点にします。症状だけでは故障部品を確定できません。";
+  if (routes.some((item) => item.id === "zvw30-inverter-preparation")) {
+    const reference = formatDtcReference(plan.code, plan.subcode);
+    plan.reason = !plan.subcode
+      ? reference + "：INFは未入力です。同じ親コードの参考資料は閲覧できますが、実車に該当する経路は未確定です。"
+      : getZvw30ReferenceOptions(plan).length > 1
+        ? reference + "：入力した詳細コードに一致する参考資料を提示します。入力はユーザー申告で、実車取得・国内適合は未検証です。"
+        : reference + "：この詳細コードの具体的な手順は未登録です。別INFや別コードの検査で代用しません。";
+  }
   return plan;
 }
 
@@ -18630,9 +18645,9 @@ function getFocusedDiagnosisGraph(plan) {
   const unknown = stop("未測定・再現せず・判定できない結果は正常として進めません。直前の確認項目の発生条件、測定値、メーカー基準を揃えてください。");
   if (!route) return { start: stop(plan.routes.length ? "今回の診断対象を一つ選んでください。候補をすべて検査する指示ではありません。" : "この入力に対応する具体的な診断手順は未登録です。コードの全文・車種・年式・エンジン型式、または主症状を指定してください。汎用検査で穴埋めしません。") };
   if (route.id === "zvw30-inverter-preparation") return {
-    start: { title: "詳細コードと保存記録を整理", text: "入力コードのINF、検出ECU、現在／履歴、フリーズフレームを記録します。P0A94とP324Eの両方が実際に記録されていれば双方を残します。片方の入力から他方の発生を推定しません。", measurements: ["INF・同時DTC・保存済み発生記録"], procedure: { phase: "遮断前の記録確認", tool: "メーカー固有の詳細コードに対応する診断機", condition: "コード消去前。記録確認のための強制駆動・再現走行はしない", point: "ハイブリッド制御のDTC詳細・保存済みフリーズフレーム", standard: "数値による良否判定ではなく診断経路の選択情報", stop: "INF未取得なら部品判定を保留" }, options: [["記録を整理した：必要資料を確認", "applicability"]] },
-    applicability: { title: "車両と診断経路を照合", text: "車台番号・製造時期・インバーター識別情報と、国内修理書のDTC＋INF経路を照合します。米国資料の部品修理を国内の供給範囲へ転用しません。一式供給であることと本体故障の証明は別です。", measurements: ["該当修理書の版・ページ・INF・対象部品番号"], procedure: { phase: "資料準備", condition: "車種適合はアプリでは未検証", standard: "車両・INFが一致する国内診断経路", stop: "一致する資料がなければ実作業の案内を保留" }, options: [["必要な測定情報の様式を見る", "monitor"], ["P324E-788の数値付き参考手順を見る", "p324eScope"], ["P0A94-587の保存データ比較を見る", "p0a94Scope"]] },
-    p0a94Scope: {"title":"P0A94-587：電圧検出系を絞る参考手順","text":"2010 Prius海外向け修理情報の再掲を参照した参考経路です。昇圧前電圧VLとバッテリー電圧VBの検出系を切り分けます。国内適合は未確認。親コードP0A94からINF587を推定しません。P324E併発を含む優先診断・前段検査を省いて、以下の表だけで部品交換を確定しません。","measurements":[],"procedure":{"phase":"参考資料の閲覧／実車適合・測定の確認ではない","tool":"メーカー固有のINFとフリーズフレームを表示できる診断機、または取得済み記録","condition":"併発DTCの記録、ライブ項目と取得条件、原資料手順6・7の保存データ比較を収録。前段の再現試験とライブ値からの交換分岐は未収録。今回の実車INFは不明","point":"Powertrain / Hybrid Control / Trouble Codes内のP0A94-587に対応するフリーズフレーム。現在値や別発生時の値を混ぜない","stop":"コード消去・負荷運転・高電圧端子測定はこの閲覧経路では指示しない。保存がない項目は0として埋めない","source":"https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P0A94/P0A94-587/"},"options":[["併発コードとライブ記録の入口を見る","p0a94Entry"],["保存時のVB・VL判定を読む","p0a94Frame"]]},
+    start: { title: "詳細コードと保存記録を整理", text: (plan.subcode ? `入力詳細コード：${formatDtcReference(plan.code, plan.subcode)}（ユーザー申告・実車未検証）。` : "INFは未入力です。") + "入力コードのINF、検出ECU、現在／履歴、フリーズフレームを記録します。P0A94とP324Eの両方が実際に記録されていれば双方を残します。片方の入力から他方の発生を推定しません。", measurements: ["INF・同時DTC・保存済み発生記録"], procedure: { phase: "遮断前の記録確認", tool: "メーカー固有の詳細コードに対応する診断機", condition: "コード消去前。記録確認のための強制駆動・再現走行はしない", point: "ハイブリッド制御のDTC詳細・保存済みフリーズフレーム", standard: "数値による良否判定ではなく診断経路の選択情報", stop: "INF未取得なら部品判定を保留" }, options: [["記録を整理した：必要資料を確認", "applicability"]] },
+    applicability: { title: "車両と診断経路を照合", text: "車台番号・製造時期・インバーター識別情報と、国内修理書のDTC＋INF経路を照合します。米国資料の部品修理を国内の供給範囲へ転用しません。一式供給であることと本体故障の証明は別です。", measurements: ["該当修理書の版・ページ・INF・対象部品番号"], procedure: { phase: "資料準備", condition: "車種適合はアプリでは未検証", standard: "車両・INFが一致する国内診断経路", stop: "一致する資料がなければ実作業の案内を保留" }, options: getZvw30ReferenceOptions(plan) },
+    p0a94Scope: {"title":"P0A94-587：電圧検出系を絞る参考手順","text":"2010 Prius海外向け修理情報の再掲を参照した参考経路です。昇圧前電圧VLとバッテリー電圧VBの検出系を切り分けます。国内適合は未確認。親コードP0A94からINF587を推定しません。P324E併発を含む優先診断・前段検査を省いて、以下の表だけで部品交換を確定しません。","measurements":[],"procedure":{"phase":"参考資料の閲覧／実車適合・測定の確認ではない","tool":"メーカー固有のINFとフリーズフレームを表示できる診断機、または取得済み記録","condition":"併発DTCの記録、ライブ項目と取得条件、原資料手順6・7の保存データ比較を収録。前段の再現試験とライブ値からの交換分岐は未収録。実車のINF取得と国内適合は未検証","point":"Powertrain / Hybrid Control / Trouble Codes内のP0A94-587に対応するフリーズフレーム。現在値や別発生時の値を混ぜない","stop":"コード消去・負荷運転・高電圧端子測定はこの閲覧経路では指示しない。保存がない項目は0として埋めない","source":"https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P0A94/P0A94-587/"},"options":[["併発コードとライブ記録の入口を見る","p0a94Entry"],["保存時のVB・VL判定を読む","p0a94Frame"]]},
     p0a94Entry: {"title":"P0A94-587：併発コードで先に確認する経路を絞る","text":"まずP0A94の全INFと同時DTCを消去せず記録します。参考資料の入口ではP0A1F-129、P0A94-442、P0A94-585の併発を別経路に分けています。これらがあれば、後段のVB・VL比較だけで本体判定せず、該当コードの経路を先に照合します。","measurements":["P0A94の全INF、同時DTC、検出ECU、現在／履歴の区分を元表示のまま記録"],"procedure":{"phase":"読み取り記録の整理／優先経路の確定前","tool":"メーカー固有DTC・INF対応の診断機または取得済み全DTC記録","condition":"別時刻や別ECUのコードを、同時発生と推定して結合しない。P324Eも実際に記録されている場合だけ併記","point":"入口で分岐する3種類：P0A1F-129（電池電圧検出関連）、P0A94-442、P0A94-585。表の掲載順を故障発生順や複数併発時の優先順位にしない","standard":"いずれか併発：対応する診断経路の照合へ。該当なしでも正常ではなく、前段検査を含む587経路の確認を継続。INFや同時DTC一覧が不足：分岐未確定","stop":"参考元のP0A1F-129の行と本文リンクP0AFCが不一致。複数該当時の優先順も未確定のため、この画面から自動で別コードや交換へ誘導しない","source":"原資料手順1の分岐表：https://charm.li/images/IMP33Q313/asian881/65999488/ （2010 Prius修理情報再掲、国内適合未確認）"},"options":[["ライブ項目と取得条件を見る（実施指示ではない）","p0a94Live"]]},
     p0a94Live: {"title":"P0A94-587：VB・VL・VHを同じ条件で記録","text":"バッテリー電圧VB、昇圧前VL、昇圧後VHの3値を一組で確認します。1つずつ別の運転状態で読んだ値を比較しません。まず表示名・単位・時刻・車両状態を揃えて記録し、保存時データとは分けて扱います。","measurements":["記録欄にVB＝__ V、VL＝__ V、VH＝__ V、取得時刻、READY／IG、Pレンジ、停車／走行、エンジン停止／作動を記入。未取得は未取得と記載"],"procedure":{"phase":"ライブデータの記録条件を確認する参考手順","tool":"該当項目を表示できるメーカー固有データモニター。汎用OBDで未対応なら取得済みとはしない","condition":"原資料手順5：READY・Pレンジ・停車・エンジン停止での読み取りと事前の充電条件。今回の閲覧は取得済み記録の検討用。故障車をこの画面だけでREADYや負荷運転へ移行させない","point":"Powertrain / Hybrid Control / Data List。HV battery voltage (VB)（表ではPower Resource VB）、VL-Voltage before Boosting、VH-Voltage after Boosting。単位はいずれもV。診断機の表示名と対応を記録","standard":"VB・VLが両方220 V未満の場合、原資料では充電の前準備があります。220 Vは前準備の指標で故障の合否値ではありません。ライブ比較表には交換対象が重なる条件があり、未解決のため数値による交換判定は登録しない","stop":"片側だけの低値や表示欠落を充電不足と決めない。READY不能・取得条件不一致・項目未対応なら保留し、既存の保存データを確認。端子へテスターを当てる検査ではなく、強制充電やコード消去は案内しない","source":"https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P0A94/P0A94-587/ （手順5の項目・条件を確認。判定表の整合性は未解決）"},"options":[["保存時のVB・VL判定を読む","p0a94Frame"]]},
     p0a94Frame: {"title":"P0A94-587：故障時のVBとVLを別々に判定","text":"同じフリーズフレームの2項目を比較します。VBだけが範囲外ならバッテリースマートユニット側、VLだけが範囲外ならインバーター側へ向かうのが原資料の分岐です。両方が範囲内、または両方が範囲外の場合は、ここでは片側に決めず次のブロック電圧比較へ進みます。","measurements":[],"procedure":{"phase":"保存データの参考比較／部品交換の確定ではない","tool":"診断機の保存済みフリーズフレーム表示","condition":"INF587の同一発生記録。欠落・単位不明・別時刻なら判定保留。原資料の前段条件と車両適合の確認が別途必要","point":"Power Resource VB（V）とVL-Voltage before Boosting（V）。VH-Voltage after Boosting（昇圧後）でVLを代用しない","standard":"各々160 V未満または285 V超を範囲外とする。160 V・285 Vちょうどは範囲内。これは当該保存データの切り分け値で、全運転域の正常電圧ではない","stop":"両方が範囲内でも車両正常とはしない。両方が範囲外でも両部品故障とはしない。保存データが不足する場合は比較結果を付けず保留","source":"原資料手順6の表：https://charm.li/images/IMP33Q313/asian881/66014302/ （2026-10-29確認）"},"options":[["次段のブロック電圧比較を読む（結果選択ではない）","p0a94Blocks"]]},
@@ -18792,7 +18807,7 @@ function renderFocusedDiagnosis(result) {
 function buildFocusedDiagnosisWorksheet(plan) {
   const graph = getFocusedDiagnosisGraph(plan);
   const route = plan.routes.find((item) => item.id === plan.selected);
-  const lines = ["車両別診断手順書・下書き", "車種適合・基準値・実測の実施は未検証。部品交換の確定指示ではありません。", `対象車両：${plan.vehicle || "未入力"}`, `選択車両情報：${JSON.stringify(plan.vehicleProfile || {})}`, `DTC：${plan.code || "未入力"}`, `症状：${plan.symptom || "未入力"}`, `経路：${route?.title || "未選択"}`, ""];
+  const lines = ["車両別診断手順書・下書き", "車種適合・基準値・実測の実施は未検証。部品交換の確定指示ではありません。", `対象車両：${plan.vehicle || "未入力"}`, `選択車両情報：${JSON.stringify(plan.vehicleProfile || {})}`, `DTC：${plan.code ? formatDtcReference(plan.code, plan.subcode) : "未入力"}`, `症状：${plan.symptom || "未入力"}`, `経路：${route?.title || "未選択"}`, ""];
   const entries = [...plan.history, { nodeId: plan.nodeId, label: "未回答／現在の到達点", observation: plan.observation }];
   entries.forEach((entry, index) => {
     const node = graph[entry.nodeId];
@@ -18817,7 +18832,7 @@ function downloadFocusedDiagnosisWorksheet(plan, status) {
     objectUrl = URL.createObjectURL(new Blob(["\uFEFF", buildFocusedDiagnosisWorksheet(plan)], { type: "text/plain;charset=utf-8" }));
     link = document.createElement("a");
     link.href = objectUrl;
-    link.download = `診断手順書_下書き_${plan.code || "症状"}.txt`;
+    link.download = `診断手順書_下書き_${plan.code || "症状"}${plan.subcode ? "-" + plan.subcode : ""}.txt`;
     document.body.appendChild(link);
     link.click();
     status.textContent = "保存を開始しました。完了はブラウザーのダウンロード一覧で確認してください。";
