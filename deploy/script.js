@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.705";
+const APP_VERSION = "3.13.706";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -18707,6 +18707,35 @@ function applyFocusedDiagnosis(result) {
   return result;
 }
 
+function getFocusedMeasurementFields(plan, nodeId = plan.nodeId) {
+  if (plan.selected !== "zvw30-inverter-preparation") return [];
+  const fields = {
+    p324eWiring: [
+      ["isolation", "安全処置・指定点0 V確認の記録", "確認者、日時、指定測定点、測定器、表示値。未確認なら空欄"],
+      ["connector", "コネクター接続・切離条件の記録", "接続状態、A59とIGCTリレーの切離、端子図の照合状況"],
+      ["b", "A59-10（+B）→IGCTソケット5（Ω）", "表示値と単位。OL表示はそのまま記録"],
+      ["b2", "A59-9（+B2）→IGCTソケット5（Ω）", "表示値と単位"],
+      ["gnd1", "A59-28（GND1）→車体アース（Ω）", "表示値と単位"],
+      ["gnd2", "A59-27（GND2）→車体アース（Ω）", "表示値と単位"],
+      ["bGround", "A59-10（+B）→車体アース（短絡検査）", "表示値・単位・レンジ。OLは上限と取扱説明書も記録"],
+      ["b2Ground", "A59-9（+B2）→車体アース（短絡検査）", "表示値・単位・レンジ。OLを自動的に正常扱いしない"],
+      ["other", "他回路との短絡検査の記録", "配線図で照合した全測定端子対・各表示値・単位。+Bと+B2相互は対象外"]
+    ],
+    p0a94Live: [
+      ["vb", "ライブVB（V）", "HV battery voltage / Power Resource VBの取得済み値"],
+      ["vl", "ライブVL（V）", "VL-Voltage before Boostingの取得済み値"],
+      ["vh", "ライブVH（V）", "VH-Voltage after Boostingの取得済み値"],
+      ["context", "ライブ取得時刻・車両状態", "同一取得の時刻、READY／IG、レンジ、停車／走行、エンジン状態"]
+    ],
+    p0a94Frame: [
+      ["record", "フリーズフレームの識別情報", "DTC・INF、発生記録IDまたは時刻、診断機表示名"],
+      ["vb", "保存時Power Resource VB（V）", "同一フリーズフレームの値。現在値で代用しない"],
+      ["vl", "保存時VL-Voltage before Boosting（V）", "同一フリーズフレームの値。VHで代用しない"]
+    ]
+  };
+  return fields[nodeId] || [];
+}
+
 function renderFocusedDiagnosis(result) {
   const plan = result.focusedDiagnosis;
   flowChart.focusedDiagnosisResult = result;
@@ -18768,6 +18797,29 @@ function renderFocusedDiagnosis(result) {
   }
   content.querySelector("h4").tabIndex = -1;
   if (plan.selected) {
+    const measurements = getFocusedMeasurementFields(plan);
+    if (measurements.length) {
+      const status = document.createElement("p");
+      status.setAttribute("role", "status");
+      const update = () => {
+        const count = measurements.filter(([key]) => String(plan.observation[`measurement_${key}`] || "").trim()).length;
+        status.textContent = `項目別記録：${count} / ${measurements.length}欄に入力あり。空欄は未測定／未記録。入力数は検査完了・適合・安全の確認ではありません。数値の自動判定は行いません。`;
+      };
+      content.appendChild(status);
+      for (const [key, title, placeholder] of measurements) {
+        const label = document.createElement("label");
+        label.textContent = title;
+        const field = document.createElement("textarea");
+        field.rows = 2;
+        field.maxLength = 3000;
+        field.placeholder = placeholder;
+        field.value = plan.observation[`measurement_${key}`] || "";
+        field.addEventListener("input", () => { plan.observation[`measurement_${key}`] = field.value; update(); });
+        label.appendChild(field);
+        content.appendChild(label);
+      }
+      update();
+    }
     for (const [key, labelText, placeholder] of [
       ["reference", "この車両の基準値・単位・出典", "型式／エンジン、測定条件、基準値と単位、整備書名・版・ページ。未取得なら空欄。"],
       ["actual", "実測値・単位・測定条件", "回転数・暖機状態などの条件と実測値。未測定なら空欄。"]
@@ -18809,10 +18861,20 @@ function buildFocusedDiagnosisWorksheet(plan) {
   const route = plan.routes.find((item) => item.id === plan.selected);
   const lines = ["車両別診断手順書・下書き", "車種適合・基準値・実測の実施は未検証。部品交換の確定指示ではありません。", `対象車両：${plan.vehicle || "未入力"}`, `選択車両情報：${JSON.stringify(plan.vehicleProfile || {})}`, `DTC：${plan.code ? formatDtcReference(plan.code, plan.subcode) : "未入力"}`, `症状：${plan.symptom || "未入力"}`, `経路：${route?.title || "未選択"}`, ""];
   const entries = [...plan.history, { nodeId: plan.nodeId, label: "未回答／現在の到達点", observation: plan.observation }];
+  lines.push(`経路選定の根拠・適用状況：${plan.reason || "未記録"}`, "");
   entries.forEach((entry, index) => {
     const node = graph[entry.nodeId];
     lines.push(`${index + 1}. ${node.title}`, node.text, `確認対象：${node.measurements.join("、") || "この段階で追加指定なし"}`, `基準値・単位・出典（ユーザー入力）：${entry.observation?.reference || "未取得"}`, `実測値・単位・条件（ユーザー入力）：${entry.observation?.actual || "未測定／未記録"}`, `結果（ユーザー選択）：${entry.label}`, "");
     lines.push(...getFocusedProcedureDetails(node), "");
+    const fields = getFocusedMeasurementFields(plan, entry.nodeId);
+    if (fields.length) {
+      lines.push("項目別記録（ユーザー入力・未検証。記入は検査完了や適合の証明ではない）：");
+      for (const [key, title] of fields) {
+        const value = String(entry.observation?.[`measurement_${key}`] || "").trim();
+        lines.push(`${title}：${value || "未測定／未記録"}`);
+      }
+      lines.push("");
+    }
   });
   lines.push("次の選択肢：", ...graph[plan.nodeId].options.map(([label, target]) => `${label} → ${graph[target].title}`));
   if (route?.id === "workflow-catalyst-p0420-p0430") lines.push("一般診断の参考：https://www.walkerexhaust.com/support/tech-tips/diagnosing-catalytic-converter-issues.html");
