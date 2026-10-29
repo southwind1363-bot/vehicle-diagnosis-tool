@@ -1,0 +1,33 @@
+{
+  "id": "prius-2010-p0a94-587-reference",
+  "reviewedAt": "2026-10-29",
+  "sourceType": "manufacturer_repair_information_republication",
+  "sourceHost": "Operation CHARM",
+  "sourceVehicleLabel": "2010 Toyota Prius L4-1.8L (2ZR-FXE) Hybrid",
+  "dtc": "P0A94",
+  "inf": "587",
+  "domesticApplicabilityVerified": false,
+  "currentManufacturerRevisionVerified": false,
+  "vehicleTested": false,
+  "automaticReplacementDecision": false,
+  "source": "https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P0A94/P0A94-587/",
+  "visuallyReviewedTables": {
+    "freezeFrameRange": "https://charm.li/images/IMP33Q313/asian881/66014302/",
+    "freezeFrameBlockSum": "https://charm.li/images/IMP33Q313/asian881/66016518/"
+  },
+  "scopeNotes": [
+    "Only original steps 6 and 7 are explained. Earlier DTC routing, reproduction and live-data prerequisites are not implemented.",
+    "Do not infer INF587 from the parent code or claim applicability to the reported P324E co-occurrence.",
+    "Range endpoints 160 and 285 V are included; block-sum difference endpoints -40 and +25 V are excluded.",
+    "Both range flags equal means continue comparison, not normal vehicle or two faulty parts. Missing values are unknown, not zero.",
+    "No vehicle commands, automatic numeric decisions or source images are included."
+  ],
+  "unimplementedResearch": {
+    "dtcRoutingTable": "https://charm.li/images/IMP33Q313/asian881/65999488/",
+    "notes": [
+      "Step 1 table visually reviewed. It distinguishes P0A1F-129, P0A94-442 and P0A94-585 co-occurrences. Do not construct a combined-code priority without resolving overlapping matches.",
+      "The step 1 B text hyperlink points to P0AFC while the image names P0A1F-129. This inconsistency needs primary-manual review before implementing that transition.",
+      "Step 5 live comparison image did not load successfully; no live thresholds transcribed or inferred."
+    ]
+  }
+}
