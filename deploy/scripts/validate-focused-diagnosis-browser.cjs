@@ -153,6 +153,29 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const [infDownload] = await Promise.all([page.waitForEvent('download'),flow.getByRole('button',{name:'診断手順書の下書きを保存',exact:true}).click()]);
   assert.match(infDownload.suggestedFilename(),/P0A94-587/);
   assert.match(fs.readFileSync(await infDownload.path(),'utf8'),/DTC：P0A94:587/);
+  await flow.getByRole('button',{name:'記録を整理した：必要資料を確認',exact:true}).click();
+  await flow.getByRole('button',{name:'P0A94-587の保存データ比較を見る',exact:true}).click();
+  await flow.getByRole('button',{name:'保存時のVB・VL判定を読む',exact:true}).click();
+  const comparison = flow.getByRole('status').filter({hasText:'手順6との参考照合'});
+  const confirmFrame = flow.getByRole('checkbox',{name:/同一のP0A94-587保存記録/});
+  await flow.getByLabel('フリーズフレームの識別情報',{exact:true}).fill('架空記録 TEST-A');
+  const vb = flow.getByLabel('保存時Power Resource VB（V）',{exact:true});
+  const vl = flow.getByLabel('保存時VL-Voltage before Boosting（V）',{exact:true});
+  await vb.fill('220'); await vl.fill('159.9');
+  assert.match(await comparison.innerText(),/照合保留/);
+  await confirmFrame.check();
+  for (const [b,l,expected] of [
+    ['220','159.9','次の照合先はインバーター側'],['285.1','160','次の照合先はバッテリースマートユニット側'],
+    ['１６０ Ｖ','285','次の確認は同じ発生記録の全ブロック'],['0','286','次の確認は同じ発生記録の全ブロック'],
+    ['','160','照合保留'],['220','OL','照合保留'],['220 mV','160','照合保留']
+  ]) {
+    await vb.fill(b); await vl.fill(l);
+    assert((await comparison.innerText()).includes(expected));
+    assert.equal(await flow.getByRole('button',{name:/次段のブロック電圧比較/}).count(),expected.startsWith('次の確認') ? 1 : 0);
+    const worksheet = await page.evaluate(()=>buildFocusedDiagnosisWorksheet(flowChart.focusedDiagnosisResult.focusedDiagnosis));
+    assert(worksheet.includes(await comparison.innerText()));
+  }
+  await diagnose('P0A94-587');
   await page.locator('#obdCode').fill('P0A94-172');
   await flow.getByRole('button',{name:'記録を整理した：必要資料を確認',exact:true}).click();
   assert.match(await flow.innerText(),/診断条件が変わりました/);

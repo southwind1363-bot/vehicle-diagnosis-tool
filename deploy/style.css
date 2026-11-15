@@ -3362,3 +3362,4 @@ body.dark .flow-node-measure .flow-step {
     transition: none !important;
   }
 }
+#flowChart button[hidden] { display: none; }

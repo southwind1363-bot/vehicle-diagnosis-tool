@@ -22,7 +22,7 @@
     "Do not infer INF587 from the parent code or claim applicability to the reported P324E co-occurrence.",
     "Range endpoints 160 and 285 V are included; block-sum difference endpoints -40 and +25 V are excluded.",
     "Both range flags equal means continue comparison, not normal vehicle or two faulty parts. Missing values are unknown, not zero.",
-    "No vehicle commands, automatic numeric decisions or source images are included."
+    "Release 3.13.707 compares manually entered saved VB and VL with the step 6 reference after the user confirms the acquisition and entry conditions. Only matching range flags offer the step 7 comparison. This is a reference-table lookup; domestic applicability, co-occurring code priority and replacement decisions remain unverified."
   ],
   "unimplementedResearch": {
     "dtcRoutingTable": "https://charm.li/images/IMP33Q313/asian881/65999488/",

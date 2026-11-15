@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.706";
+const APP_VERSION = "3.13.707";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -18736,6 +18736,29 @@ function getFocusedMeasurementFields(plan, nodeId = plan.nodeId) {
   return fields[nodeId] || [];
 }
 
+function getSavedVoltageComparison(plan, nodeId, observation = {}) {
+  if (nodeId !== "p0a94Frame" || plan.selected !== "zvw30-inverter-preparation" ||
+      plan.code !== "P0A94" || plan.subcode !== "587") return null;
+  const prefix = "海外修理資料・手順6との参考照合（国内適合未確認）。";
+  const result = (message, compareBlocks = false) => ({ text: prefix + message, compareBlocks });
+  if (!observation.frameConfirmed || !observation.measurement_record?.trim()) {
+    return result("照合保留。同一発生記録の識別情報を記入し、取得条件を確認してください。");
+  }
+  const readVolts = (value) => {
+    const match = /^([0-9]{1,4}(?:\.[0-9]{1,6})?)\s*V?$/i.exec(String(value ?? "").normalize("NFKC").trim());
+    return match ? Number(match[1]) : null;
+  };
+  const vb = readVolts(observation.measurement_vb);
+  const vl = readVolts(observation.measurement_vl);
+  if (vb === null || vl === null) return result("照合保留。保存時VB・VLをV単位の数値で記録してください。");
+  const vbOutside = vb < 160 || vb > 285;
+  const vlOutside = vl < 160 || vl > 285;
+  const values = `VB ${vb} V（${vbOutside ? "範囲外" : "範囲内"}）、VL ${vl} V（${vlOutside ? "範囲外" : "範囲内"}）。`;
+  if (vbOutside === vlOutside) return result(values + "次の確認は同じ発生記録の全ブロック電圧の合計とVBの比較です。", true);
+  return result(values + (vbOutside ? "次の照合先はバッテリースマートユニット側です。" : "次の照合先はインバーター側です。") +
+    "該当車両の修理書でこの分岐の適用条件を照合してください。");
+}
+
 function renderFocusedDiagnosis(result) {
   const plan = result.focusedDiagnosis;
   flowChart.focusedDiagnosisResult = result;
@@ -18763,6 +18786,7 @@ function renderFocusedDiagnosis(result) {
       flowChart.querySelector("h4[tabindex]")?.focus();
     });
     parent.appendChild(control);
+    return control;
   };
   const header = add("今回の診断対象", plan.reason, "start");
   const vehicleLabel = document.createElement("p");
@@ -18796,14 +18820,22 @@ function renderFocusedDiagnosis(result) {
     details.slice(1).forEach((text) => { const paragraph = document.createElement("p"); paragraph.textContent = text; detailCard.appendChild(paragraph); });
   }
   content.querySelector("h4").tabIndex = -1;
+  let blockComparisonButton;
+  const savedComparison = () => getSavedVoltageComparison(plan, plan.nodeId, plan.observation);
   if (plan.selected) {
     const measurements = getFocusedMeasurementFields(plan);
     if (measurements.length) {
       const status = document.createElement("p");
       status.setAttribute("role", "status");
+      const comparison = savedComparison() ? document.createElement("p") : null;
       const update = () => {
         const count = measurements.filter(([key]) => String(plan.observation[`measurement_${key}`] || "").trim()).length;
-        status.textContent = `項目別記録：${count} / ${measurements.length}欄に入力あり。空欄は未測定／未記録。入力数は検査完了・適合・安全の確認ではありません。数値の自動判定は行いません。`;
+        status.textContent = `項目別記録：${count} / ${measurements.length}欄に入力あり。空欄は未測定／未記録。入力数は検査完了・適合・安全の確認ではありません。`;
+        if (comparison) {
+          const reference = savedComparison();
+          comparison.textContent = reference.text;
+          if (blockComparisonButton) blockComparisonButton.hidden = !reference.compareBlocks;
+        }
       };
       content.appendChild(status);
       for (const [key, title, placeholder] of measurements) {
@@ -18817,6 +18849,16 @@ function renderFocusedDiagnosis(result) {
         field.addEventListener("input", () => { plan.observation[`measurement_${key}`] = field.value; update(); });
         label.appendChild(field);
         content.appendChild(label);
+      }
+      if (comparison) {
+        const label = document.createElement("label");
+        const confirm = document.createElement("input");
+        confirm.type = "checkbox";
+        confirm.checked = plan.observation.frameConfirmed === true;
+        confirm.addEventListener("change", () => { plan.observation.frameConfirmed = confirm.checked; update(); });
+        label.append(confirm, " 手順6へ進む前提と併発DTCを照合し、同一のP0A94-587保存記録のVB・VLを選択した");
+        comparison.setAttribute("role", "status");
+        content.append(label, comparison);
       }
       update();
     }
@@ -18836,11 +18878,17 @@ function renderFocusedDiagnosis(result) {
       content.appendChild(label);
     }
   }
-  node.options.forEach(([label, target]) => button(content, label, () => {
+  node.options.forEach(([label, target]) => {
+    const option = button(content, label, () => {
     plan.history.push({ nodeId: plan.nodeId, label, observation: { ...plan.observation } });
     plan.nodeId = target;
     plan.observation = {};
-  }));
+    });
+    if (target === "p0a94Blocks" && savedComparison()) {
+      blockComparisonButton = option;
+      option.hidden = !savedComparison().compareBlocks;
+    }
+  });
   if (node.options.length) button(content, "未測定・再現せず・判断できない", () => { plan.history.push({ nodeId: plan.nodeId, label: "未測定／判定保留", observation: { ...plan.observation } }); plan.nodeId = "unknown"; plan.observation = {}; });
   if (plan.history.length) button(content, "一つ前の確認に戻る", () => { const previous = plan.history.pop(); plan.nodeId = previous.nodeId; plan.observation = previous.observation || {}; });
   if (plan.selected) button(content, "経路・結果を選び直す", () => { plan.selected = plan.routes.length === 1 ? plan.routes[0].id : null; plan.history = []; plan.nodeId = "start"; plan.observation = {}; });
@@ -18873,10 +18921,14 @@ function buildFocusedDiagnosisWorksheet(plan) {
         const value = String(entry.observation?.[`measurement_${key}`] || "").trim();
         lines.push(`${title}：${value || "未測定／未記録"}`);
       }
+      const comparison = getSavedVoltageComparison(plan, entry.nodeId, entry.observation);
+      if (comparison) lines.push(comparison.text);
       lines.push("");
     }
   });
-  lines.push("次の選択肢：", ...graph[plan.nodeId].options.map(([label, target]) => `${label} → ${graph[target].title}`));
+  const reference = getSavedVoltageComparison(plan, plan.nodeId, plan.observation);
+  const next = graph[plan.nodeId].options.filter(([, target]) => target !== "p0a94Blocks" || !reference || reference.compareBlocks);
+  lines.push("次の選択肢：", ...next.map(([label, target]) => `${label} → ${graph[target].title}`));
   if (route?.id === "workflow-catalyst-p0420-p0430") lines.push("一般診断の参考：https://www.walkerexhaust.com/support/tech-tips/diagnosing-catalytic-converter-issues.html");
   else lines.push(`登録手順の出典：${route?.workflow?.source || "登録済み症状フロー／個別手順未登録"}`);
   return lines.join("\n");
