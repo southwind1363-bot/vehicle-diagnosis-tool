@@ -175,6 +175,32 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const worksheet = await page.evaluate(()=>buildFocusedDiagnosisWorksheet(flowChart.focusedDiagnosisResult.focusedDiagnosis));
     assert(worksheet.includes(await comparison.innerText()));
   }
+  await vb.fill('251.4'); await vl.fill('251.4');
+  await flow.getByRole('button',{name:/次段のブロック電圧比較/}).click();
+  const blockStatus = flow.getByRole('status').filter({hasText:'手順7との参考照合'});
+  const battery = flow.getByLabel('保存時HV battery voltage（V）',{exact:true});
+  const block = n => flow.getByLabel(`保存時ブロック${n}（V）`,{exact:true});
+  await battery.fill('251.4');
+  for (let n=1;n<=13;n++) await block(n).fill('15.1');
+  const confirmBlocks = flow.getByRole('checkbox',{name:/全14ブロックを選択/});
+  await confirmBlocks.check();
+  assert.match(await blockStatus.innerText(),/ブロック番号：14/);
+  for (const [last,expected] of [
+    ['OL','照合保留'],['15.1 mV','照合保留'],['15.1','バッテリースマートユニット側'],
+    ['15.100001','インバーター側'],['80.099999','インバーター側'],['80.1','バッテリースマートユニット側']
+  ]) {
+    await block(14).fill(last);
+    const message = await blockStatus.innerText();
+    assert(message.includes(expected) && message.includes('TEST-A'),message);
+    const worksheet = await page.evaluate(()=>buildFocusedDiagnosisWorksheet(flowChart.focusedDiagnosisResult.focusedDiagnosis));
+    assert(worksheet.includes(message));
+  }
+  await confirmBlocks.uncheck();
+  assert.match(await blockStatus.innerText(),/照合保留/);
+  await flow.getByRole('button',{name:'一つ前の確認に戻る',exact:true}).click();
+  await flow.getByRole('button',{name:/次段のブロック電圧比較/}).click();
+  assert.equal(await block(14).inputValue(),'');
+  assert.equal(await confirmBlocks.isChecked(),false);
   await diagnose('P0A94-587');
   await page.locator('#obdCode').fill('P0A94-172');
   await flow.getByRole('button',{name:'記録を整理した：必要資料を確認',exact:true}).click();

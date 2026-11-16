@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.707";
+const APP_VERSION = "3.13.708";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -18709,6 +18709,14 @@ function applyFocusedDiagnosis(result) {
 
 function getFocusedMeasurementFields(plan, nodeId = plan.nodeId) {
   if (plan.selected !== "zvw30-inverter-preparation") return [];
+  if (nodeId === "p0a94Blocks" && plan.code === "P0A94" && plan.subcode === "587") {
+    return [
+      ["batteryVb", "保存時HV battery voltage（V）", "手順7で指定された同一発生記録のバッテリー電圧"],
+      ...Array.from({ length: 14 }, (_, index) => [
+        "block" + (index + 1), `保存時ブロック${index + 1}（V）`, "診断機の該当番号の保存値"
+      ])
+    ];
+  }
   const fields = {
     p324eWiring: [
       ["isolation", "安全処置・指定点0 V確認の記録", "確認者、日時、指定測定点、測定器、表示値。未確認なら空欄"],
@@ -18736,20 +18744,43 @@ function getFocusedMeasurementFields(plan, nodeId = plan.nodeId) {
   return fields[nodeId] || [];
 }
 
+function readSavedVolts(value) {
+  const match = /^([0-9]{1,4}(?:\.[0-9]{1,6})?)\s*V?$/i.exec(String(value ?? "").normalize("NFKC").trim());
+  return match ? Number(match[1]) : null;
+}
+
 function getSavedVoltageComparison(plan, nodeId, observation = {}) {
-  if (nodeId !== "p0a94Frame" || plan.selected !== "zvw30-inverter-preparation" ||
+  if (plan.selected !== "zvw30-inverter-preparation" ||
       plan.code !== "P0A94" || plan.subcode !== "587") return null;
+  if (nodeId === "p0a94Blocks") {
+    const frame = plan.history.find(entry => entry.nodeId === "p0a94Frame")?.observation;
+    const record = frame?.measurement_record?.trim();
+    const result = message => ({ text: `海外修理資料・手順7との参考照合（国内適合未確認）。発生記録：${record || "不明"}。${message}` });
+    if (!frame || !getSavedVoltageComparison(plan, "p0a94Frame", frame)?.compareBlocks || !observation.frameConfirmed) {
+      return result("照合保留。手順6と同じ発生記録のHV battery voltageと全14ブロックを確認してください。");
+    }
+    const vb = readSavedVolts(observation.measurement_batteryVb);
+    if (vb === null) return result("照合保留。保存時HV battery voltageをV単位で記録してください。");
+    const missing = [];
+    let sumMicrovolts = 0;
+    for (let number = 1; number <= 14; number++) {
+      const volts = readSavedVolts(observation["measurement_block" + number]);
+      if (volts === null) missing.push(number);
+      else sumMicrovolts += Math.round(volts * 1e6);
+    }
+    if (missing.length) return result(`照合保留。保存値を確認するブロック番号：${missing.join("、")}。`);
+    const delta = sumMicrovolts - Math.round(vb * 1e6);
+    const target = delta > -40e6 && delta < 25e6 ? "インバーター側" : "バッテリースマートユニット側";
+    return result(`全14ブロック合計 ${sumMicrovolts / 1e6} V、保存時VB ${vb} V、合計 − VB は ${delta / 1e6} V。次の照合先は${target}です。`);
+  }
+  if (nodeId !== "p0a94Frame") return null;
   const prefix = "海外修理資料・手順6との参考照合（国内適合未確認）。";
   const result = (message, compareBlocks = false) => ({ text: prefix + message, compareBlocks });
   if (!observation.frameConfirmed || !observation.measurement_record?.trim()) {
     return result("照合保留。同一発生記録の識別情報を記入し、取得条件を確認してください。");
   }
-  const readVolts = (value) => {
-    const match = /^([0-9]{1,4}(?:\.[0-9]{1,6})?)\s*V?$/i.exec(String(value ?? "").normalize("NFKC").trim());
-    return match ? Number(match[1]) : null;
-  };
-  const vb = readVolts(observation.measurement_vb);
-  const vl = readVolts(observation.measurement_vl);
+  const vb = readSavedVolts(observation.measurement_vb);
+  const vl = readSavedVolts(observation.measurement_vl);
   if (vb === null || vl === null) return result("照合保留。保存時VB・VLをV単位の数値で記録してください。");
   const vbOutside = vb < 160 || vb > 285;
   const vlOutside = vl < 160 || vl > 285;
@@ -18856,7 +18887,9 @@ function renderFocusedDiagnosis(result) {
         confirm.type = "checkbox";
         confirm.checked = plan.observation.frameConfirmed === true;
         confirm.addEventListener("change", () => { plan.observation.frameConfirmed = confirm.checked; update(); });
-        label.append(confirm, " 手順6へ進む前提と併発DTCを照合し、同一のP0A94-587保存記録のVB・VLを選択した");
+        label.append(confirm, plan.nodeId === "p0a94Blocks"
+          ? " 手順6と同じ発生記録のHV battery voltageと全14ブロックを選択した"
+          : " 手順6へ進む前提と併発DTCを照合し、同一のP0A94-587保存記録のVB・VLを選択した");
         comparison.setAttribute("role", "status");
         content.append(label, comparison);
       }

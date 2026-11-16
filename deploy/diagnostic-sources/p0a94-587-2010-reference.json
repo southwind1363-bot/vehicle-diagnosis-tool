@@ -4,6 +4,8 @@
   "sourceType": "manufacturer_repair_information_republication",
   "sourceHost": "Operation CHARM",
   "sourceVehicleLabel": "2010 Toyota Prius L4-1.8L (2ZR-FXE) Hybrid",
+  "blockNumberingSource": "2010 Prius Diagnostic Trouble Code Chart, pp. 40-41, P3011-123 through P3024-123 (blocks 1 through 14): https://attachments.priuschat.com/attachment-files/2021/07/209702_DTC_Codes.pdf",
+  "step7Implementation": "3.13.708 uses the previously reviewed step 7 freeze-frame table. Require step 6 continuation, same-record confirmation, saved HV battery voltage and all fourteen individually numbered voltages. Strict lower and upper bounds use integer microvolts to preserve six-decimal input precision.",
   "dtc": "P0A94",
   "inf": "587",
   "domesticApplicabilityVerified": false,
