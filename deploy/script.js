@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.710";
+const APP_VERSION = "3.13.711";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -18733,6 +18733,32 @@ function applyFocusedDiagnosis(result) {
   return result;
 }
 
+function getPairedRecordNextCheck(observation = {}) {
+  // Review both codes at each step. This order is for collecting records only.
+  const stages = [
+    ["Inf", "のDTC詳細画面で、親コードに続くINFを確認してください。"],
+    ["Ecu", "のDTC一覧で、検出ECU名と現在／履歴の区分を確認してください。"],
+    ["Frame", "のフリーズフレームで、記録IDまたは取得時刻を確認してください。"],
+    ["Order", "の保存記録で、Occurrence Orderの表示と取得時点を確認してください。表示がなければ発生順は不明として保存できます。"]
+  ];
+  const unavailable = /^(?:未取得|未記録|未確認|未入力|不明|未対応|表示なし|なし|n\/?a|unknown|[-—?]+)$/i;
+  for (const [suffix, instruction] of stages) {
+    const missing = [];
+    for (const code of ["P0A94", "P324E"]) {
+      const key = code + suffix;
+      const raw = String(observation["measurement_" + key] || "").normalize("NFKC").trim();
+      // Match the recorded Toyota INF or same-parent DTC + INF, never a parent code alone.
+      const infPattern = new RegExp("^(?:" + code + "[-:]\\s*)?(?:INF\\s*[:=]?\\s*)?[0-9]{1,4}$", "i");
+      const uncertainInf = suffix === "Inf" && !raw.split(/\s*[,、;／/・\n]\s*/u).every(part => infPattern.test(part));
+      if (!raw || unavailable.test(raw) || uncertainInf) missing.push({ code, key });
+    }
+    if (missing.length) {
+      return { key: missing[0].key, text: "次に確認する記録：" + missing.map(item => item.code).join("・") + instruction };
+    }
+  }
+  return { key: null, text: "次に確認する記録：記入した両コードの元表示を照合し、発生順が不明ならその状態を保存してください。優先診断の指定は車両に合う国内修理書で確認します。" };
+}
+
 function getFocusedMeasurementFields(plan, nodeId = plan.nodeId) {
   if (plan.selected !== "zvw30-inverter-preparation") return [];
   if (nodeId === "pairedRecords") {
@@ -18908,6 +18934,14 @@ function renderFocusedDiagnosis(result) {
   if (!plan.selected) plan.routes.forEach((item) => button(header, item.title, () => { plan.selected = item.id; plan.nodeId = "start"; plan.history = []; plan.observation = {}; }));
   if (plan.history.length) add("選択した結果（今回の画面内のみ）", plan.history.map((entry) => entry.label).join(" → "), "start");
   const content = add(node.title, node.text);
+  if (plan.nodeId === "pairedPriority" || plan.nodeId === "pairedTiming") {
+    const records = plan.history.find(entry => entry.nodeId === "pairedRecords");
+    if (records) {
+      const reminder = document.createElement("p");
+      reminder.textContent = getPairedRecordNextCheck(records.observation).text;
+      content.appendChild(reminder);
+    }
+  }
   const details = getFocusedProcedureDetails(node);
   if (details.length) {
     const detailCard = add("測定条件・安全・判定根拠", details[0], "safety");
@@ -18924,9 +18958,23 @@ function renderFocusedDiagnosis(result) {
       const wiringReview = () => getP324eHarnessReview(plan, plan.nodeId, plan.observation);
       const comparison = savedComparison() ? document.createElement("p") : null;
       const wiringStatus = wiringReview() ? document.createElement("p") : null;
+      const paired = plan.nodeId === "pairedRecords";
+      const pairedFields = new Map();
+      const jump = paired ? document.createElement("button") : null;
+      if (jump) {
+        jump.type = "button";
+        jump.className = "secondary-button";
+        jump.textContent = "該当する記録欄へ";
+        jump.addEventListener("click", () => pairedFields.get(getPairedRecordNextCheck(plan.observation).key)?.focus());
+      }
       const update = () => {
         const count = measurements.filter(([key]) => String(plan.observation[`measurement_${key}`] || "").trim()).length;
         status.textContent = `項目別記録：${count} / ${measurements.length}欄に入力あり。空欄は未測定／未記録。入力数は検査完了・適合・安全の確認ではありません。`;
+        if (paired) {
+          const nextCheck = getPairedRecordNextCheck(plan.observation);
+          status.textContent = nextCheck.text;
+          jump.hidden = !nextCheck.key;
+        }
         if (comparison) {
           const reference = savedComparison();
           comparison.textContent = reference.text;
@@ -18935,6 +18983,7 @@ function renderFocusedDiagnosis(result) {
         if (wiringStatus) wiringStatus.textContent = wiringReview();
       };
       content.appendChild(status);
+      if (jump) content.appendChild(jump);
       if (wiringStatus) {
         wiringStatus.setAttribute("role", "status");
         content.appendChild(wiringStatus);
@@ -18947,6 +18996,7 @@ function renderFocusedDiagnosis(result) {
         field.maxLength = 3000;
         field.placeholder = placeholder;
         field.value = plan.observation[`measurement_${key}`] || "";
+        if (paired) pairedFields.set(key, field);
         field.addEventListener("input", () => { plan.observation[`measurement_${key}`] = field.value; update(); });
         label.appendChild(field);
         content.appendChild(label);
@@ -19022,7 +19072,7 @@ function buildFocusedDiagnosisWorksheet(plan) {
       const inf = pairedEntry.observation?.["measurement_" + code + "Inf"]?.trim();
       lines.push(`${code}　INF：${inf || "未記録"}`);
     }
-    lines.push("");
+    lines.push(getPairedRecordNextCheck(pairedEntry.observation).text, "");
   }
   lines.push(`経路選定の根拠・適用状況：${plan.reason || "未記録"}`, "");
   entries.forEach((entry, index) => {

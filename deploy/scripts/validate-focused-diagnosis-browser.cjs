@@ -159,6 +159,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const companion = flow.getByLabel(other+' の詳細コード（INF）',{exact:true});
     assert.equal(await companion.inputValue(),'');
     await companion.fill('未取得');
+    const nextCheck = flow.getByRole('status').filter({hasText:'次に確認する記録'});
+    const nextText = await nextCheck.innerText();
+    assert(nextText.includes(other) && nextText.includes('DTC詳細画面'));
+    await go('該当する記録欄へ');
+    assert.equal(await page.evaluate(()=>document.activeElement.closest('label').textContent), (inf ? other : 'P0A94')+' の詳細コード（INF）');
     await flow.getByLabel(primary+' のOccurrence Order・取得時点',{exact:true}).fill('1・初回保存');
     await flow.getByLabel(primary+' の発生記録',{exact:true}).fill('模擬記録A');
     await flow.getByLabel(other+' の発生記録',{exact:true}).fill('模擬記録B');
@@ -168,6 +173,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const report = fs.readFileSync(await download.path(),'utf8');
     assert(report.includes(primary+'　INF：'+(inf || '未記録')));
     assert(report.includes(other+'　INF：未取得'));
+    assert(report.includes(nextText));
     assert(report.includes(primary+' のOccurrence Order・取得時点：1・初回保存'));
     assert(report.includes(other+' のOccurrence Order・取得時点：未測定／未記録'));
     for (const expected of [primary+' の発生記録：模擬記録A',other+' の発生記録：模擬記録B','発生順は未確定',other+' の詳細コード（INF）：未取得']) assert(report.includes(expected));
@@ -176,6 +182,24 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await go('発生記録を識別できた：優先診断表を照合');
     assert.match(await flow.innerText(),/国内修理書の表で両INF/);
   }
+  await diagnose('P0A94-587');
+  await go('両コードが保存記録にある：併記する');
+  const nextRecord = flow.getByRole('status').filter({hasText:'次に確認する記録'});
+  const infField = flow.getByLabel('P324E の詳細コード（INF）',{exact:true});
+  for (const value of ['P324E','P0A94-587','未取得','788?']) {
+    await infField.fill(value);
+    assert.match(await nextRecord.innerText(),/P324EのDTC詳細画面/);
+  }
+  await infField.fill('Ｐ３２４Ｅ－７８８');
+  for (const [field,stage] of [['検出ECU・現在／履歴','DTC一覧'],['発生記録','フリーズフレーム'],['Occurrence Order・取得時点','Occurrence Order']]) {
+    assert((await nextRecord.innerText()).includes(stage));
+    await flow.getByLabel('P0A94 の'+field,{exact:true}).fill('模擬記録A');
+    assert((await nextRecord.innerText()).includes('P324Eの'));
+    await flow.getByLabel('P324E の'+field,{exact:true}).fill('模擬記録B');
+  }
+  assert.equal(await flow.getByRole('button',{name:'該当する記録欄へ'}).count(),0);
+  await infField.fill('');
+  assert.match(await nextRecord.innerText(),/P324EのDTC詳細画面/);
   await diagnose('P324E-788');
   await go('記録を整理した：必要資料を確認');
   await go('P324E-788の数値付き参考手順を見る');
