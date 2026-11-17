@@ -149,6 +149,49 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const report = await page.evaluate(()=>buildFocusedDiagnosisWorksheet(flowChart.focusedDiagnosisResult.focusedDiagnosis));
     assert(report.includes('DTC：'+detailed),code);
   }
+  await diagnose('P324E-788');
+  const go = name => flow.getByRole('button',{name,exact:true}).click();
+  await go('記録を整理した：必要資料を確認');
+  await go('P324E-788の数値付き参考手順を見る');
+  const back = () => go('一つ前の確認に戻る');
+  for (const [choice,expected] of [
+    ['U0110-159／160／656／657が併発','その通信DTCの診断表'],
+    ['P0A94など他コードが併発・併発状況不明','併発時の優先診断表']
+  ]) {
+    await go(choice);
+    assert((await flow.innerText()).includes(expected));
+    assert.equal(await flow.getByLabel('A59-10（+B）→IGCTソケット5（Ω）',{exact:true}).count(),0);
+    await back();
+  }
+  await go('P324E-788単独を保存記録で確認した');
+  await flow.getByLabel('この車両の基準値・単位・出典',{exact:true}).fill('模擬適用資料');
+  await flow.getByLabel('実測値・単位・測定条件',{exact:true}).fill('模擬記録：指定点0 V');
+  await go('指定点の0 Vと適用資料を記録で確認した');
+  await go('接続不良あり');
+  assert((await flow.innerText()).includes('接続不良が見つかった箇所を優先'));
+  await back();
+  await go('接続は良好・指定の切離条件で得た抵抗記録あり');
+  const harness = flow.getByRole('status').filter({hasText:'配線記録の参考照合'});
+  const fillHarness = (name,value) => flow.getByLabel(name,{exact:true}).fill(value);
+  const bLine = 'A59-10（+B）→IGCTソケット5（Ω）';
+  await fillHarness(bLine,'1 Ω');
+  assert.match(await harness.innerText(),/A59-10.*範囲外/);
+  await fillHarness(bLine,'0.99 Ω');
+  for (const label of ['A59-9（+B2）→IGCTソケット5（Ω）','A59-28（GND1）→車体アース（Ω）','A59-27（GND2）→車体アース（Ω）']) await fillHarness(label,'0.1');
+  const ground='A59-10（+B）→車体アース（短絡検査）';
+  await fillHarness('A59-9（+B2）→車体アース（短絡検査）','0.01 MΩ');
+  for (const [value,expected] of [['OL','判定保留'],['10000','判定保留'],['10 mΩ','判定保留'],['9999 Ω','範囲外'],['10 kΩ','他回路との短絡検査の全端子対']]) {
+    await fillHarness(ground,value);
+    const message = await harness.innerText();
+    assert(message.includes(expected),message);
+    assert((await page.evaluate(()=>buildFocusedDiagnosisWorksheet(flowChart.focusedDiagnosisResult.focusedDiagnosis))).includes(message));
+  }
+  await back(); await back();
+  await flow.getByLabel('実測値・単位・測定条件',{exact:true}).fill('   ');
+  await go('指定点の0 Vと適用資料を記録で確認した');
+  await go('接続は良好・指定の切離条件で得た抵抗記録あり');
+  await fillHarness(bLine,'1 Ω');
+  assert.match(await harness.innerText(),/照合保留。安全処置の段階/);
   await diagnose('P0A94-587');
   const [infDownload] = await Promise.all([page.waitForEvent('download'),flow.getByRole('button',{name:'診断手順書の下書きを保存',exact:true}).click()]);
   assert.match(infDownload.suggestedFilename(),/P0A94-587/);

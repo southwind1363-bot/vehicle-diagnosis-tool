@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.708";
+const APP_VERSION = "3.13.709";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -18652,7 +18652,16 @@ function getFocusedDiagnosisGraph(plan) {
     p0a94Live: {"title":"P0A94-587：VB・VL・VHを同じ条件で記録","text":"バッテリー電圧VB、昇圧前VL、昇圧後VHの3値を一組で確認します。1つずつ別の運転状態で読んだ値を比較しません。まず表示名・単位・時刻・車両状態を揃えて記録し、保存時データとは分けて扱います。","measurements":["記録欄にVB＝__ V、VL＝__ V、VH＝__ V、取得時刻、READY／IG、Pレンジ、停車／走行、エンジン停止／作動を記入。未取得は未取得と記載"],"procedure":{"phase":"ライブデータの記録条件を確認する参考手順","tool":"該当項目を表示できるメーカー固有データモニター。汎用OBDで未対応なら取得済みとはしない","condition":"原資料手順5：READY・Pレンジ・停車・エンジン停止での読み取りと事前の充電条件。今回の閲覧は取得済み記録の検討用。故障車をこの画面だけでREADYや負荷運転へ移行させない","point":"Powertrain / Hybrid Control / Data List。HV battery voltage (VB)（表ではPower Resource VB）、VL-Voltage before Boosting、VH-Voltage after Boosting。単位はいずれもV。診断機の表示名と対応を記録","standard":"VB・VLが両方220 V未満の場合、原資料では充電の前準備があります。220 Vは前準備の指標で故障の合否値ではありません。ライブ比較表には交換対象が重なる条件があり、未解決のため数値による交換判定は登録しない","stop":"片側だけの低値や表示欠落を充電不足と決めない。READY不能・取得条件不一致・項目未対応なら保留し、既存の保存データを確認。端子へテスターを当てる検査ではなく、強制充電やコード消去は案内しない","source":"https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P0A94/P0A94-587/ （手順5の項目・条件を確認。判定表の整合性は未解決）"},"options":[["保存時のVB・VL判定を読む","p0a94Frame"]]},
     p0a94Frame: {"title":"P0A94-587：故障時のVBとVLを別々に判定","text":"同じフリーズフレームの2項目を比較します。VBだけが範囲外ならバッテリースマートユニット側、VLだけが範囲外ならインバーター側へ向かうのが原資料の分岐です。両方が範囲内、または両方が範囲外の場合は、ここでは片側に決めず次のブロック電圧比較へ進みます。","measurements":[],"procedure":{"phase":"保存データの参考比較／部品交換の確定ではない","tool":"診断機の保存済みフリーズフレーム表示","condition":"INF587の同一発生記録。欠落・単位不明・別時刻なら判定保留。原資料の前段条件と車両適合の確認が別途必要","point":"Power Resource VB（V）とVL-Voltage before Boosting（V）。VH-Voltage after Boosting（昇圧後）でVLを代用しない","standard":"各々160 V未満または285 V超を範囲外とする。160 V・285 Vちょうどは範囲内。これは当該保存データの切り分け値で、全運転域の正常電圧ではない","stop":"両方が範囲内でも車両正常とはしない。両方が範囲外でも両部品故障とはしない。保存データが不足する場合は比較結果を付けず保留","source":"原資料手順6の表：https://charm.li/images/IMP33Q313/asian881/66014302/ （2026-10-29確認）"},"options":[["次段のブロック電圧比較を読む（結果選択ではない）","p0a94Blocks"]]},
     p0a94Blocks: {"title":"P0A94-587：全ブロック電圧の合計とVBを比較","text":"前段からこの比較へ到達する場合、同一保存記録の全Battery Block電圧を合計します。合計が下記範囲に入る場合は原資料ではインバーター側、範囲外ならバッテリースマートユニット側へ進みます。保存記録なしの場合は原資料の次のライブデータ検査へ進む構成であり、正常扱いや即交換にはなりません。","measurements":[],"procedure":{"phase":"保存データの参考比較／国内適合未確認","tool":"全ブロック値を表示する診断機または同一記録の出力","condition":"VBと全ブロック値が同じフリーズフレームに揃うこと。欠落ブロックを除いた合計や、ライブ値との混在では比較しない","point":"S＝全Battery Block電圧の合計（V）、VB＝同じ記録のHV battery voltage（V）","standard":"VB − 40 V < S < VB + 25 V。両条件を同時に満たすこと。境界ちょうどは含まない。説明用の仮想値：VB＝220 Vなら180 V < S < 245 V。これは実車値ではない","stop":"未取得・記録なしは判定保留。部品候補は前段の分岐・適合確認を満たした場合の参考で、自動交換判定ではない。次のライブデータ検査は未収録","source":"原資料手順7の表：https://charm.li/images/IMP33Q313/asian881/66016518/ （2026-10-29確認）"},"options":[]},
-    p324eScope: { title: "P324E-788：参考資料の適用範囲", text: "2010年式プリウスの海外向け修理情報の再掲を参照した参考例です。国内DAA-ZVW30への適合・改訂状況は未検証。資料ではP324E-788単独と、U0110-159／160／656／657併発を区別し、後者は該当DTCの診断へ戻します。P0A94併発時にこの単独経路の交換結論を流用しません。", measurements: [], procedure: { phase: "参考手順の閲覧（実車適合の確認ではない）", condition: "親コードP324EだけではINF788を推定しない", stop: "年式・仕様・端子図・INF・同時DTCが一致しない場合、この数値を実車の合否基準にしない", source: "https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P324E/" }, options: [["参考の配線検査と判定を読む", "p324eWiring"]] },
+    p324eScope: { title: "P324E-788：参考資料の適用範囲", text: "2010年式プリウスの海外向け修理情報の再掲を参照した参考例です。国内DAA-ZVW30への適合・改訂状況は未検証。資料ではP324E-788単独と、U0110-159／160／656／657併発を区別し、後者は該当DTCの診断へ戻します。P0A94併発時にこの単独経路の交換結論を流用しません。", measurements: [], procedure: { phase: "参考手順の閲覧（実車適合の確認ではない）", condition: "親コードP324EだけではINF788を推定しない", stop: "年式・仕様・端子図・INF・同時DTCが一致しない場合、この数値を実車の合否基準にしない", source: "https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P324E/" }, options: plan.code === "P324E" && plan.subcode === "788" ? [
+      ["P324E-788単独を保存記録で確認した", "p324eSafety"],
+      ["U0110-159／160／656／657が併発", "p324eCommunication"],
+      ["P0A94など他コードが併発・併発状況不明", "p324eOther"]
+    ] : [["参考の配線検査と判定を読む", "p324eWiring"]] },
+    p324eCommunication: stop("該当するU0110のINFと検出ECUを保存し、その通信DTCの診断表を照合します。P0A94などもある場合は全INFの優先順位を確認してください。"),
+    p324eOther: stop("P0A94などの併発・未確認があります。各コードのINFと発生記録を揃え、併発時の優先診断表を照合してください。単独コード用の配線判定はここで保留します。"),
+    p324eSafety: { title: "安全処置と測定条件の記録を確認", text: "既に取得した点検記録を使います。車両に適合する修理書と端子図、サービスプラグ取り外し・指定時間の放電待機・指定点の0 V確認について、有資格者の記録を照合してください。基準欄に資料の版と該当箇所、実測欄に指定点・表示値・確認時の条件を記入します。", measurements: ["適用資料の版、測定点、測定器、確認者、時刻、表示値"], options: [["指定点の0 Vと適用資料を記録で確認した", "p324eConnection"]] },
+    p324eConnection: { title: "インバーターのコネクター接続状態を確認", text: "A59の接続・ロック状態の点検記録を確認してください。", measurements: ["接続不良があればコネクター名と該当箇所"], options: [["接続不良あり", "p324eContactFault"], ["接続は良好・指定の切離条件で得た抵抗記録あり", "p324eWiring"]] },
+    p324eContactFault: { title: "接続不良が見つかった箇所を優先", text: "該当する端子・ロックの状態を記録し、その接続箇所の修理と修理後の再評価へ進みます。", measurements: [], options: [] },
     p324eWiring: { title: "P324E-788：接続・配線と本体を切り分ける参考例", text: "資料の経路はコネクター接続確認→電源・アース配線の断線／短絡検査です。接続不良はその箇所を修正、配線が基準外なら配線・コネクターを修理する分岐です。接続と指定の配線検査がすべて適合した場合に本体交換の経路となります。抵抗値だけで内部故障を直接測定する検査ではありません。", measurements: [], procedure: { phase: "遮断後の低電圧ハーネス抵抗検査の参考値／国内適合未確認", tool: "抵抗測定に適合するデジタルテスター。絶縁抵抗計による検査ではない", condition: "有資格者による該当車両の安全処置と指定点の0 V確認が前提。電源OFF、サービスプラグ未装着、A59をインバーターから切離し、IGCTリレーを取り外したハーネス側。通電状態では抵抗を測らない", point: "断線：A59-10（+B）とIGCTリレーのソケット5、A59-9（+B2）と同5、A59-28（GND1）と車体アース、A59-27（GND2）と車体アース。短絡：+B／+B2と車体アース・他回路端子。+Bと+B2は図上で共通の電源線につながるため、その相互導通を短絡と誤判定しない", standard: "資料記載：上記4つの断線検査はそれぞれ1 Ω未満。短絡検査は10 kΩ以上。境界を含むかに注意（1 Ωは適合せず、10 kΩは適合）。端子向きは元資料のハーネス正面図で照合", stop: "測定点や無電圧が不明なら切離・測定しない。国内配線図との一致が未確認のまま適用しない。未測定の項目を正常としない。全条件の照合なしに交換確定しない", source: "数値出典：2010 Prius P324E-788修理情報の再掲（Operation CHARM）、2026-10-29に本文・断線表・短絡表・端子図を確認。メーカー国内正本との照合は未実施" }, options: [] },
     monitor: { title: "遮断前のデータモニター項目を準備", text: "選んだINFの経路に必要な項目だけを登録します。モニター名・単位・IG／READY等の取得条件・比較基準・結果別の行き先を一組にします。この例の具体的な項目名と基準値は未登録です。", measurements: [], procedure: { phase: "通電状態で取得する情報の準備", tool: "該当モニターに対応する診断機", condition: "車両指定の取得条件は未登録。READY移行の指示ではありません", point: "未登録", standard: "未登録（汎用電圧で代用しない）", stop: "指定項目・条件・基準が揃うまで測定指示を出さない" }, options: [["高電圧点検前の安全条件を確認", "isolation"]] },
     isolation: { title: "高電圧作業前の安全条件（資料確認）", text: "ZVW30のトヨタ回収資料には、絶縁手袋、電源停止とサービスプラグ取り外し後10分以上の待機、露出高電圧端子に触れる前の0 V確認があります。これはインバーター診断の全手順ではありません。時間経過だけで安全と判定せず、0 V確認もHVバッテリー内部を含む全車両の無電圧を意味しません。", measurements: [], procedure: { phase: "遮断・無電圧確認の準備／実作業不可", tool: "適合する測定器・リード・保護具と測定器の機能確認方法：詳細未登録", condition: "停止・再投入防止・プラグ取り外し・放電待機・指定点での確認を該当修理書で確定", point: "インバーターの指定測定点とアクセス手順：未登録", standard: "安全確認の0 Vと故障診断の良否基準を混同しない", stop: "測定点・測定器の健全性・0 V確認が不明、または電圧が残る場合は接触・切離作業へ進めない", source: "https://global.toyota/pages/global_toyota/sustainability/esg/challenge2050/Challenge5/proper-disposal/hv_detachable_prius30.pdf" }, options: [["本体判定に必要な情報を確認（作業承認ではない）", "evidence"]] },
@@ -18742,6 +18751,35 @@ function getFocusedMeasurementFields(plan, nodeId = plan.nodeId) {
     ]
   };
   return fields[nodeId] || [];
+}
+
+function getP324eHarnessReview(plan, nodeId, observation = {}) {
+  if (plan.selected !== "zvw30-inverter-preparation" || plan.code !== "P324E" ||
+      plan.subcode !== "788" || nodeId !== "p324eWiring") return "";
+  const prefix = "P324E-788単独・配線記録の参考照合（国内適合未検証）。";
+  const safety = plan.history.find(entry => entry.nodeId === "p324eSafety")?.observation;
+  if (!safety?.reference?.trim() || !safety.actual?.trim()) {
+    return prefix + "照合保留。安全処置の段階で、適用資料と指定点0 Vの確認記録を記入してください。";
+  }
+  const pending = [];
+  const circuits = getFocusedMeasurementFields(plan, nodeId);
+  for (const [key, label] of circuits) {
+    const continuity = ["b", "b2", "gnd1", "gnd2"].includes(key);
+    if (!continuity && key !== "bGround" && key !== "b2Ground") continue;
+    const raw = String(observation["measurement_" + key] || "").normalize("NFKC").trim();
+    const match = /^(\d{1,8}(?:\.\d{1,6})?)\s*(Ω|kΩ|MΩ)?$/.exec(raw);
+    if (!match || (!match[2] && !continuity)) {
+      pending.push(label);
+      continue;
+    }
+    const multiplier = { "Ω": 1, "kΩ": 1000, "MΩ": 1000000 }[match[2] || "Ω"];
+    const ohms = Number(match[1]) * multiplier;
+    if (continuity ? ohms >= 1 : ohms < 10000) {
+      return prefix + `次の確認箇所：${label}。記録値 ${raw}${match[2] ? "" : " Ω"} は参考基準（${continuity ? "1 Ω未満" : "10 kΩ以上"}）の範囲外です。該当する配線・端子の記録を照合してください。`;
+    }
+  }
+  if (pending.length) return prefix + `判定保留。次に照合する記録：${pending[0]}。表示値・単位・レンジを確認してください。OLは数値に換算しません。`;
+  return prefix + "断線4点と対地短絡2点の記録値は参考範囲内です。次は配線図にある他回路との短絡検査の全端子対・表示値を個別に照合してください。全指定箇所の適合を確認した場合に、原資料はインバーター本体側へ進みます。";
 }
 
 function readSavedVolts(value) {
@@ -18858,7 +18896,9 @@ function renderFocusedDiagnosis(result) {
     if (measurements.length) {
       const status = document.createElement("p");
       status.setAttribute("role", "status");
+      const wiringReview = () => getP324eHarnessReview(plan, plan.nodeId, plan.observation);
       const comparison = savedComparison() ? document.createElement("p") : null;
+      const wiringStatus = wiringReview() ? document.createElement("p") : null;
       const update = () => {
         const count = measurements.filter(([key]) => String(plan.observation[`measurement_${key}`] || "").trim()).length;
         status.textContent = `項目別記録：${count} / ${measurements.length}欄に入力あり。空欄は未測定／未記録。入力数は検査完了・適合・安全の確認ではありません。`;
@@ -18867,8 +18907,13 @@ function renderFocusedDiagnosis(result) {
           comparison.textContent = reference.text;
           if (blockComparisonButton) blockComparisonButton.hidden = !reference.compareBlocks;
         }
+        if (wiringStatus) wiringStatus.textContent = wiringReview();
       };
       content.appendChild(status);
+      if (wiringStatus) {
+        wiringStatus.setAttribute("role", "status");
+        content.appendChild(wiringStatus);
+      }
       for (const [key, title, placeholder] of measurements) {
         const label = document.createElement("label");
         label.textContent = title;
@@ -18956,6 +19001,8 @@ function buildFocusedDiagnosisWorksheet(plan) {
       }
       const comparison = getSavedVoltageComparison(plan, entry.nodeId, entry.observation);
       if (comparison) lines.push(comparison.text);
+      const wiringReview = getP324eHarnessReview(plan, entry.nodeId, entry.observation);
+      if (wiringReview) lines.push(wiringReview);
       lines.push("");
     }
   });

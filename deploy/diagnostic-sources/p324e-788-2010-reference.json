@@ -11,6 +11,7 @@
   "currentManufacturerRevisionVerified": false,
   "vehicleTested": false,
   "automaticReplacementDecision": false,
+  "implementationNotes": "3.13.709: compare recorded isolated harness continuity and two supply-to-body short checks only after the user selects the single-code, safety and connection conditions. Inter-circuit shorts require individual manual review. No vehicle commands or new thresholds.",
   "source": "https://charm.li/Toyota/2010/Prius%20L4-1.8L%20%282ZR-FXE%29%20Hybrid/Repair%20and%20Diagnosis/A%20L%20L%20%20Diagnostic%20Trouble%20Codes%20%28%20DTC%20%29/Testing%20and%20Inspection/P%20Code%20Charts/P324E/",
   "visuallyReviewedTables": {
     "dtcBranch": "https://charm.li/images/IMP33Q313/asian881/80762793/",
