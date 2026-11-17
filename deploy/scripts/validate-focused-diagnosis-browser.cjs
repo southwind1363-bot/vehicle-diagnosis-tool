@@ -149,8 +149,34 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const report = await page.evaluate(()=>buildFocusedDiagnosisWorksheet(flowChart.focusedDiagnosisResult.focusedDiagnosis));
     assert(report.includes('DTC：'+detailed),code);
   }
-  await diagnose('P324E-788');
   const go = name => flow.getByRole('button',{name,exact:true}).click();
+  for (const [code,primary,other,inf] of [
+    ['P0A94-0587','P0A94','P324E','0587'], ['P324E-788','P324E','P0A94','788'], ['P0A94','P0A94','P324E','']
+  ]) {
+    await diagnose(code);
+    await go('両コードが保存記録にある：併記する');
+    assert.equal(await flow.getByLabel(primary+' の詳細コード（INF）',{exact:true}).inputValue(),inf);
+    const companion = flow.getByLabel(other+' の詳細コード（INF）',{exact:true});
+    assert.equal(await companion.inputValue(),'');
+    await companion.fill('未取得');
+    await flow.getByLabel(primary+' のOccurrence Order・取得時点',{exact:true}).fill('1・初回保存');
+    await flow.getByLabel(primary+' の発生記録',{exact:true}).fill('模擬記録A');
+    await flow.getByLabel(other+' の発生記録',{exact:true}).fill('模擬記録B');
+    await go('時刻・発生順が不明：確認事項を残す');
+    const [download] = await Promise.all([page.waitForEvent('download'),go('診断手順書の下書きを保存')]);
+    assert(download.suggestedFilename().includes(code+'_'+other));
+    const report = fs.readFileSync(await download.path(),'utf8');
+    assert(report.includes(primary+'　INF：'+(inf || '未記録')));
+    assert(report.includes(other+'　INF：未取得'));
+    assert(report.includes(primary+' のOccurrence Order・取得時点：1・初回保存'));
+    assert(report.includes(other+' のOccurrence Order・取得時点：未測定／未記録'));
+    for (const expected of [primary+' の発生記録：模擬記録A',other+' の発生記録：模擬記録B','発生順は未確定',other+' の詳細コード（INF）：未取得']) assert(report.includes(expected));
+    await go('一つ前の確認に戻る');
+    assert.equal(await companion.inputValue(),'未取得');
+    await go('発生記録を識別できた：優先診断表を照合');
+    assert.match(await flow.innerText(),/国内修理書の表で両INF/);
+  }
+  await diagnose('P324E-788');
   await go('記録を整理した：必要資料を確認');
   await go('P324E-788の数値付き参考手順を見る');
   const back = () => go('一つ前の確認に戻る');
