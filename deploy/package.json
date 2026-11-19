@@ -51,6 +51,6 @@
     "import:dtc:sample": "node scripts/import-verified-dtc-csv.js --input scripts/fixtures/verified-dtc-sample.csv --source \"検証用サンプル\" --source-url \"https://example.invalid/verified-dtc-sample\" --source-date \"2026-05-31\""
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.22.3"
   }
 }
